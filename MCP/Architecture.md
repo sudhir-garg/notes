@@ -1,6 +1,26 @@
 # MCP Architecture Guide
 
-[https://www.youtube.com/watch?v=nQa31xdXbGk&list=PLKnIA16_Rmva_oZ9F4ayUu9qcWgF7Fyc0&index=3](https://www.youtube.com/watch?v=nQa31xdXbGk&list=PLKnIA16_Rmva_oZ9F4ayUu9qcWgF7Fyc0&index=3)
+[YouTube Video Link](https://www.youtube.com/watch?v=nQa31xdXbGk&list=PLKnIA16_Rmva_oZ9F4ayUu9qcWgF7Fyc0&index=3)
+
+## Table of Contents
+
+- [1. The Core Entities: Host, Client, and Server](#1-the-core-entities-host-client-and-server)
+  - [The Phone and SIM Analogy](#the-phone-and-sim-analogy)
+  - [End-to-End Execution Example](#end-to-end-execution-example)
+- [2. Benefits of the Client-Server Architecture](#2-benefits-of-the-client-server-architecture)
+- [3. MCP Primitives](#3-mcp-primitives)
+  - [Tools (Dynamic Actions)](#tools-dynamic-actions)
+  - [Resources (Static Data)](#resources-static-data)
+  - [Prompts (Behavior Shaping)](#prompts-behavior-shaping)
+- [4. The Data Layer (JSON-RPC 2.0)](#4-the-data-layer-json-rpc-20)
+  - [What is RPC?](#what-is-rpc)
+  - [JSON-RPC Examples in MCP](#json-rpc-examples-in-mcp)
+  - [Why JSON-RPC Instead of REST APIs?](#why-json-rpc-instead-of-rest-apis)
+- [5. The Transport Layer](#5-the-transport-layer)
+  - [Transport Layer Examples](#transport-layer-examples)
+  - [The Brilliance of the Architecture](#the-brilliance-of-the-architecture)
+
+---
 
 ## 1. The Core Entities: Host, Client, and Server
 
