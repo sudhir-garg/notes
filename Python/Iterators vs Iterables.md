@@ -1,5 +1,7 @@
 # Python Iterables vs. Iterators
 
+[Youtube Video Link](https://www.youtube.com/watch?v=jTYiNjvnHZY)
+
 ## Table of Contents
 - [Python Iterables vs. Iterators](#python-iterables-vs-iterators-1)
 - [Under the Hood of Iteration](#under-the-hood-of-iteration)
