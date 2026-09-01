@@ -1,5 +1,28 @@
 # MCP Lifecycle
 
+[YouTube Video Link](https://www.youtube.com/watch?v=sBHeMcxupmE&list=PLKnIA16_Rmva_oZ9F4ayUu9qcWgF7Fyc0&index=4)
+
+## Table of Contents
+
+- [What is the MCP Lifecycle?](#what-is-the-mcp-lifecycle)
+  - [What is a Session?](#what-is-a-session)
+- [1. The Initialization Phase (The "Handshake")](#1-the-initialization-phase-the-handshake)
+  - [Step 1: Client Sends initialize Request](#step-1-client-sends-initialize-request)
+  - [Step 2: Server Responds](#step-2-server-responds)
+  - [Step 3: Client Sends initialized Notification](#step-3-client-sends-initialized-notification)
+  - [Important Rules for Initialization](#️-important-rules-for-initialization)
+- [2. The Operation Phase](#2-the-operation-phase)
+  - [Part A: Capability Discovery (Automatic)](#part-a-capability-discovery-automatic)
+  - [Part B: Tool Calling (User-Driven)](#part-b-tool-calling-user-driven)
+- [3. The Shutdown Phase](#3-the-shutdown-phase)
+- [Special Lifecycle Scenarios](#special-lifecycle-scenarios)
+  - [1. Pings](#1-pings)
+  - [2. Error Handling](#2-error-handling)
+  - [3. Timeouts & Cancellation](#3-timeouts--cancellation)
+  - [4. Progress Notifications](#4-progress-notifications)
+
+---
+
 ## What is the MCP Lifecycle?
 
 The MCP Lifecycle describes the complete sequence of steps that govern how a Host (Client) and a Server **establish, use, and end** a connection during a session.
