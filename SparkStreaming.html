@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spark Structured Streaming with Kafka, S3 and Databricks — Production Learning Guide</title><style>*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#f6f8fb;color:#172033;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.72;font-size:16px}main{max-width:1240px;margin:auto;padding:0 28px 80px}.hero{margin:28px 0 26px;padding:64px 68px;border:1px solid #dbe3ee;border-radius:28px;background:linear-gradient(135deg,#0f172a 0%,#172554 58%,#1e3a5f 100%);color:#fff;box-shadow:0 20px 60px rgba(15,23,42,.16)}.hero h1{font-size:clamp(36px,5vw,62px);line-height:1.06;letter-spacing:-.045em;max-width:980px;margin:18px 0}.hero p{max-width:900px;color:#dbeafe;font-size:18px}.meta{display:flex;flex-wrap:wrap;gap:9px;margin-top:28px}.pill{display:inline-flex;align-items:center;padding:7px 12px;border-radius:999px;background:#ffffff14;border:1px solid #ffffff25;color:inherit;font-size:12px;font-weight:700;letter-spacing:.05em}.toc{background:#fff;border:1px solid #dce4ef;border-radius:20px;padding:28px 34px;margin:28px 0;box-shadow:0 8px 28px rgba(15,23,42,.05)}.toc h2{margin:0 0 14px;font-size:20px}.toc ol{columns:2;column-gap:50px;margin:0;padding-left:22px}.toc li{break-inside:avoid;margin:6px 0}.toc a{color:#2563eb;text-decoration:none}.toc a:hover{text-decoration:underline}.section{background:#fff;border:1px solid #e1e7ef;border-radius:22px;margin:28px 0;padding:42px 48px;box-shadow:0 7px 26px rgba(15,23,42,.045)}h2{font-size:32px;line-height:1.2;letter-spacing:-.025em;margin:0 0 18px;color:#0f172a}h3{font-size:22px;margin:30px 0 10px;color:#16233a}h4{font-size:18px;margin:22px 0 8px}.lead{font-size:18px;color:#475569}.callout{border-radius:14px;padding:18px 20px;margin:22px 0;border-left:5px solid #2563eb;background:#eff6ff}.callout.good{border-left-color:#16a34a;background:#f0fdf4}.callout.warn{border-left-color:#d97706;background:#fffbeb}.callout.danger{border-left-color:#dc2626;background:#fef2f2}.callout strong{display:block;margin-bottom:4px;color:#0f172a}.diagram{margin:28px 0;padding:18px;background:#fbfcfe;border:1px solid #e5eaf1;border-radius:18px;overflow:auto}.diagram svg{display:block;width:100%;height:auto;max-height:520px}.section img{max-width:100%;border-radius:16px}table{width:100%;border-collapse:separate;border-spacing:0;margin:22px 0;border:1px solid #dce4ee;border-radius:14px;overflow:hidden;font-size:14px}th{background:#f1f5f9;color:#172033;text-align:left;font-weight:750}th,td{padding:13px 15px;border-bottom:1px solid #e5eaf0;border-right:1px solid #e5eaf0;vertical-align:top}tr:last-child td{border-bottom:0}th:last-child,td:last-child{border-right:0}tbody tr:nth-child(even){background:#fafcff}pre{position:relative;background:#0b1220;color:#e5edf8;border:1px solid #1e293b;border-radius:15px;padding:20px 22px;overflow:auto;line-height:1.55;font-size:13px;box-shadow:0 10px 30px rgba(2,6,23,.12)}code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}p code,li code,td code{background:#eef2f7;border:1px solid #e1e7ef;border-radius:5px;padding:2px 5px;color:#b42318;font-size:.9em}.section ul,.section ol{padding-left:25px}.section li{margin:6px 0}.section strong{color:#111827}.top{position:fixed;right:22px;bottom:22px;z-index:10;background:#2563eb;color:#fff;text-decoration:none;padding:9px 13px;border-radius:999px;font-weight:700;font-size:13px;box-shadow:0 8px 24px rgba(37,99,235,.28)}.footer{color:#64748b;font-size:13px;text-align:center;margin-top:35px}.section:target{scroll-margin-top:20px}@media(max-width:800px){main{padding:0 14px 50px}.hero{padding:38px 25px;border-radius:20px}.section{padding:28px 22px;border-radius:18px}.toc ol{columns:1}.hero h1{font-size:39px}h2{font-size:28px}}@media print{body{background:#fff}.hero{box-shadow:none}.section{box-shadow:none;break-inside:auto}.top{display:none}.toc{break-after:page}}</style></head>
+<body><a class="top" href="#top">↑ Top</a><main id="top">
+<section class="hero"><div class="pill">PRODUCTION-ORIENTED STUDY GUIDE · UPDATED FOR CURRENT SPARK / DATABRICKS DOCUMENTATION</div><h1>Apache Spark Structured Streaming with Kafka + S3 Dimensions on Databricks</h1><p>A complete learning and implementation guide for processing real-time meter-usage facts from Kafka, enriching them with account, billing and service-location dimensions stored in S3/Delta, and publishing reliable Bronze, Silver and Gold Delta data products.</p><div class="meta"><span class="pill">PySpark</span><span class="pill">Apache Spark Structured Streaming</span><span class="pill">Apache Kafka</span><span class="pill">Amazon S3</span><span class="pill">Delta Lake</span><span class="pill">Databricks</span><span class="pill">Event Time</span><span class="pill">Watermarks</span></div></section>
+
+<div class="callout good"><strong>Running mental model</strong>Kafka continuously supplies transactional meter-usage facts. Spark Structured Streaming parses, validates, deduplicates, enriches and aggregates those facts. S3/Delta dimensions supply reference attributes. Delta Lake stores durable Bronze/Silver/Gold results, while checkpoints preserve query progress and state for recovery.</div>
+
+<nav class="toc"><h2>Table of Contents</h2><ol>
+<li><a href="#scenario">Business Scenario & Data Model</a></li><li><a href="#fundamentals">Structured Streaming Fundamentals</a></li><li><a href="#architecture">Architecture & Runtime Components</a></li><li><a href="#kafka">Kafka as the Streaming Source</a></li><li><a href="#event">Meter Usage Event Design</a></li><li><a href="#s3">S3 Dimensions & Master Data</a></li><li><a href="#enrichment">Stream-Static Dimension Enrichment</a></li><li><a href="#time">Event Time & Watermarks</a></li><li><a href="#windows">Windowing</a></li><li><a href="#state">Stateful Streaming</a></li><li><a href="#semantics">Delivery & Exactly-Once Semantics</a></li><li><a href="#checkpoint">Checkpointing</a></li><li><a href="#output">Output Modes</a></li><li><a href="#triggers">Triggers</a></li><li><a href="#delta">Delta Lake Sink</a></li><li><a href="#medallion">Medallion Architecture</a></li><li><a href="#quality">Data Quality</a></li><li><a href="#dedupe">Deduplication</a></li><li><a href="#schema">Schema Evolution</a></li><li><a href="#performance">Performance Optimization</a></li><li><a href="#failure">Fault Tolerance & Recovery</a></li><li><a href="#monitoring">Monitoring & Observability</a></li><li><a href="#implementation">End-to-End Databricks Implementation</a></li><li><a href="#project">Project Structure</a></li><li><a href="#mistakes">Common Mistakes</a></li><li><a href="#interview">Interview Preparation</a></li><li><a href="#decisions">Architecture Decisions</a></li><li><a href="#mental">Final Mental Model & Checklist</a></li><li><a href="#sources">Official References</a></li>
+</ol></nav>
+
+<section class="section" id="scenario"><h2>1. Business Scenario: Utility Meter Usage</h2><p class="lead">We will use one scenario throughout the guide so every Spark concept connects to a real data-engineering problem.</p>
+<div class="diagram"><svg viewBox="0 0 1100 390" role="img" aria-label="Overall Kafka + S3 dimensions + Spark Structured Streaming architecture"><style>
+.box{fill:#fff;stroke:#334155;stroke-width:2}.stream{fill:#eff6ff;stroke:#2563eb}.dim{fill:#ecfdf5;stroke:#059669}.delta{fill:#f5f3ff;stroke:#7c3aed}.gold{fill:#fff7ed;stroke:#ea580c}.ops{fill:#f8fafc;stroke:#64748b}.t{font:700 16px Inter,Arial;fill:#172033}.s{font:13px Inter,Arial;fill:#475569}.a{stroke:#475569;stroke-width:2.5;fill:none;marker-end:url(#arr)}.dashed{stroke-dasharray:7 6}.label{font:12px Inter,Arial;fill:#64748b}
+</style><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/></marker></defs>
+<rect x="35" y="110" width="175" height="90" rx="14" class="box stream"/><text x="122" y="145" text-anchor="middle" class="t">Kafka</text><text x="122" y="168" text-anchor="middle" class="s">Meter usage facts</text><text x="122" y="187" text-anchor="middle" class="s">topic / partitions</text>
+<path d="M210 155 H310" class="a"/>
+<rect x="310" y="75" width="225" height="160" rx="14" class="box"/><text x="422" y="108" text-anchor="middle" class="t">Spark Structured Streaming</text><text x="422" y="137" text-anchor="middle" class="s">parse → validate → dedupe</text><text x="422" y="160" text-anchor="middle" class="s">event time → enrich → aggregate</text><text x="422" y="183" text-anchor="middle" class="s">state + watermark + checkpoint</text><text x="422" y="206" text-anchor="middle" class="s">Databricks compute</text>
+<path d="M535 155 H635" class="a"/>
+<rect x="635" y="30" width="180" height="75" rx="14" class="box dim"/><text x="725" y="62" text-anchor="middle" class="t">S3 / Delta</text><text x="725" y="84" text-anchor="middle" class="s">Account / Billing</text><path d="M725 105 V138 H535" class="a dashed"/>
+<rect x="635" y="125" width="180" height="75" rx="14" class="box dim"/><text x="725" y="157" text-anchor="middle" class="t">S3 / Delta</text><text x="725" y="179" text-anchor="middle" class="s">Service Location</text><path d="M635 163 H535" class="a dashed"/>
+<rect x="635" y="220" width="180" height="75" rx="14" class="box delta"/><text x="725" y="252" text-anchor="middle" class="t">Delta Lake</text><text x="725" y="274" text-anchor="middle" class="s">Bronze / Silver / Gold</text><path d="M535 205 H635" class="a"/>
+<path d="M815 258 H920" class="a"/><rect x="920" y="215" width="145" height="85" rx="14" class="box gold"/><text x="992" y="247" text-anchor="middle" class="t">Serving</text><text x="992" y="270" text-anchor="middle" class="s">SQL / BI / APIs</text>
+</svg><div class="caption">Overall Kafka + S3 dimensions + Spark Structured Streaming architecture</div></div>
+<div class="grid"><div class="mini"><span class="badge">FACT</span><h4>Meter Usage</h4><p>High-volume events arrive continuously. Each event represents a meter reading or interval-usage measurement.</p></div><div class="mini"><span class="badge">DIMENSION</span><h4>Account / Customer</h4><p>Reference attributes such as account status, customer relationship and effective dates change relatively slowly.</p></div><div class="mini"><span class="badge">DIMENSION</span><h4>Billing / Location</h4><p>Tariff, billing cycle, address, region and service-location attributes enrich the usage fact.</p></div></div>
+<h3>Business relationship</h3><p>A useful logical chain is <strong>Customer → Account → Billing → Service Location → Meter → Meter Usage</strong>. The exact physical model can differ by utility, but the important streaming boundary is that meter-usage records are facts while the other entities provide reference context.</p>
+<table><tr><th>Data type</th><th>Example</th><th>Typical behavior</th><th>Streaming role</th></tr><tr><td>Dimension/master</td><td>Account, Billing, Service Location</td><td>Slower-changing; refreshed periodically</td><td>Join/enrichment input</td></tr><tr><td>Fact/transaction</td><td>Meter usage event</td><td>High-volume, append-oriented</td><td>Streaming source</td></tr></table>
+<div class="callout"><strong>Key design question</strong>“Static” does not mean “never changes.” It means the dimension is read as a batch/static snapshot by the streaming query. If dimension history or point-in-time correctness is required, you need an explicit SCD/time-validity strategy.</div></section>
+
+<section class="section" id="fundamentals"><h2>2. Structured Streaming Fundamentals</h2>
+<h3>What is streaming?</h3><p>Streaming is the continuous or incremental processing of data as it becomes available rather than waiting for a complete bounded dataset. A utility meter may produce thousands or millions of readings while the pipeline remains active.</p>
+<h3>Batch vs streaming</h3><table><tr><th>Dimension</th><th>Batch</th><th>Streaming</th></tr><tr><td>Input</td><td>Bounded dataset</td><td>Unbounded/incrementally arriving dataset</td></tr><tr><td>Execution</td><td>Run → finish</td><td>Long-running or repeatedly triggered</td></tr><tr><td>Latency</td><td>Minutes/hours/days</td><td>Seconds/minutes depending on SLA</td></tr><tr><td>State</td><td>Often recomputed per job</td><td>May be retained between triggers</td></tr><tr><td>Failure recovery</td><td>Rerun job</td><td>Checkpointed offsets/state allow continuation</td></tr></table>
+<h3>Micro-batch processing</h3><p>Structured Streaming is primarily executed as incremental micro-batches: the engine identifies new source data, processes it as a batch, commits progress, and repeats. This gives a streaming programming model while retaining Spark SQL/DataFrame semantics.</p>
+<h3>Continuous processing</h3><p>Apache Spark also has a continuous-processing execution mode with lower-latency goals but different operator/support semantics. Do not treat it as synonymous with “a stream.” On current Databricks, operational low-latency deployment choices are also affected by the compute and pipeline mode you choose; for example, Databricks documents a distinct real-time mode and does not support the OSS continuous trigger on serverless compute.</p>
+<h3>Structured Streaming vs legacy Spark Streaming</h3><table><tr><th>Legacy Spark Streaming (DStreams)</th><th>Structured Streaming</th></tr><tr><td>RDD/DStream-oriented API</td><td>DataFrame/SQL-oriented API</td></tr><tr><td>Lower-level programming model</td><td>Declarative query model</td></tr><tr><td>Older architecture</td><td>Modern Spark streaming API</td></tr><tr><td>Less natural integration with SQL optimizations</td><td>Uses Spark SQL engine and Catalyst/Tungsten execution foundations</td></tr></table>
+<h3>Streaming DataFrame</h3><p>A streaming DataFrame has the same relational abstraction as a batch DataFrame, but represents data that will arrive over time. <code>spark.readStream</code> creates a streaming input; transformations remain lazy until a <code>writeStream</code> query is started.</p>
+<h3>Source → transformation → sink</h3><p>The core mental model is simple: <strong>Source</strong> supplies records; <strong>transformations</strong> parse, filter, join, aggregate and enrich them; <strong>sink</strong> persists or forwards the result. A <strong>streaming query</strong> is the running execution of that plan.</p></section>
+
+<section class="section" id="architecture"><h2>3. Spark Structured Streaming Architecture</h2><div class="diagram"><svg viewBox="0 0 1100 390" role="img" aria-label="Overall Kafka + S3 dimensions + Spark Structured Streaming architecture"><style>
+.box{fill:#fff;stroke:#334155;stroke-width:2}.stream{fill:#eff6ff;stroke:#2563eb}.dim{fill:#ecfdf5;stroke:#059669}.delta{fill:#f5f3ff;stroke:#7c3aed}.gold{fill:#fff7ed;stroke:#ea580c}.ops{fill:#f8fafc;stroke:#64748b}.t{font:700 16px Inter,Arial;fill:#172033}.s{font:13px Inter,Arial;fill:#475569}.a{stroke:#475569;stroke-width:2.5;fill:none;marker-end:url(#arr)}.dashed{stroke-dasharray:7 6}.label{font:12px Inter,Arial;fill:#64748b}
+</style><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/></marker></defs>
+<rect x="35" y="110" width="175" height="90" rx="14" class="box stream"/><text x="122" y="145" text-anchor="middle" class="t">Kafka</text><text x="122" y="168" text-anchor="middle" class="s">Meter usage facts</text><text x="122" y="187" text-anchor="middle" class="s">topic / partitions</text>
+<path d="M210 155 H310" class="a"/>
+<rect x="310" y="75" width="225" height="160" rx="14" class="box"/><text x="422" y="108" text-anchor="middle" class="t">Spark Structured Streaming</text><text x="422" y="137" text-anchor="middle" class="s">parse → validate → dedupe</text><text x="422" y="160" text-anchor="middle" class="s">event time → enrich → aggregate</text><text x="422" y="183" text-anchor="middle" class="s">state + watermark + checkpoint</text><text x="422" y="206" text-anchor="middle" class="s">Databricks compute</text>
+<path d="M535 155 H635" class="a"/>
+<rect x="635" y="30" width="180" height="75" rx="14" class="box dim"/><text x="725" y="62" text-anchor="middle" class="t">S3 / Delta</text><text x="725" y="84" text-anchor="middle" class="s">Account / Billing</text><path d="M725 105 V138 H535" class="a dashed"/>
+<rect x="635" y="125" width="180" height="75" rx="14" class="box dim"/><text x="725" y="157" text-anchor="middle" class="t">S3 / Delta</text><text x="725" y="179" text-anchor="middle" class="s">Service Location</text><path d="M635 163 H535" class="a dashed"/>
+<rect x="635" y="220" width="180" height="75" rx="14" class="box delta"/><text x="725" y="252" text-anchor="middle" class="t">Delta Lake</text><text x="725" y="274" text-anchor="middle" class="s">Bronze / Silver / Gold</text><path d="M535 205 H635" class="a"/>
+<path d="M815 258 H920" class="a"/><rect x="920" y="215" width="145" height="85" rx="14" class="box gold"/><text x="992" y="247" text-anchor="middle" class="t">Serving</text><text x="992" y="270" text-anchor="middle" class="s">SQL / BI / APIs</text>
+</svg><div class="caption">Overall Kafka + S3 dimensions + Spark Structured Streaming architecture</div></div>
+<h3>Runtime components</h3><table><tr><th>Component</th><th>Responsibility</th><th>Production concern</th></tr><tr><td>Driver</td><td>Builds query plan, coordinates execution and tracks streaming progress</td><td>Driver restart should be recoverable through checkpointing; avoid driver-heavy operations.</td></tr><tr><td>Executors</td><td>Run tasks against Kafka partitions and data transformations</td><td>Size for throughput, shuffle and state.</td></tr><tr><td>SparkSession</td><td>Entry point for DataFrame/SQL operations</td><td>Centralize configuration and catalog access.</td></tr><tr><td>Streaming query</td><td>Active execution created by <code>writeStream</code></td><td>Give each query a stable checkpoint.</td></tr><tr><td>Trigger</td><td>Controls when the engine processes available data</td><td>Choose from latency/cost/throughput requirements.</td></tr><tr><td>Checkpoint</td><td>Stores progress and state needed for recovery</td><td>Do not casually delete or reuse across incompatible query definitions.</td></tr><tr><td>State store</td><td>Holds intermediate state for aggregations, deduplication and joins</td><td>Bound state with watermarks where semantics permit.</td></tr></table>
+<div class="callout warn"><strong>Production principle</strong>Checkpointing is not merely a “resume file.” It is part of the identity and correctness machinery of a streaming query. Changing the checkpoint location effectively creates a new query history.</div></section>
+
+<section class="section" id="kafka"><h2>4. Kafka as the Streaming Source</h2><p>Kafka is a distributed, partitioned commit log. Spark integrates with Kafka as a Structured Streaming source using the <code>kafka</code> format. Spark's current Kafka integration requires Kafka 0.10 or higher.</p>
+<div class="grid"><div class="mini"><h4>Topic</h4><p>Logical stream name, e.g. <code>meter_usage</code>.</p></div><div class="mini"><h4>Partition</h4><p>Ordered append-only log within a topic. Partitioning provides parallelism.</p></div><div class="mini"><h4>Offset</h4><p>Monotonic position within a partition. Spark uses offsets to define progress.</p></div><div class="mini"><h4>Producer</h4><p>Application that publishes usage events.</p></div><div class="mini"><h4>Consumer group</h4><p>Kafka-side mechanism for distributing partitions among consumers. Spark's source maintains its own streaming progress through checkpoints.</p></div><div class="mini"><h4>Key / value</h4><p>Key can drive partitioning; value carries the event payload. Preserve useful metadata for troubleshooting.</p></div></div>
+<div class="diagram"><svg viewBox="0 0 1100 390" role="img" aria-label="Kafka partitions, offsets and Spark micro-batches"><style>
+.box{fill:#fff;stroke:#334155;stroke-width:2}.stream{fill:#eff6ff;stroke:#2563eb}.dim{fill:#ecfdf5;stroke:#059669}.delta{fill:#f5f3ff;stroke:#7c3aed}.gold{fill:#fff7ed;stroke:#ea580c}.ops{fill:#f8fafc;stroke:#64748b}.t{font:700 16px Inter,Arial;fill:#172033}.s{font:13px Inter,Arial;fill:#475569}.a{stroke:#475569;stroke-width:2.5;fill:none;marker-end:url(#arr)}.dashed{stroke-dasharray:7 6}.label{font:12px Inter,Arial;fill:#64748b}
+</style><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/></marker></defs>
+<rect x="30" y="55" width="230" height="270" rx="14" class="box stream"/><text x="145" y="86" text-anchor="middle" class="t">Kafka Topic</text><text x="145" y="108" text-anchor="middle" class="s">meter_usage</text>
+<rect x="55" y="130" width="180" height="45" rx="8" class="box"/><text x="145" y="158" text-anchor="middle" class="s">Partition 0: offsets 0…N</text>
+<rect x="55" y="190" width="180" height="45" rx="8" class="box"/><text x="145" y="218" text-anchor="middle" class="s">Partition 1: offsets 0…N</text>
+<rect x="55" y="250" width="180" height="45" rx="8" class="box"/><text x="145" y="278" text-anchor="middle" class="s">Partition 2: offsets 0…N</text>
+<path d="M260 165 H365" class="a"/><path d="M260 212 H365" class="a"/><path d="M260 260 H365" class="a"/>
+<rect x="365" y="85" width="270" height="210" rx="14" class="box"/><text x="500" y="117" text-anchor="middle" class="t">Spark Streaming Query</text><text x="500" y="146" text-anchor="middle" class="s">Micro-batch 101</text><text x="500" y="168" text-anchor="middle" class="s">read offsets → process</text><text x="500" y="190" text-anchor="middle" class="s">write sink → commit</text><text x="500" y="212" text-anchor="middle" class="s">checkpoint offsets/state</text><text x="500" y="244" text-anchor="middle" class="s">Micro-batch 102 …</text><text x="500" y="266" text-anchor="middle" class="s">same pattern repeats</text>
+<path d="M635 190 H760" class="a"/><rect x="760" y="115" width="270" height="150" rx="14" class="box delta"/><text x="895" y="150" text-anchor="middle" class="t">Delta Sink + Checkpoint</text><text x="895" y="176" text-anchor="middle" class="s">committed output</text><text x="895" y="198" text-anchor="middle" class="s">offset log</text><text x="895" y="220" text-anchor="middle" class="s">commit log / state</text>
+</svg><div class="caption">Kafka partitions, offsets and Spark micro-batches</div></div>
+<h3>Kafka source options</h3><table><tr><th>Option</th><th>Purpose</th><th>Important behavior</th></tr><tr><td><code>subscribe</code></td><td>Read one or more named topics</td><td>Use when the topic set is explicitly known.</td></tr><tr><td><code>subscribePattern</code></td><td>Subscribe using a topic-name regex</td><td>Useful for controlled topic families; ensure new topics are intentionally included.</td></tr><tr><td><code>startingOffsets</code></td><td>Starting position for a new query</td><td><code>earliest</code>, <code>latest</code>, or explicit offsets. On restart, the checkpoint takes precedence.</td></tr><tr><td><code>endingOffsets</code></td><td>Batch/incremental bounded endpoint</td><td>Relevant to bounded reads; not the normal way to cap a continuously running query.</td></tr><tr><td><code>failOnDataLoss</code></td><td>Controls behavior when Spark detects possible lost/out-of-range Kafka data</td><td>Default is true in the documented Kafka integration. Disabling it can hide real data-loss conditions.</td></tr><tr><td><code>maxOffsetsPerTrigger</code></td><td>Rate-limit input per trigger</td><td>Useful for backpressure/cost control and catch-up management.</td></tr></table>
+<pre><code>kafka_df = (spark.readStream
+    .format("kafka")
+    .option("kafka.bootstrap.servers", kafka_bootstrap)
+    .option("subscribe", "meter_usage")
+    .option("startingOffsets", "latest")
+    .option("failOnDataLoss", "true")
+    .load())
+
+raw = kafka_df.selectExpr(
+    "CAST(key AS STRING) AS kafka_key",
+    "CAST(value AS STRING) AS raw_json",
+    "topic",
+    "partition",
+    "offset",
+    "timestamp AS kafka_timestamp"
+)</code></pre>
+<p>Current Spark documentation notes that <code>startingOffsets</code> applies when a new streaming query is started; a resumed query uses its checkpointed progress. Newly discovered Kafka partitions start from the earliest available offset in the documented behavior.</p>
+<div class="callout bad"><strong>Do not confuse Kafka offset progress with business-event deduplication.</strong> Structured Streaming can process source offsets exactly once at the query level under supported sink/query semantics, but it does not magically remove duplicate business events already present in Kafka. Use an event identifier and explicit deduplication.</div></section>
+
+<section class="section" id="event"><h2>5. Designing the Meter Usage Event</h2>
+<h3>Example Kafka JSON</h3><pre><code>{
+  "event_id": "MU-20260926-000001",
+  "meter_id": "MTR-100045",
+  "account_id": "ACC-700145",
+  "service_location_id": "SL-90122",
+  "meter_timestamp": "2026-09-26T10:05:00Z",
+  "usage_kwh": 2.731,
+  "reading_type": "INTERVAL",
+  "ingestion_timestamp": "2026-09-26T10:05:02Z"
+}</code></pre>
+<h3>Explicit Spark schema</h3><pre><code>from pyspark.sql.types import (
+    StructType, StructField, StringType, DoubleType, TimestampType
+)
+
+meter_schema = StructType([
+    StructField("event_id", StringType(), False),
+    StructField("meter_id", StringType(), False),
+    StructField("account_id", StringType(), False),
+    StructField("service_location_id", StringType(), False),
+    StructField("meter_timestamp", TimestampType(), False),
+    StructField("usage_kwh", DoubleType(), False),
+    StructField("reading_type", StringType(), True),
+    StructField("ingestion_timestamp", TimestampType(), True),
+])
+
+parsed = (raw
+    .withColumn("payload", from_json("raw_json", meter_schema))
+    .select("*", "payload.*")
+    .drop("payload"))</code></pre>
+<h3>Why explicit schemas?</h3><ul><li>Streaming schema inference can be brittle when producers evolve payloads.</li><li>Types become deterministic across batches.</li><li>Timestamp and numeric handling is explicit.</li><li>Unexpected fields can be detected and routed rather than silently becoming a new interpretation.</li><li>Schema review becomes part of deployment/change management.</li></ul>
+<h3>Malformed records</h3><p><code>from_json</code> returns null for malformed JSON when used in its standard permissive pattern. Production pipelines should identify records where the parsed struct is null and quarantine the raw payload together with Kafka metadata.</p>
+<pre><code>from pyspark.sql.functions import col, from_json, current_timestamp
+
+parsed = raw.withColumn("payload", from_json("raw_json", meter_schema))
+
+bad = (parsed
+    .filter(col("payload").isNull())
+    .select("raw_json", "topic", "partition", "offset", "kafka_timestamp")
+    .withColumn("quarantine_ts", current_timestamp()))
+
+good = parsed.filter(col("payload").isNotNull()).select("*", "payload.*").drop("payload")</code></pre></section>
+
+<section class="section" id="s3"><h2>6. S3 as the Dimension / Master Data Source</h2><p>Databricks can access S3 through Unity Catalog external locations. A storage credential represents the AWS IAM authorization and an external location combines that credential with a governed cloud-storage path. Databricks recommends Unity Catalog external locations for cloud-object-storage access. citeturn0search12turn0search18</p>
+<table><tr><th>Format</th><th>Use</th><th>Guidance</th></tr><tr><td>CSV</td><td>Interchange / legacy extracts</td><td>Easy to consume but weaker typing and larger/slower scans.</td></tr><tr><td>JSON</td><td>Semi-structured exchange</td><td>Useful at ingestion boundaries; not usually the best analytical storage.</td></tr><tr><td>Parquet</td><td>Columnar analytical storage</td><td>Good compression, projection and predicate pushdown.</td></tr><tr><td>Delta</td><td>Transactional lakehouse tables</td><td>Preferred when dimensions need ACID updates, versioning and governed table semantics.</td></tr></table>
+<h3>Dimension schemas</h3><pre><code># Account
+account_id STRING
+customer_id STRING
+account_status STRING
+account_type STRING
+effective_from TIMESTAMP
+effective_to TIMESTAMP
+
+# Billing
+billing_id STRING
+account_id STRING
+tariff_code STRING
+billing_cycle STRING
+rate_plan STRING
+
+# Service Location
+service_location_id STRING
+account_id STRING
+address STRING
+city STRING
+state STRING
+postal_code STRING
+region STRING</code></pre>
+<h3>Relationships</h3><p>Typical enrichment keys are <code>account_id</code> from the meter event to Account and Billing, and <code>service_location_id</code> to Service Location. In a more normalized model, Billing may have multiple rows per account over time, so a point-in-time rule is needed if the business asks “which tariff was active when this meter event happened?”</p>
+<pre><code>account_dim = spark.read.table("utility_ref.account")
+billing_dim = spark.read.table("utility_ref.billing")
+location_dim = spark.read.table("utility_ref.service_location")</code></pre>
+<div class="callout warn"><strong>Freshness matters.</strong> A stream-static join uses the current static snapshot available to the query. If a dimension is corrected after a fact has already been processed, the old enriched Silver row is not automatically rewritten by a normal stream-static join. If historical re-enrichment is required, design a replay/backfill or a point-in-time dimension strategy.</div></section>
+
+<section class="section" id="enrichment"><h2>7. The Critical Pattern: Kafka Facts + S3/Delta Dimensions</h2><div class="diagram"><svg viewBox="0 0 1100 390" role="img" aria-label="Stream-static enrichment of meter usage with current dimension snapshots"><style>
+.box{fill:#fff;stroke:#334155;stroke-width:2}.stream{fill:#eff6ff;stroke:#2563eb}.dim{fill:#ecfdf5;stroke:#059669}.delta{fill:#f5f3ff;stroke:#7c3aed}.gold{fill:#fff7ed;stroke:#ea580c}.ops{fill:#f8fafc;stroke:#64748b}.t{font:700 16px Inter,Arial;fill:#172033}.s{font:13px Inter,Arial;fill:#475569}.a{stroke:#475569;stroke-width:2.5;fill:none;marker-end:url(#arr)}.dashed{stroke-dasharray:7 6}.label{font:12px Inter,Arial;fill:#64748b}
+</style><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/></marker></defs>
+<rect x="30" y="135" width="190" height="90" rx="14" class="box stream"/><text x="125" y="168" text-anchor="middle" class="t">Streaming Fact</text><text x="125" y="191" text-anchor="middle" class="s">meter_usage events</text><path d="M220 180 H355" class="a"/>
+<rect x="355" y="60" width="205" height="70" rx="14" class="box dim"/><text x="457" y="90" text-anchor="middle" class="t">Account</text><text x="457" y="112" text-anchor="middle" class="s">account_id → attributes</text>
+<rect x="355" y="160" width="205" height="70" rx="14" class="box dim"/><text x="457" y="190" text-anchor="middle" class="t">Billing</text><text x="457" y="212" text-anchor="middle" class="s">account_id → tariff</text>
+<rect x="355" y="260" width="205" height="70" rx="14" class="box dim"/><text x="457" y="290" text-anchor="middle" class="t">Service Location</text><text x="457" y="312" text-anchor="middle" class="s">location_id → region</text>
+<path d="M560 95 H675 V180" class="a dashed"/><path d="M560 195 H675" class="a dashed"/><path d="M560 295 H675 V180" class="a dashed"/>
+<rect x="675" y="125" width="235" height="110" rx="14" class="box delta"/><text x="792" y="158" text-anchor="middle" class="t">Enriched Silver</text><text x="792" y="181" text-anchor="middle" class="s">facts + customer/account</text><text x="792" y="202" text-anchor="middle" class="s">+ tariff + location</text>
+<path d="M910 180 H1035" class="a"/><rect x="1035" y="140" width="55" height="80" rx="12" class="box gold"/><text x="1062" y="172" text-anchor="middle" class="t">Gold</text><text x="1062" y="194" text-anchor="middle" class="s">KPIs</text>
+</svg><div class="caption">Stream-static enrichment of meter usage with current dimension snapshots</div></div>
+<h3>Stream-static join</h3><p>A stream-static join combines an incremental streaming DataFrame with a batch/static DataFrame. Databricks describes this as a stateless join: each micro-batch's new records are joined with the current static table version. No watermark is required merely because the join is stream-static.</p>
+<pre><code>enriched = (meter_stream
+    .join(account_dim, "account_id", "left")
+    .join(billing_dim, "account_id", "left")
+    .join(location_dim, "service_location_id", "left"))</code></pre>
+<h3>Why LEFT JOIN is often safer</h3><p>An inner join drops usage events when a dimension record is missing. That can silently reduce operational totals. A left join preserves the fact and makes the missing enrichment observable through null dimension attributes or a quality flag.</p>
+<pre><code>from pyspark.sql.functions import when, col
+
+silver = (enriched
+    .withColumn(
+        "dimension_status",
+        when(col("account_id").isNull(), "INVALID_ACCOUNT")
+        .when(col("billing_id").isNull(), "MISSING_BILLING")
+        .when(col("service_location_id").isNull(), "MISSING_LOCATION")
+        .otherwise("ENRICHED")
+    ))</code></pre>
+<h3>Broadcast joins</h3><p>Broadcasting can be effective when a dimension is small enough to replicate to executors. It avoids a full shuffle of the streaming side. Do not broadcast a “dimension” merely because its business role is a dimension; a dimension can still be tens or hundreds of gigabytes.</p>
+<pre><code>from pyspark.sql.functions import broadcast
+
+small_account_dim = broadcast(account_dim)
+enriched = meter_stream.join(small_account_dim, "account_id", "left")</code></pre>
+<div class="callout"><strong>Production rule:</strong> choose broadcast based on measured executor memory, dimension size, join cardinality and cluster configuration—not on a hard-coded “dimensions are always broadcast” rule.</div>
+<h3>Late-arriving dimension data</h3><p>Suppose a meter event references <code>ACC-900</code>, but the Account dimension extract does not contain that account until 10 minutes later. A normal stream-static join processes the event against the snapshot available at that time. It does not automatically revisit the event. Strategies include: dimension refresh before stream processing, reprocessing/backfill, maintaining a Delta dimension with a reliable update process, or designing a separate reconciliation job.</p></section>
+
+<section class="section" id="time"><h2>8. Event Time, Processing Time and Watermarks</h2><div class="diagram"><svg viewBox="0 0 1100 390" role="img" aria-label="Event-time watermarking for late meter readings"><style>
+.box{fill:#fff;stroke:#334155;stroke-width:2}.stream{fill:#eff6ff;stroke:#2563eb}.dim{fill:#ecfdf5;stroke:#059669}.delta{fill:#f5f3ff;stroke:#7c3aed}.gold{fill:#fff7ed;stroke:#ea580c}.ops{fill:#f8fafc;stroke:#64748b}.t{font:700 16px Inter,Arial;fill:#172033}.s{font:13px Inter,Arial;fill:#475569}.a{stroke:#475569;stroke-width:2.5;fill:none;marker-end:url(#arr)}.dashed{stroke-dasharray:7 6}.label{font:12px Inter,Arial;fill:#64748b}
+</style><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/></marker></defs>
+<line x1="75" y1="210" x2="1015" y2="210" stroke="#64748b" stroke-width="3"/><line x1="240" y1="160" x2="240" y2="260" stroke="#2563eb" stroke-width="4"/><line x1="650" y1="160" x2="650" y2="260" stroke="#059669" stroke-width="4"/>
+<text x="240" y="140" text-anchor="middle" class="t">Latest event time</text><text x="650" y="140" text-anchor="middle" class="t">Watermark frontier</text>
+<text x="75" y="240" class="s">09:50</text><text x="225" y="240" class="s">10:05</text><text x="385" y="240" class="s">10:12</text><text x="545" y="240" class="s">10:20</text><text x="705" y="240" class="s">10:30</text><text x="865" y="240" class="s">10:40</text>
+<path d="M240 190 C370 95,500 95,650 190" fill="none" stroke="#2563eb" stroke-width="3"/>
+<rect x="385" y="55" width="205" height="55" rx="12" class="box stream"/><text x="487" y="88" text-anchor="middle" class="s">Event generated at 10:05</text>
+<rect x="700" y="70" width="285" height="85" rx="12" class="box warn"/><text x="842" y="100" text-anchor="middle" class="t">Example watermark</text><text x="842" y="123" text-anchor="middle" class="s">max(event_time) − 10 minutes</text>
+<text x="650" y="300" text-anchor="middle" class="s">Events older than the supported lateness horizon may be considered too late for stateful results.</text>
+</svg><div class="caption">Event-time watermarking for late meter readings</div></div>
+<table><tr><th>Time concept</th><th>Meaning</th><th>Meter example</th></tr><tr><td>Event time</td><td>When the business event actually occurred</td><td>Meter reading timestamp = 10:05</td></tr><tr><td>Ingestion time</td><td>When your ingestion system accepted/recorded it</td><td>Kafka ingestion metadata = 10:05:02</td></tr><tr><td>Processing time</td><td>When Spark processed the record</td><td>Executor processes it at 10:12</td></tr></table>
+<p>If the event occurred at 10:05 but arrives at 10:12, using processing time would place it in the wrong business interval. Event-time windows preserve the meaning of the measurement.</p>
+<pre><code>meter_stream = meter_stream.withWatermark("meter_timestamp", "10 minutes")</code></pre>
+<p>A watermark establishes a lateness threshold for stateful processing. Spark tracks progress in event time and can evict old state. A watermark that is too short can cause valid late data to be excluded from stateful results; one that is too long retains more state and can increase latency/resource usage. Databricks explicitly recommends tuning watermarks to the late-data behavior your workload must support.</p>
+<div class="callout warn"><strong>Watermark is not a timer that delays every record.</strong> It is a progress/cleanup boundary used by stateful operations. Do not explain it as “Spark waits exactly 10 minutes and then processes the record.”</div></section>
+
+<section class="section" id="windows"><h2>9. Windowing</h2><p>Windowing converts an unbounded event stream into bounded time buckets for analytics.</p>
+<table><tr><th>Window</th><th>Definition</th><th>Meter use case</th></tr><tr><td>Tumbling</td><td>Fixed, non-overlapping intervals</td><td>Hourly consumption</td></tr><tr><td>Sliding</td><td>Fixed duration with a smaller slide</td><td>15-minute rolling usage every 5 minutes</td></tr><tr><td>Session</td><td>Activity-based periods separated by inactivity gaps</td><td>Less common for interval meters; useful for user/device activity patterns.</td></tr></table>
+<h3>Tumbling: hourly consumption</h3><pre><code>from pyspark.sql.functions import window, sum as _sum
+
+hourly = (meter_stream
+    .withWatermark("meter_timestamp", "30 minutes")
+    .groupBy(
+        window("meter_timestamp", "1 hour"),
+        "meter_id",
+        "account_id"
+    )
+    .agg(_sum("usage_kwh").alias("usage_kwh")))</code></pre>
+<h3>Sliding: 15-minute window every 5 minutes</h3><pre><code>rolling = (meter_stream
+    .withWatermark("meter_timestamp", "30 minutes")
+    .groupBy(
+        window("meter_timestamp", "15 minutes", "5 minutes"),
+        "meter_id"
+    )
+    .agg(_sum("usage_kwh").alias("usage_kwh")))</code></pre>
+<h3>State implications</h3><p>Every active group/window can require state. More dimensions in the grouping key, longer windows and longer watermarks generally increase the amount of state that must be retained.</p></section>
+
+<section class="section" id="state"><h2>10. Stateful Streaming</h2><p>Stateful operators remember information across micro-batches. Stateless operators can process a record independently of prior records.</p>
+<table><tr><th>Stateless</th><th>Stateful</th></tr><tr><td>select, cast, filter, simple withColumn</td><td>windowed aggregation, deduplication, stream-stream joins, stateful custom logic</td></tr><tr><td>Limited cross-batch memory</td><td>Requires state store and checkpointed state</td></tr><tr><td>Usually simpler recovery</td><td>State size and cleanup must be managed</td></tr></table>
+<h3>Hourly total consumption</h3><pre><code>hourly_usage = (meter_stream
+    .withWatermark("meter_timestamp", "30 minutes")
+    .groupBy(
+        window("meter_timestamp", "1 hour"),
+        "meter_id",
+        "account_id"
+    )
+    .agg(_sum("usage_kwh").alias("total_usage_kwh")))</code></pre>
+<p>The state store keeps partial aggregates so Spark can update the result as more events arrive. Watermarks provide a mechanism to eventually clean up old state. Databricks documents watermarks as a key technique for preventing unbounded state growth in aggregations, deduplication and other stateful operations. citeturn1search0</p></section>
+
+<section class="section" id="semantics"><h2>11. Delivery Semantics and “Exactly Once”</h2>
+<table><tr><th>Semantic</th><th>Meaning</th><th>Risk</th></tr><tr><td>At-most-once</td><td>Records may be lost, but are not intentionally retried into duplicates</td><td>Data loss</td></tr><tr><td>At-least-once</td><td>Records are retried until acknowledged; duplicates may occur</td><td>Duplicates</td></tr><tr><td>Exactly-once</td><td>Under a defined source/query/sink contract, each input effect is reflected once in the transactional result</td><td>Requires end-to-end conditions; not a blanket guarantee across arbitrary external side effects</td></tr></table>
+<p>Structured Streaming checkpointing records source progress and committed micro-batches; with a compatible transactional sink such as Delta Lake, this supports exactly-once processing semantics for the query. Databricks documents checkpoints as tracking offsets, commits and state, while Delta provides transactional table semantics.</p>
+<div class="callout bad"><strong>Exactly-once does not mean “Kafka can never contain duplicate business events.”</strong> If a producer publishes the same event twice with different Kafka offsets, Spark sees two source records. Business-level deduplication is still your responsibility.</div>
+<p>Also be careful with arbitrary external sinks or side effects in <code>foreachBatch</code>: the application must make its writes idempotent or transactionally coordinated if it needs equivalent end-to-end semantics.</p></section>
+
+<section class="section" id="checkpoint"><h2>12. Checkpointing</h2><div class="diagram"><svg viewBox="0 0 1100 390" role="img" aria-label="Checkpoint-based recovery"><style>
+.box{fill:#fff;stroke:#334155;stroke-width:2}.stream{fill:#eff6ff;stroke:#2563eb}.dim{fill:#ecfdf5;stroke:#059669}.delta{fill:#f5f3ff;stroke:#7c3aed}.gold{fill:#fff7ed;stroke:#ea580c}.ops{fill:#f8fafc;stroke:#64748b}.t{font:700 16px Inter,Arial;fill:#172033}.s{font:13px Inter,Arial;fill:#475569}.a{stroke:#475569;stroke-width:2.5;fill:none;marker-end:url(#arr)}.dashed{stroke-dasharray:7 6}.label{font:12px Inter,Arial;fill:#64748b}
+</style><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/></marker></defs>
+<rect x="35" y="80" width="235" height="180" rx="14" class="box stream"/><text x="152" y="115" text-anchor="middle" class="t">Kafka</text><text x="152" y="145" text-anchor="middle" class="s">offsets 100…120</text><text x="152" y="175" text-anchor="middle" class="s">new records</text><text x="152" y="215" text-anchor="middle" class="s">retained by Kafka policy</text>
+<path d="M270 170 H390" class="a"/>
+<rect x="390" y="60" width="250" height="220" rx="14" class="box"/><text x="515" y="98" text-anchor="middle" class="t">Streaming Query</text><text x="515" y="130" text-anchor="middle" class="s">read → transform → write</text><text x="515" y="160" text-anchor="middle" class="s">stateful operators</text><text x="515" y="190" text-anchor="middle" class="s">micro-batch commits</text><text x="515" y="220" text-anchor="middle" class="s">failure / restart</text>
+<path d="M640 150 H745" class="a"/>
+<rect x="745" y="55" width="315" height="230" rx="14" class="box delta"/><text x="902" y="92" text-anchor="middle" class="t">Checkpoint Location</text><text x="902" y="125" text-anchor="middle" class="s">offset log</text><text x="902" y="151" text-anchor="middle" class="s">commit log</text><text x="902" y="177" text-anchor="middle" class="s">state store metadata/state</text><text x="902" y="215" text-anchor="middle" class="s">restart resumes from recorded progress</text>
+<path d="M902 285 V340 H515 V280" class="a dashed"/><text x="700" y="330" text-anchor="middle" class="label">Recovery uses the existing checkpoint; changing/deleting it starts a different query history.</text>
+</svg><div class="caption">Checkpoint-based recovery</div></div>
+<p>Databricks documents checkpoint directories as containing source offsets, commit information and state metadata/state for stateful queries. A restarted query can use that information to continue from recorded progress. Deleting the checkpoint or changing to a new checkpoint path causes the next run to start a new query history.</p>
+<h3>Typical checkpoint path</h3><pre><code>checkpoint_path = "s3://&lt;governed-bucket&gt;/checkpoints/meter_usage_silver/"
+
+query = (silver_stream.writeStream
+    .format("delta")
+    .outputMode("append")
+    .option("checkpointLocation", checkpoint_path)
+    .toTable("utility.silver.meter_usage"))</code></pre>
+<p>With Unity Catalog, Databricks states that Structured Streaming checkpoints must use paths in Unity Catalog-managed external locations. citeturn0search0</p>
+<div class="callout warn"><strong>Never share one checkpoint across unrelated queries.</strong> The checkpoint belongs to a specific streaming query definition and source/sink history. Use a stable, dedicated checkpoint directory per logical query.</div></section>
+
+<section class="section" id="output"><h2>13. Output Modes</h2>
+<table><tr><th>Mode</th><th>Concept</th><th>Typical meter example</th></tr><tr><td>Append</td><td>Only newly finalized rows are written</td><td>Raw/enriched events; window results after they are final according to watermark semantics.</td></tr><tr><td>Update</td><td>Rows whose results changed are written</td><td>Continuously changing aggregations.</td></tr><tr><td>Complete</td><td>Entire result table is emitted each trigger</td><td>Small aggregation result sets; often unsuitable for large production results.</td></tr></table>
+<p>Output-mode support depends on the query's logical plan. A stateful aggregation that has not reached a final event-time result may require Update or Complete rather than Append. Always validate the supported mode for the exact query and sink.</p></section>
+
+<section class="section" id="triggers"><h2>14. Triggers</h2>
+<table><tr><th>Trigger</th><th>Use</th><th>Current Databricks guidance</th></tr><tr><td>Default / 0-second processing time</td><td>Continuously process available data with minimal scheduling delay</td><td>Useful on supported classic compute for low-latency micro-batches, but increases checking/storage overhead.</td></tr><tr><td><code>processingTime="10 seconds"</code></td><td>Bound latency and reduce trigger overhead</td><td>Good general-purpose tuning knob.</td></tr><tr><td><code>availableNow=True</code></td><td>Process all data available when the job starts, then stop</td><td>Preferred for incremental/bounded batch-style streaming workloads; supported for Kafka on Databricks Runtime 10.4 LTS+ per current docs.</td></tr><tr><td><code>once=True</code></td><td>Legacy single-batch trigger</td><td>Deprecated on Databricks Runtime 11.3 LTS+; prefer AvailableNow.</td></tr><tr><td>Continuous trigger</td><td>OSS continuous processing mode</td><td>Experimental/different semantics; not supported on Databricks serverless. Current Databricks operational choices include real-time mode and pipeline continuous mode.</td></tr></table>
+<pre><code># Always-on classic-compute style
+query = (silver_stream.writeStream
+    .format("delta")
+    .outputMode("append")
+    .trigger(processingTime="10 seconds")
+    .option("checkpointLocation", checkpoint_path)
+    .toTable("utility.silver.meter_usage"))
+
+# Bounded incremental processing
+query = (silver_stream.writeStream
+    .format("delta")
+    .outputMode("append")
+    .trigger(availableNow=True)
+    .option("checkpointLocation", checkpoint_path)
+    .toTable("utility.silver.meter_usage"))</code></pre>
+<p>Current Databricks documentation recommends <code>AvailableNow</code> for incremental batch-style processing and documents trigger differences by compute mode. Serverless Structured Streaming currently supports AvailableNow and the deprecated Once, but not the default/time-based triggers.</p></section>
+
+<section class="section" id="delta"><h2>15. Delta Lake as the Streaming Sink</h2>
+<p>Delta Lake is a natural sink for Databricks Structured Streaming because it provides transactional table semantics, schema controls and lakehouse integration. Databricks documents Delta as a streaming source and sink and highlights reliability and performance benefits for streaming workloads.</p>
+<pre><code>query = (enriched_stream.writeStream
+    .format("delta")
+    .outputMode("append")
+    .option("checkpointLocation", "s3://&lt;bucket&gt;/checkpoints/silver_meter_usage")
+    .toTable("utility.silver.meter_usage"))</code></pre>
+<h3>Schema enforcement vs schema evolution</h3><p>Schema enforcement protects a table from incompatible writes. Schema evolution is an explicit decision that allows compatible changes under supported configurations. Do not enable evolution blindly; treat producer schema changes as contract changes.</p>
+<h3>MERGE</h3><p><code>MERGE</code> is useful for batch-style upserts and CDC patterns. A streaming query should not automatically use a per-row MERGE pattern simply because a table is transactional. If you need custom micro-batch upserts, <code>foreachBatch</code> plus a carefully designed idempotent MERGE is a common pattern, but it increases operational complexity.</p>
+<h3>OPTIMIZE, file sizes and liquid clustering</h3><p>Low-latency streaming can generate many small files. Databricks provides table optimization capabilities to improve file layout. Liquid clustering can be useful for tables where access patterns and data distribution make traditional partitioning less effective. Choose layout based on workload characteristics rather than applying every optimization by default.</p>
+<div class="callout"><strong>Do not confuse streaming partitioning with Delta table partitioning.</strong> Kafka partitions determine source parallelism. Spark partitions determine execution parallelism. Delta partitioning/clustering determines storage layout. They solve different problems.</div></section>
+
+<section class="section" id="medallion"><h2>16. Medallion Architecture</h2><div class="diagram"><svg viewBox="0 0 1100 390" role="img" aria-label="Databricks Medallion architecture for meter usage"><style>
+.box{fill:#fff;stroke:#334155;stroke-width:2}.stream{fill:#eff6ff;stroke:#2563eb}.dim{fill:#ecfdf5;stroke:#059669}.delta{fill:#f5f3ff;stroke:#7c3aed}.gold{fill:#fff7ed;stroke:#ea580c}.ops{fill:#f8fafc;stroke:#64748b}.t{font:700 16px Inter,Arial;fill:#172033}.s{font:13px Inter,Arial;fill:#475569}.a{stroke:#475569;stroke-width:2.5;fill:none;marker-end:url(#arr)}.dashed{stroke-dasharray:7 6}.label{font:12px Inter,Arial;fill:#64748b}
+</style><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/></marker></defs>
+<rect x="30" y="75" width="280" height="245" rx="18" class="box stream"/><text x="170" y="115" text-anchor="middle" class="t">BRONZE</text><text x="170" y="140" text-anchor="middle" class="s">Raw Kafka payload</text><text x="170" y="165" text-anchor="middle" class="s">topic / partition / offset</text><text x="170" y="190" text-anchor="middle" class="s">ingestion timestamp</text><text x="170" y="215" text-anchor="middle" class="s">raw value + metadata</text><text x="170" y="250" text-anchor="middle" class="s">Replayable landing layer</text>
+<path d="M310 197 H410" class="a"/>
+<rect x="410" y="75" width="280" height="245" rx="18" class="box delta"/><text x="550" y="115" text-anchor="middle" class="t">SILVER</text><text x="550" y="140" text-anchor="middle" class="s">Parsed + typed events</text><text x="550" y="165" text-anchor="middle" class="s">validated + deduplicated</text><text x="550" y="190" text-anchor="middle" class="s">event-time semantics</text><text x="550" y="215" text-anchor="middle" class="s">dimension enrichment</text><text x="550" y="250" text-anchor="middle" class="s">Trusted analytical facts</text>
+<path d="M690 197 H790" class="a"/>
+<rect x="790" y="75" width="280" height="245" rx="18" class="box gold"/><text x="930" y="115" text-anchor="middle" class="t">GOLD</text><text x="930" y="140" text-anchor="middle" class="s">Hourly / daily usage</text><text x="930" y="165" text-anchor="middle" class="s">account KPIs</text><text x="930" y="190" text-anchor="middle" class="s">location / billing KPIs</text><text x="930" y="215" text-anchor="middle" class="s">BI / SQL consumption</text><text x="930" y="250" text-anchor="middle" class="s">Business-facing data products</text>
+</svg><div class="caption">Databricks Medallion architecture for meter usage</div></div>
+<table><tr><th>Layer</th><th>Purpose</th><th>Meter usage contents</th></tr><tr><td>Bronze</td><td>Raw, replayable landing</td><td>Kafka payload, topic, partition, offset, Kafka timestamp, ingestion metadata.</td></tr><tr><td>Silver</td><td>Trusted business facts</td><td>Parsed/typed, validated, deduplicated, event-time normalized, dimension-enriched usage.</td></tr><tr><td>Gold</td><td>Business-facing products</td><td>Hourly/daily consumption, account, billing and location aggregates.</td></tr></table>
+<p>Databricks describes medallion architecture as a pattern for transforming raw ingestion into clean and business-ready tables. Lakeflow pipelines can also implement streaming tables, materialized views and data-quality expectations on top of this model.</p></section>
+
+<section class="section" id="quality"><h2>17. Data Quality</h2>
+<table><tr><th>Rule</th><th>Example</th><th>Action</th></tr><tr><td>Required key</td><td><code>event_id IS NOT NULL</code></td><td>Quarantine/drop/fail depending on criticality</td></tr><tr><td>Valid usage</td><td><code>usage_kwh &gt;= 0</code></td><td>Quarantine suspicious records; do not silently coerce.</td></tr><tr><td>Known account</td><td>Account dimension match</td><td>Preserve fact with missing-dimension status or quarantine according to SLA.</td></tr><tr><td>Timestamp sanity</td><td>Event time within an allowed business horizon</td><td>Flag or quarantine.</td></tr><tr><td>JSON parse</td><td>Parsed struct is non-null</td><td>Dead-letter/quarantine raw payload.</td></tr></table>
+<h3>Quarantine pattern</h3><pre><code>valid = (good
+    .filter("event_id IS NOT NULL")
+    .filter("meter_id IS NOT NULL")
+    .filter("usage_kwh >= 0")
+    .filter("meter_timestamp IS NOT NULL"))
+
+quarantine = (good
+    .filter("event_id IS NULL OR meter_id IS NULL OR usage_kwh < 0 OR meter_timestamp IS NULL")
+    .withColumn("quarantine_reason", lit("validation_failure")))</code></pre>
+<h3>Databricks expectations</h3><p>When using Lakeflow pipelines, expectations provide row-level quality constraints with actions such as warn, drop or fail. They also expose quality metrics in the pipeline experience. This is Databricks-specific functionality layered on top of the Spark execution model, not a generic Apache Spark DataFrame feature.</p></section>
+
+<section class="section" id="dedupe"><h2>18. Deduplication</h2>
+<p>Duplicate Kafka records can arise from producer retries, upstream replay, application bugs, connector behavior or at-least-once delivery patterns. Use a stable business identifier such as <code>event_id</code>.</p>
+<pre><code># For events whose duplicate arrival is bounded by the watermark horizon
+clean = (meter_stream
+    .withWatermark("meter_timestamp", "2 hours")
+    .dropDuplicates(["event_id"]))</code></pre>
+<p>For cases where duplicate records can have different timestamps/arrival metadata, Databricks Runtime 13.3 LTS+ provides <code>dropDuplicatesWithinWatermark</code>. It requires a watermark and guarantees deduplication within the configured watermark horizon.</p>
+<pre><code>clean = (meter_stream
+    .withWatermark("meter_timestamp", "2 hours")
+    .dropDuplicatesWithinWatermark(["event_id"]))</code></pre>
+<div class="callout warn"><strong>Deduplication horizon is a business decision.</strong> If duplicates can appear 12 hours after the original event, a 2-hour watermark cannot guarantee removal of that late duplicate.</div></section>
+
+<section class="section" id="schema"><h2>19. Schema Evolution</h2>
+<p>Suppose the producer changes:</p><pre><code>Old:
+meter_id
+usage_kwh
+timestamp
+
+New:
+meter_id
+usage_kwh
+voltage
+timestamp</code></pre>
+<h3>Questions to answer before deployment</h3><ul><li>Is the new field optional or required?</li><li>Will old consumers continue to parse the event?</li><li>Does the schema registry enforce compatibility?</li><li>Does the Spark parser explicitly select the fields it needs?</li><li>Will the Bronze layer preserve the raw payload so the event can be replayed?</li><li>Does the Delta target allow the new column under the chosen schema policy?</li></ul>
+<table><tr><th>Strategy</th><th>Benefit</th><th>Risk</th></tr><tr><td>Explicit stable schema</td><td>Predictability</td><td>Requires planned changes</td></tr><tr><td>Schema registry + compatibility rules</td><td>Contract enforcement</td><td>Additional platform dependency</td></tr><tr><td>Permissive parsing</td><td>Fast ingestion</td><td>Can hide producer drift</td></tr><tr><td>Raw Bronze + curated Silver</td><td>Replay and controlled evolution</td><td>More storage and pipeline stages</td></tr></table>
+<p>For production, prefer contract-driven evolution rather than “turn on schema evolution and hope.” Databricks also documents schema validation/enforcement and schema-evolution behavior for its ingestion tooling; the exact mechanism differs between plain Spark, Auto Loader and Lakeflow pipelines.</p></section>
+
+<section class="section" id="performance"><h2>20. Performance Optimization</h2>
+<table><tr><th>Lever</th><th>What it controls</th><th>Production guidance</th></tr><tr><td>Kafka partitions</td><td>Available source parallelism</td><td>Partition based on throughput and key/order requirements; avoid both under-partitioning and excessive partition counts.</td></tr><tr><td><code>maxOffsetsPerTrigger</code></td><td>Input rate per trigger</td><td>Use to prevent overload and control catch-up.</td></tr><tr><td>Trigger interval</td><td>Latency and per-trigger overhead</td><td>Use the largest interval compatible with the SLA; measure batch duration.</td></tr><tr><td>Broadcast</td><td>Join shuffle avoidance</td><td>Only for genuinely small dimensions.</td></tr><tr><td>Predicate pushdown</td><td>Bytes scanned</td><td>Filter early, especially on large Delta dimensions.</td></tr><tr><td>File sizing</td><td>Storage/read efficiency</td><td>Monitor small files and compact/optimize appropriately.</td></tr><tr><td>State</td><td>Memory/storage for aggregations/dedup</td><td>Use watermarks and bound cardinality/window duration.</td></tr><tr><td>Cache</td><td>Repeated reuse in a single job</td><td>Do not cache blindly in long-running streams; memory pressure and changing data reduce the benefit.</td></tr><tr><td>Cluster sizing</td><td>CPU/memory/network</td><td>Size from measured input rate, state, shuffle and latency targets.</td></tr><tr><td>Autoscaling</td><td>Dynamic compute</td><td>Useful for some workloads, but understand startup/scaling latency and stateful behavior.</td></tr></table>
+<h3>Kafka rate limiting</h3><pre><code>kafka_stream = (spark.readStream
+    .format("kafka")
+    .option("kafka.bootstrap.servers", kafka_bootstrap)
+    .option("subscribe", "meter_usage")
+    .option("startingOffsets", "latest")
+    .option("maxOffsetsPerTrigger", 200000)
+    .load())</code></pre>
+<p>Kafka's Spark integration documents <code>maxOffsetsPerTrigger</code> as a maximum number of offsets processed per trigger.</p>
+<div class="callout"><strong>Optimization sequence</strong>Measure first → identify bottleneck → tune source rate/trigger → optimize joins → control state → fix storage layout → resize compute. Randomly increasing workers is often the least informative first move.</div></section>
+
+<section class="section" id="failure"><h2>21. Fault Tolerance and Failure Recovery</h2>
+<table><tr><th>Failure</th><th>Expected behavior</th><th>Engineering response</th></tr><tr><td>Kafka unavailable</td><td>Query cannot fetch new data; it should recover when source connectivity returns if configured correctly.</td><td>Monitor lag and source errors; verify networking/authentication.</td></tr><tr><td>Executor failure</td><td>Tasks can be retried by Spark.</td><td>Monitor repeated task failures and skew/OOM.</td></tr><tr><td>Driver restart</td><td>Query restarts and uses checkpointed progress/state.</td><td>Keep checkpoint durable and stable.</td></tr><tr><td>Cluster restart</td><td>Job/query can restart using checkpoint.</td><td>Use reliable orchestration and restart policy.</td></tr><tr><td>S3 temporary issue</td><td>Reads/writes may fail or retry depending on layer.</td><td>Check cloud/network/IAM and retry behavior.</td></tr><tr><td>Bad Kafka record</td><td>Can poison a batch if parsing/validation is not isolated.</td><td>Capture raw payload and quarantine malformed events.</td></tr><tr><td>Schema mismatch</td><td>Query may fail rather than silently produce corrupt output.</td><td>Deploy compatible schema changes and test replay.</td></tr><tr><td>Dimension unavailable</td><td>Enrichment can fail depending on storage/query access.</td><td>Decide whether to fail, retry, or preserve facts with an enrichment status.</td></tr></table>
+<p>Checkpointing and sink commit logs are central to recovery. Databricks documents that checkpoints track offsets, commits and state; this is why checkpoint storage should be durable and governed.</p></section>
+
+<section class="section" id="monitoring"><h2>22. Monitoring and Observability</h2>
+<table><tr><th>Metric</th><th>What it tells you</th><th>Typical symptom</th></tr><tr><td>Input rows/sec</td><td>Arrival rate</td><td>Traffic spike</td></tr><tr><td>Processed rows/sec</td><td>Processing capacity</td><td>Backlog if below input rate</td></tr><tr><td>Batch duration</td><td>Work completion time</td><td>Increasing latency</td></tr><tr><td>Kafka lag</td><td>Unprocessed source backlog</td><td>Pipeline cannot keep up</td></tr><tr><td>State size</td><td>Retained state</td><td>Watermark/window/cardinality problem</td></tr><tr><td>Failed batches</td><td>Reliability</td><td>Schema/data/storage issue</td></tr><tr><td>Data-quality failures</td><td>Input health</td><td>Producer or source-data regression</td></tr><tr><td>Query status</td><td>Operational health</td><td>Stopped/failed stream</td></tr></table>
+<p>Databricks exposes Structured Streaming monitoring information, including query progress and sink/source metrics. For Delta sinks, some output-row metrics have documented limitations, so use the appropriate query-progress and table-level metrics rather than assuming every sink exposes identical counters.</p>
+<h3>Operational alert examples</h3><ul><li>Kafka lag above threshold for N consecutive intervals.</li><li>Batch duration exceeds trigger interval by a sustained margin.</li><li>Watermark stops advancing.</li><li>State size grows continuously.</li><li>Malformed-record rate exceeds baseline.</li><li>Missing-dimension rate spikes.</li><li>Query is not active when it should be.</li></ul></section>
+
+<section class="section" id="implementation"><h2>23. End-to-End Databricks Implementation</h2><div class="diagram"><svg viewBox="0 0 1100 390" role="img" aria-label="End-to-end utility meter data product"><style>
+.box{fill:#fff;stroke:#334155;stroke-width:2}.stream{fill:#eff6ff;stroke:#2563eb}.dim{fill:#ecfdf5;stroke:#059669}.delta{fill:#f5f3ff;stroke:#7c3aed}.gold{fill:#fff7ed;stroke:#ea580c}.ops{fill:#f8fafc;stroke:#64748b}.t{font:700 16px Inter,Arial;fill:#172033}.s{font:13px Inter,Arial;fill:#475569}.a{stroke:#475569;stroke-width:2.5;fill:none;marker-end:url(#arr)}.dashed{stroke-dasharray:7 6}.label{font:12px Inter,Arial;fill:#64748b}
+</style><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/></marker></defs>
+<rect x="20" y="105" width="150" height="100" rx="14" class="box dim"/><text x="95" y="140" text-anchor="middle" class="t">S3 / Delta</text><text x="95" y="164" text-anchor="middle" class="s">Dimensions</text><text x="95" y="185" text-anchor="middle" class="s">Account/Billing/Location</text>
+<rect x="20" y="235" width="150" height="100" rx="14" class="box stream"/><text x="95" y="270" text-anchor="middle" class="t">Kafka</text><text x="95" y="294" text-anchor="middle" class="s">Meter usage</text><text x="95" y="315" text-anchor="middle" class="s">events</text>
+<path d="M170 285 H290" class="a"/><path d="M170 155 H245 V230 H290" class="a dashed"/>
+<rect x="290" y="115" width="245" height="210" rx="18" class="box"/><text x="412" y="150" text-anchor="middle" class="t">Structured Streaming</text><text x="412" y="178" text-anchor="middle" class="s">parse + validate</text><text x="412" y="202" text-anchor="middle" class="s">dedupe + watermark</text><text x="412" y="226" text-anchor="middle" class="s">dimension enrichment</text><text x="412" y="250" text-anchor="middle" class="s">aggregate</text><text x="412" y="285" text-anchor="middle" class="s">checkpoint + recover</text>
+<path d="M535 220 H640" class="a"/>
+<rect x="640" y="105" width="210" height="100" rx="14" class="box delta"/><text x="745" y="140" text-anchor="middle" class="t">Delta Silver</text><text x="745" y="164" text-anchor="middle" class="s">trusted enriched facts</text><text x="745" y="185" text-anchor="middle" class="s">replayable history</text>
+<path d="M745 205 V255" class="a"/>
+<rect x="640" y="255" width="210" height="100" rx="14" class="box gold"/><text x="745" y="290" text-anchor="middle" class="t">Delta Gold</text><text x="745" y="314" text-anchor="middle" class="s">hour/day/account KPIs</text><text x="745" y="335" text-anchor="middle" class="s">billing/location analytics</text>
+<path d="M850 305 H1040" class="a"/><rect x="1040" y="250" width="50" height="110" rx="12" class="box gold"/><text x="1065" y="287" text-anchor="middle" class="t">BI</text><text x="1065" y="310" text-anchor="middle" class="s">SQL</text><text x="1065" y="333" text-anchor="middle" class="s">ML</text>
+</svg><div class="caption">End-to-end utility meter data product</div></div>
+<h3>Step 1 — Configuration</h3><pre><code>from pyspark.sql import functions as F
+from pyspark.sql.types import *
+
+KAFKA_BOOTSTRAP = "broker1:9092,broker2:9092"
+KAFKA_TOPIC = "meter_usage"
+CHECKPOINT_BRONZE = "s3://&lt;bucket&gt;/checkpoints/bronze/meter_usage"
+CHECKPOINT_SILVER = "s3://&lt;bucket&gt;/checkpoints/silver/meter_usage"
+CHECKPOINT_GOLD = "s3://&lt;bucket&gt;/checkpoints/gold/hourly_usage"
+</code></pre>
+<div class="callout warn"><strong>Secrets</strong>Do not hard-code Kafka passwords, IAM secrets or tokens. Use Databricks secret-backed configuration, Unity Catalog governed access, workload identity/roles and the appropriate Kafka authentication mechanism.</div>
+<h3>Step 2 — Kafka Bronze</h3><pre><code>kafka_raw = (spark.readStream
+    .format("kafka")
+    .option("kafka.bootstrap.servers", KAFKA_BOOTSTRAP)
+    .option("subscribe", KAFKA_TOPIC)
+    .option("startingOffsets", "latest")
+    .option("failOnDataLoss", "true")
+    .option("maxOffsetsPerTrigger", 200000)
+    .load())
+
+bronze = (kafka_raw
+    .select(
+        F.col("key").cast("string").alias("kafka_key"),
+        F.col("value").cast("string").alias("raw_json"),
+        "topic", "partition", "offset",
+        F.col("timestamp").alias("kafka_timestamp")
+    )
+    .withColumn("ingested_at", F.current_timestamp()))
+
+bronze_query = (bronze.writeStream
+    .format("delta")
+    .outputMode("append")
+    .option("checkpointLocation", CHECKPOINT_BRONZE)
+    .toTable("utility.bronze.meter_usage_raw"))</code></pre>
+<p><strong>Expected behavior:</strong> every accepted Kafka record is landed with raw payload and Kafka metadata. This layer is intentionally close to source so that downstream parsing rules can be changed without needing the producer to replay immediately.</p>
+<h3>Step 3 — Parse and validate</h3><pre><code>meter_schema = StructType([
+    StructField("event_id", StringType(), False),
+    StructField("meter_id", StringType(), False),
+    StructField("account_id", StringType(), False),
+    StructField("service_location_id", StringType(), False),
+    StructField("meter_timestamp", TimestampType(), False),
+    StructField("usage_kwh", DoubleType(), False),
+    StructField("reading_type", StringType(), True),
+    StructField("ingestion_timestamp", TimestampType(), True),
+])
+
+parsed = (bronze
+    .withColumn("payload", F.from_json("raw_json", meter_schema)))
+
+valid = (parsed
+    .filter(F.col("payload").isNotNull())
+    .select("*", "payload.*")
+    .drop("payload")
+    .filter(F.col("event_id").isNotNull())
+    .filter(F.col("meter_id").isNotNull())
+    .filter(F.col("account_id").isNotNull())
+    .filter(F.col("service_location_id").isNotNull())
+    .filter(F.col("meter_timestamp").isNotNull())
+    .filter(F.col("usage_kwh") >= 0))</code></pre>
+<h3>Step 4 — Deduplicate with event time</h3><pre><code>deduped = (valid
+    .withWatermark("meter_timestamp", "2 hours")
+    .dropDuplicatesWithinWatermark(["event_id"]))</code></pre>
+<h3>Step 5 — Read dimensions</h3><pre><code>account_dim = spark.read.table("utility_ref.account")
+billing_dim = spark.read.table("utility_ref.billing")
+location_dim = spark.read.table("utility_ref.service_location")</code></pre>
+<h3>Step 6 — Enrich</h3><pre><code>silver = (deduped
+    .join(account_dim, "account_id", "left")
+    .join(billing_dim, "account_id", "left")
+    .join(location_dim, "service_location_id", "left")
+    .withColumn(
+        "dimension_status",
+        F.when(F.col("billing_id").isNull(), "MISSING_BILLING")
+         .when(F.col("region").isNull(), "MISSING_LOCATION")
+         .otherwise("ENRICHED")
+    ))</code></pre>
+<h3>Step 7 — Write Silver</h3><pre><code>silver_query = (silver.writeStream
+    .format("delta")
+    .outputMode("append")
+    .option("checkpointLocation", CHECKPOINT_SILVER)
+    .toTable("utility.silver.meter_usage"))</code></pre>
+<h3>Step 8 — Hourly Gold aggregation</h3><pre><code>hourly = (silver
+    .withWatermark("meter_timestamp", "30 minutes")
+    .groupBy(
+        F.window("meter_timestamp", "1 hour"),
+        "account_id",
+        "meter_id",
+        "region"
+    )
+    .agg(
+        F.sum("usage_kwh").alias("total_usage_kwh"),
+        F.count("event_id").alias("reading_count")
+    )
+    .select(
+        "account_id", "meter_id", "region",
+        F.col("window.start").alias("window_start"),
+        F.col("window.end").alias("window_end"),
+        "total_usage_kwh", "reading_count"
+    ))
+
+gold_query = (hourly.writeStream
+    .format("delta")
+    .outputMode("append")
+    .option("checkpointLocation", CHECKPOINT_GOLD)
+    .toTable("utility.gold.hourly_meter_usage"))</code></pre>
+<div class="callout good"><strong>Production pattern</strong>Keep the Bronze, Silver and Gold checkpoints separate. Treat each layer as a separately observable query so failures and reprocessing boundaries are explicit.</div>
+<h3>Important caveat: dimension history</h3><p>The code above joins to the current dimension snapshot. If billing tariff must reflect the tariff effective at <code>meter_timestamp</code>, use effective-date logic or a point-in-time dimension model. For example, the conceptual condition is <code>effective_from &lt;= meter_timestamp AND (effective_to IS NULL OR meter_timestamp &lt; effective_to)</code>. This becomes a data-modeling requirement, not merely a Spark syntax issue.</p></section>
+
+<section class="section" id="project"><h2>24. Recommended Databricks Project Structure</h2><pre><code>databricks-project/
+├── bronze/
+│   ├── meter_usage_raw.py
+│   └── schemas.py
+├── silver/
+│   ├── meter_usage_clean.py
+│   └── enrichment.py
+├── gold/
+│   ├── hourly_usage.py
+│   ├── daily_usage.py
+│   └── account_usage.py
+├── dimensions/
+│   ├── account.py
+│   ├── billing.py
+│   └── service_location.py
+├── streaming/
+│   ├── kafka_config.py
+│   ├── checkpoints.py
+│   └── triggers.py
+├── data_quality/
+│   ├── rules.py
+│   └── quarantine.py
+├── config/
+│   ├── dev.yml
+│   ├── test.yml
+│   └── prod.yml
+└── monitoring/
+    ├── alerts.py
+    └── metrics.sql</code></pre>
+<table><tr><th>Folder</th><th>Responsibility</th></tr><tr><td>bronze</td><td>Raw landing and source metadata.</td></tr><tr><td>silver</td><td>Parsing, validation, deduplication and enrichment.</td></tr><tr><td>gold</td><td>Business aggregates/data products.</td></tr><tr><td>dimensions</td><td>Reference/master-data ingestion and preparation.</td></tr><tr><td>streaming</td><td>Shared streaming configuration and conventions.</td></tr><tr><td>data_quality</td><td>Reusable quality rules and quarantine logic.</td></tr><tr><td>config</td><td>Environment-specific settings without embedding secrets.</td></tr><tr><td>monitoring</td><td>Operational metrics, dashboards and alert logic.</td></tr></table></section>
+
+<section class="section" id="mistakes"><h2>25. Common Spark Structured Streaming Mistakes</h2>
+<table><tr><th>Mistake</th><th>Why it is a problem</th><th>Safer pattern</th></tr><tr><td>No checkpoint</td><td>Restart loses query progress/state.</td><td>Use a durable, dedicated checkpoint.</td></tr><tr><td>Deleting checkpoints to “fix” a stream</td><td>Creates a new query history and may replay or skip data depending on source configuration.</td><td>Understand the failure first; repair/replay deliberately.</td></tr><tr><td>Watermark too short</td><td>Late valid events can be excluded and state can be cleaned too early.</td><td>Base lateness on measured source behavior and SLA.</td></tr><tr><td>Watermark too long</td><td>Retains state longer and can increase resource use.</td><td>Use the minimum safe horizon.</td></tr><tr><td>Broadcasting a huge dimension</td><td>Executor memory pressure/OOM.</td><td>Measure size; use optimized join strategy.</td></tr><tr><td>Ignoring Kafka partitions</td><td>Limits source parallelism or creates unnecessary overhead.</td><td>Design partitions around throughput and ordering keys.</td></tr><tr><td>Using processing time for business windows</td><td>Late/out-of-order events land in wrong intervals.</td><td>Use event time for event-time business metrics.</td></tr><tr><td>Unbounded state</td><td>State store grows indefinitely.</td><td>Use watermarks, bounded windows and controlled cardinality.</td></tr><tr><td>Small-file explosion</td><td>Slow reads and metadata overhead.</td><td>Control trigger/file size and optimize table layout.</td></tr><tr><td>Collecting streaming data to driver</td><td>Driver memory bottleneck; breaks distributed design.</td><td>Aggregate/filter distributed and persist results.</td></tr><tr><td>Blind schema inference</td><td>Producer drift can change interpretation.</td><td>Explicit schemas and contract management.</td></tr><tr><td>Assuming stream-static join is point-in-time</td><td>Current dimension values may not represent historical state.</td><td>Use SCD/effective-date logic where required.</td></tr></table></section>
+
+<section class="section" id="interview"><h2>26. Spark Streaming Interview Preparation</h2>
+<h3>Beginner</h3><ol><li><strong>What is Structured Streaming?</strong> A Spark SQL/DataFrame-based streaming engine for incremental processing of continuously arriving data.</li><li><strong>What is a streaming DataFrame?</strong> A DataFrame representing an unbounded/incremental input rather than a finite batch.</li><li><strong>What is a micro-batch?</strong> A bounded set of newly available records processed as one trigger execution.</li><li><strong>What is a checkpoint?</strong> Durable query-progress and state information used for recovery.</li><li><strong>What is a watermark?</strong> An event-time progress threshold used to control late-data handling and state cleanup in supported stateful operations.</li></ol>
+<h3>Intermediate</h3><ol><li><strong>How does Spark read Kafka?</strong> It discovers topic partitions and offsets, processes new offsets incrementally, and records progress in the streaming checkpoint.</li><li><strong>What is a stream-static join?</strong> A streaming DataFrame joined to a batch/static DataFrame, typically without stateful stream-stream join semantics.</li><li><strong>Why use event time?</strong> Because business events can arrive late/out of order; event time preserves when the measurement actually happened.</li><li><strong>Why use watermarking?</strong> To bound how long state is retained and define lateness behavior.</li><li><strong>Append vs Update?</strong> Append emits newly finalized rows; Update emits changed result rows; exact support depends on query semantics.</li><li><strong>What does maxOffsetsPerTrigger do?</strong> It caps the amount of Kafka offset work taken in one trigger, helping control processing rate.</li></ol>
+<h3>Advanced</h3><ol><li><strong>Does exactly-once mean duplicates cannot exist?</strong> No. Query/sink exactly-once semantics are not business-event deduplication. Duplicate source events still require deduplication.</li><li><strong>What happens if a dimension changes after a stream has processed a fact?</strong> A normal stream-static join does not automatically rewrite the historical enriched result. Reprocessing or point-in-time modeling may be required.</li><li><strong>How do you control state growth?</strong> Watermarks, bounded windows, bounded deduplication horizons, appropriate grouping cardinality and monitoring.</li><li><strong>Why can Kafka lag increase even when executors are busy?</strong> Processing may be bottlenecked by shuffle, joins, state, skew, sink I/O, or too-small trigger capacity rather than raw CPU.</li><li><strong>How would you troubleshoot increasing batch duration?</strong> Compare input rate vs processed rate, inspect query progress, identify slow stages/shuffles, check state growth, Kafka lag, dimension join cost and Delta write/file behavior.</li><li><strong>When would you use foreachBatch?</strong> When each micro-batch needs custom batch logic or a sink operation such as an idempotent MERGE that is not directly expressible as a normal streaming sink.</li><li><strong>What is the difference between Kafka partitions and Spark partitions?</strong> Kafka partitions are source-log partitions and the unit of Kafka ordering/parallelism; Spark partitions are distributed execution partitions and can change through transformations.</li></ol></section>
+
+<section class="section" id="decisions"><h2>27. Architecture Decisions: Problem → Options → Trade-offs</h2>
+<h3>Decision 1: Where should raw Kafka events land?</h3><table><tr><th>Option</th><th>Trade-off</th></tr><tr><td>Directly parse into Silver</td><td>Fewer layers, but weaker replay/audit boundary.</td></tr><tr><td>Kafka → Bronze → Silver</td><td>More storage and jobs, but stronger replayability, auditability and schema-change isolation.</td></tr></table><p><strong>Pattern for this guide:</strong> Bronze first for important utility facts.</p>
+<h3>Decision 2: S3 files vs Delta tables for dimensions</h3><table><tr><th>Option</th><th>Trade-off</th></tr><tr><td>Raw CSV/JSON on S3</td><td>Simple source integration; weaker transactional semantics and potentially expensive scans.</td></tr><tr><td>Parquet</td><td>Efficient analytical reads; still requires external process for transactional updates.</td></tr><tr><td>Delta</td><td>ACID, versioning, schema enforcement and table-level integration.</td></tr></table><p><strong>Pattern for production:</strong> keep source extracts if required, but curate dimensions into governed Delta tables when the platform supports it.</p>
+<h3>Decision 3: Inner vs left dimension join</h3><p>Inner join enforces “only fully enriched records are valid,” but can silently lose facts. Left join preserves facts and exposes missing-dimension conditions. For operational metering, preserving the fact plus explicit enrichment status is often easier to reconcile.</p>
+<h3>Decision 4: Trigger strategy</h3><p>Choose from business SLA first. If the pipeline is a continuously running operational workload on supported classic compute, a processing-time trigger may be appropriate. If the requirement is “process whatever arrived since the last scheduled run and stop,” use AvailableNow. Current Databricks documentation distinguishes these modes and their compute support.</p>
+<h3>Decision 5: Current dimension vs point-in-time dimension</h3><p>If analysts ask “what tariff was applicable when the meter reading occurred?”, a current snapshot join is insufficient. Use effective dates/SCD2 or another temporal lookup strategy. If the question is “what is the account's current status for this newly arriving event?”, current-snapshot enrichment may be sufficient.</p></section>
+
+<section class="section" id="mental"><h2>28. Final End-to-End Mental Model</h2><div class="diagram"><svg viewBox="0 0 1100 390" role="img" aria-label="End-to-end utility meter data product"><style>
+.box{fill:#fff;stroke:#334155;stroke-width:2}.stream{fill:#eff6ff;stroke:#2563eb}.dim{fill:#ecfdf5;stroke:#059669}.delta{fill:#f5f3ff;stroke:#7c3aed}.gold{fill:#fff7ed;stroke:#ea580c}.ops{fill:#f8fafc;stroke:#64748b}.t{font:700 16px Inter,Arial;fill:#172033}.s{font:13px Inter,Arial;fill:#475569}.a{stroke:#475569;stroke-width:2.5;fill:none;marker-end:url(#arr)}.dashed{stroke-dasharray:7 6}.label{font:12px Inter,Arial;fill:#64748b}
+</style><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/></marker></defs>
+<rect x="20" y="105" width="150" height="100" rx="14" class="box dim"/><text x="95" y="140" text-anchor="middle" class="t">S3 / Delta</text><text x="95" y="164" text-anchor="middle" class="s">Dimensions</text><text x="95" y="185" text-anchor="middle" class="s">Account/Billing/Location</text>
+<rect x="20" y="235" width="150" height="100" rx="14" class="box stream"/><text x="95" y="270" text-anchor="middle" class="t">Kafka</text><text x="95" y="294" text-anchor="middle" class="s">Meter usage</text><text x="95" y="315" text-anchor="middle" class="s">events</text>
+<path d="M170 285 H290" class="a"/><path d="M170 155 H245 V230 H290" class="a dashed"/>
+<rect x="290" y="115" width="245" height="210" rx="18" class="box"/><text x="412" y="150" text-anchor="middle" class="t">Structured Streaming</text><text x="412" y="178" text-anchor="middle" class="s">parse + validate</text><text x="412" y="202" text-anchor="middle" class="s">dedupe + watermark</text><text x="412" y="226" text-anchor="middle" class="s">dimension enrichment</text><text x="412" y="250" text-anchor="middle" class="s">aggregate</text><text x="412" y="285" text-anchor="middle" class="s">checkpoint + recover</text>
+<path d="M535 220 H640" class="a"/>
+<rect x="640" y="105" width="210" height="100" rx="14" class="box delta"/><text x="745" y="140" text-anchor="middle" class="t">Delta Silver</text><text x="745" y="164" text-anchor="middle" class="s">trusted enriched facts</text><text x="745" y="185" text-anchor="middle" class="s">replayable history</text>
+<path d="M745 205 V255" class="a"/>
+<rect x="640" y="255" width="210" height="100" rx="14" class="box gold"/><text x="745" y="290" text-anchor="middle" class="t">Delta Gold</text><text x="745" y="314" text-anchor="middle" class="s">hour/day/account KPIs</text><text x="745" y="335" text-anchor="middle" class="s">billing/location analytics</text>
+<path d="M850 305 H1040" class="a"/><rect x="1040" y="250" width="50" height="110" rx="12" class="box gold"/><text x="1065" y="287" text-anchor="middle" class="t">BI</text><text x="1065" y="310" text-anchor="middle" class="s">SQL</text><text x="1065" y="333" text-anchor="middle" class="s">ML</text>
+</svg><div class="caption">End-to-end utility meter data product</div></div>
+<div class="card"><h3>The six-step mental model</h3><ol><li><strong>Kafka provides facts.</strong> Meter usage arrives as events with topic/partition/offset metadata.</li><li><strong>Spark processes continuously.</strong> Structured Streaming turns the unbounded source into incremental micro-batches and applies DataFrame/SQL transformations.</li><li><strong>Event time gives business meaning.</strong> Watermarks and windows manage late/out-of-order events and bounded state.</li><li><strong>Dimensions add context.</strong> Account, Billing and Service Location attributes enrich each fact; point-in-time rules are required when historical dimension correctness matters.</li><li><strong>Delta provides durable data products.</strong> Bronze preserves raw facts; Silver creates trusted enriched events; Gold creates business aggregates.</li><li><strong>Databricks operationalizes the system.</strong> Unity Catalog, jobs/pipelines, monitoring, quality expectations and governed storage turn the Spark application into a production data product.</li></ol></div>
+<h3>Production checklist</h3><ul class="checklist"><li>☐ Kafka topic partition count matches expected throughput and ordering needs.</li><li>☐ Kafka authentication/networking is governed and secrets are not hard-coded.</li><li>☐ Bronze preserves raw payload and source metadata.</li><li>☐ Explicit event schema and schema-change process exist.</li><li>☐ Event time is defined and timestamp timezone semantics are clear.</li><li>☐ Watermark is based on observed late-data behavior.</li><li>☐ Deduplication key and deduplication horizon are documented.</li><li>☐ Dimension freshness and point-in-time requirements are documented.</li><li>☐ Stream-static joins are sized and optimized appropriately.</li><li>☐ Checkpoints are durable, unique and governed.</li><li>☐ Output mode and trigger match the query semantics and SLA.</li><li>☐ Delta schema policy is explicit.</li><li>☐ Small-file behavior and table optimization are monitored.</li><li>☐ State size and Kafka lag are monitored.</li><li>☐ Quarantine/dead-letter path exists for malformed or invalid events.</li><li>☐ Recovery from driver/cluster failure has been tested.</li><li>☐ Replay/backfill procedure is documented.</li><li>☐ Data-quality metrics and alerts exist.</li><li>☐ CI/CD and environment-specific configuration are separated from code.</li><li>☐ Security/governance uses Unity Catalog and appropriate cloud-storage controls.</li></ul>
+</section>
+
+<section class="section" id="sources"><h2>Official References</h2><p class="lead">The guide is intentionally grounded in current Apache Spark and Databricks documentation. These references are the best place to verify runtime-specific details before deploying.</p><ol class="sources">
+<li><a href="https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html">Apache Spark — Structured Streaming Programming Guide</a></li>
+<li><a href="https://spark.apache.org/docs/4.0.2/streaming/structured-streaming-kafka-integration.html">Apache Spark — Structured Streaming + Kafka Integration</a></li>
+<li><a href="https://docs.databricks.com/aws/en/structured-streaming/production">Databricks — Production considerations for Structured Streaming</a></li>
+<li><a href="https://docs.databricks.com/aws/en/structured-streaming/checkpoints">Databricks — Structured Streaming checkpoints</a></li>
+<li><a href="https://docs.databricks.com/aws/en/structured-streaming/watermarks">Databricks — Apply watermarks to control data processing thresholds</a></li>
+<li><a href="https://docs.databricks.com/aws/en/structured-streaming/delta-lake">Databricks — Delta Lake table streaming reads and writes</a></li>
+<li><a href="https://docs.databricks.com/aws/en/connect/streaming/kafka">Databricks — Connect to Apache Kafka</a></li>
+<li><a href="https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3">Databricks — Connect to an AWS S3 external location</a></li>
+<li><a href="https://docs.databricks.com/aws/en/structured-streaming/unity-catalog">Databricks — Using Unity Catalog with Structured Streaming</a></li>
+<li><a href="https://docs.databricks.com/aws/en/ldp/expectations">Databricks — Manage data quality with pipeline expectations</a></li>
+<li><a href="https://docs.databricks.com/aws/en/structured-streaming/stream-monitoring">Databricks — Monitoring Structured Streaming queries</a></li>
+</ol>
+<div class="callout"><strong>Version awareness</strong>Databricks Runtime, Spark and serverless/classic compute capabilities evolve. Before production deployment, validate trigger support, Kafka connector behavior, Delta features and pipeline capabilities against the exact runtime selected for the workspace.</div></section>
+
+<footer class="card"><strong>Study-guide takeaway:</strong> A production streaming pipeline is not just “read Kafka and write Delta.” It is a coordinated system of source contracts, event-time semantics, bounded state, dimension consistency, checkpoints, transactional sinks, quality controls, observability and recovery procedures.</footer>
+</main></body></html>
