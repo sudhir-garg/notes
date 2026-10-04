@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM Evaluations — Multiple Eval Pipelines</title>
+<style>
+:root{--bg:#f6f8fb;--card:#fff;--text:#172033;--muted:#5d687a;--border:#dfe5ee;--accent:#4f46e5;--accent2:#0f766e;--warn:#b45309;--danger:#b91c1c;--code:#111827}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.7}
+.container{max-width:1100px;margin:auto;padding:28px 22px 70px}.hero{background:linear-gradient(135deg,#111827,#312e81);color:white;border-radius:22px;padding:42px 38px;margin-bottom:28px}
+.hero h1{font-size:clamp(30px,5vw,52px);line-height:1.1;margin:0 0 14px}.hero p{color:#dbe4ff;max-width:850px;font-size:18px;margin:8px 0}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}.badge{padding:6px 11px;border:1px solid #ffffff33;border-radius:999px;font-size:13px;background:#ffffff12}
+nav{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px 22px;margin-bottom:28px}nav a{color:var(--accent);text-decoration:none}nav ul{columns:2;margin:8px 0}
+@media(max-width:700px){nav ul{columns:1}}section{margin:42px 0}h2{font-size:31px;border-bottom:2px solid var(--border);padding-bottom:10px}h3{font-size:22px;margin-top:28px}
+.lead{font-size:18px;color:#364152}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;margin:18px 0;box-shadow:0 4px 18px #10182808}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}.callout{border-left:5px solid var(--accent);background:#eef2ff;padding:16px 18px;border-radius:10px;margin:18px 0}
+.callout.warning{border-color:var(--warn);background:#fff7ed}.callout.danger{border-color:var(--danger);background:#fef2f2}.callout.success{border-color:var(--accent2);background:#ecfdf5}
+table{width:100%;border-collapse:collapse;background:white;border:1px solid var(--border);border-radius:12px;overflow:hidden}th,td{padding:12px 14px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}th{background:#f1f5f9}
+code{background:#eef2f7;padding:2px 6px;border-radius:5px;font-size:.92em}pre{background:var(--code);color:#e5e7eb;padding:20px;border-radius:14px;overflow:auto;line-height:1.55}pre code{background:none;padding:0;color:inherit}
+.diagram{background:#fff;border:1px solid var(--border);border-radius:16px;padding:16px;margin:20px 0;overflow:auto}.small{font-size:14px;color:var(--muted)}
+.kpi{font-size:28px;font-weight:750}.flow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding:18px}
+.node{padding:15px 18px;border:2px solid #c7d2fe;border-radius:12px;background:#eef2ff;text-align:center;min-width:150px}.node.green{background:#ecfdf5;border-color:#99f6e4}.node.orange{background:#fff7ed;border-color:#fed7aa}
+.arrow{font-size:25px;color:#64748b}.footer{margin-top:55px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted)}.checklist li{margin:7px 0}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="hero">
+<h1>LLM Evaluations: Why One Eval Pipeline Is Not Enough</h1>
+<p>A practical study guide covering component-level, workflow-level, and application-level evaluation, with RAG examples, risk categories, metrics, and implementation patterns.</p>
+<div class="badges"><span class="badge">LLM Evaluation</span><span class="badge">RAG</span><span class="badge">Agents</span><span class="badge">Safety</span><span class="badge">Observability</span><span class="badge">Production Readiness</span></div>
+</header>
+
+<nav><strong>On this page</strong><ul>
+<li><a href="#recap">1. Previous-session recap</a></li><li><a href="#why-multiple">2. Why multiple eval pipelines?</a></li>
+<li><a href="#rag">3. RAG architecture & failure points</a></li><li><a href="#workflow">4. The 8-week ML-course trap</a></li>
+<li><a href="#levels">5. Three evaluation levels</a></li><li><a href="#risk">6. Three risk categories</a></li>
+<li><a href="#metrics">7. Risk/metric matrix</a></li><li><a href="#code">8. Practical code</a></li>
+<li><a href="#checklist">9. Production checklist</a></li><li><a href="#cheatsheet">10. Interview cheat sheet</a></li>
+</ul></nav>
+
+<section id="recap"><h2>1. Previous-Session Recap</h2>
+<p class="lead">Before understanding multiple evaluation pipelines, remember the three core ideas from the previous session.</p>
+<div class="grid">
+<div class="card"><h3>Why LLM Evals?</h3><p>Deploying an LLM application without systematic evaluation can lead to incorrect answers, hallucinations, unsafe outputs, poor retrieval, high cost, and unacceptable latency.</p></div>
+<div class="card"><h3>What are LLM Evals?</h3><p><strong>LLM evaluations are systematic and reliable ways of evaluating LLMs or LLM-based applications against clearly defined criteria.</strong></p></div>
+<div class="card"><h3>Two broad types</h3><p><strong>Model evaluation:</strong> evaluates the model itself, often with benchmarks.<br><strong>Application evaluation:</strong> evaluates the application you built around one or more models.</p></div>
+</div>
+<div class="callout success"><strong>Course focus:</strong> In an AI-engineering context, application evaluation is especially important because the application combines multiple components and workflows.</div>
+</section>
+
+<section id="why-multiple"><h2>2. Why Do We Need Multiple Eval Pipelines?</h2>
+<p>There are two major reasons:</p>
+<div class="grid">
+<div class="card"><div class="kpi">1</div><h3>Multiple failure points</h3><p>An LLM application contains several components. Any individual component—or the interaction between components—can fail.</p></div>
+<div class="card"><div class="kpi">2</div><h3>Multiple risk categories</h3><p>Even if a component performs its intended job, it may still be too slow, expensive, unsafe, incomplete, or unreliable.</p></div>
+</div>
+<div class="callout"><strong>Core principle:</strong> One application usually needs several evaluation pipelines because “correct” is only one dimension of production quality.</div>
+</section>
+
+<section id="rag"><h2>3. RAG Architecture and Its Failure Points</h2>
+<p>A simplified Retrieval-Augmented Generation (RAG) application contains a retriever and a generator.</p>
+<div class="diagram"><div class="flow">
+<div class="node">User Query</div><div class="arrow">→</div><div class="node green">Retriever</div><div class="arrow">→</div><div class="node green">Relevant Context</div><div class="arrow">→</div><div class="node orange">LLM Generator</div><div class="arrow">→</div><div class="node">Answer</div>
+</div></div>
+<h3>Failure Point #1 — Retriever</h3><p>The retriever may return irrelevant documents. If the correct document is missing or ranked too low, the generator receives poor evidence.</p>
+<h3>Failure Point #2 — Generator</h3><p>Even with useful context, the generator can produce an unsupported or incorrect answer. This is where <strong>faithfulness / groundedness</strong> becomes important.</p>
+<table><tr><th>Component</th><th>Primary job</th><th>Example evaluation</th></tr>
+<tr><td>Retriever</td><td>Retrieve relevant evidence for a query</td><td>Context relevance, recall@K</td></tr>
+<tr><td>Generator</td><td>Generate an answer from the supplied context</td><td>Faithfulness / groundedness</td></tr>
+<tr><td>RAG workflow</td><td>Make retriever + generator work together</td><td>End-to-end correctness</td></tr></table>
+</section>
+
+<section id="workflow"><h2>4. The “8-Week ML Course” Trap</h2>
+<p>Consider the query:</p><div class="card"><strong>“What is the duration of the Machine Learning course?”</strong></div>
+<p>Suppose <code>K = 5</code>, meaning the retriever returns five documents:</p>
+<table><tr><th>Rank</th><th>Document</th><th>Relevant?</th></tr>
+<tr><td>D1</td><td>Unrelated information</td><td>❌</td></tr><tr><td>D2</td><td>Unrelated information</td><td>❌</td></tr>
+<tr><td>D3</td><td>Unrelated information</td><td>❌</td></tr><tr><td>D4</td><td>Information about another course</td><td>❌</td></tr>
+<tr><td>D5</td><td>“Machine Learning course duration = 8 weeks”</td><td>✅</td></tr></table>
+<div class="callout success"><strong>Important:</strong> The correct document exists inside the retrieved top-K set. Therefore, the retriever can satisfy a recall@5-style criterion even though the ranking is not ideal.</div>
+<h3>Where can the system still fail?</h3>
+<p>The generator receives all five documents. If the prompt or ranking causes it to prioritize D1–D4, it may use an incorrect fact such as another course’s duration and answer incorrectly.</p>
+<div class="callout danger"><strong>Key insight:</strong> The retriever can be acceptable by one metric, and the generator can independently follow its instructions, yet the combined RAG workflow can still produce a wrong final answer.</div>
+<h3>Solution: Evaluate the workflow</h3>
+<p>The workflow-level evaluation tests the <strong>interaction</strong> between retrieval and generation. If the right document is present but badly ranked, a reranker may improve the final context order.</p>
+<div class="diagram"><div class="flow">
+<div class="node">Query</div><div class="arrow">→</div><div class="node">Top-K Retrieval</div><div class="arrow">→</div><div class="node orange">Reranker</div><div class="arrow">→</div><div class="node green">Best Context Order</div><div class="arrow">→</div><div class="node">Generator</div><div class="arrow">→</div><div class="node">Answer</div>
+</div></div>
+<p><strong>Reranker:</strong> a second-stage ranking component that reorders retrieved candidates using a more targeted relevance model.</p>
+</section>
+
+<section id="levels"><h2>5. The Three Levels of Evaluation</h2>
+<div class="card"><h3>Level 1 — Component Evaluation</h3><p>Evaluate individual building blocks independently.</p><ul><li>Retriever</li><li>Reranker</li><li>Query rewriter</li><li>Embedding model</li><li>Vector database</li><li>Prompt/system prompt</li><li>Output parser</li><li>Agent tool selector</li><li>Memory</li><li>Guardrails</li></ul></div>
+<div class="card"><h3>Level 2 — Workflow Evaluation</h3><p>Evaluate whether components work correctly <strong>together</strong>.</p><ul><li>RAG: retrieval → reranking → generation</li><li>Agent: reasoning → tool selection → tool execution → recovery</li><li>Multi-turn chatbot: conversation state → response generation</li></ul></div>
+<div class="card"><h3>Level 3 — Application Evaluation</h3><p>Evaluate the complete user-facing system against production requirements.</p><ul><li>End-to-end latency</li><li>Cost per request</li><li>Time to first token (TTFT)</li><li>Reliability / error rate</li><li>Safety and privacy</li><li>Overall user-task success</li></ul></div>
+<div class="callout warning"><strong>Important:</strong> Passing component and workflow evaluations does not automatically mean the application is production-ready. For example, a correct response that takes 10 seconds may violate the application's latency requirement.</div>
+</section>
+
+<section id="risk"><h2>6. Multiple Risk Categories</h2>
+<p>The second reason for multiple evaluations is that each failure point can have several dimensions of risk.</p>
+<div class="grid">
+<div class="card"><h3>1. Application Quality</h3><p>Does the system actually do the requested job well?</p><ul><li>Correctness</li><li>Relevance</li><li>Completeness</li><li>Instruction following</li><li>Groundedness</li></ul></div>
+<div class="card"><h3>2. Safety</h3><p>Does the system avoid harmful, unsafe, unauthorized, or privacy-violating behavior?</p><ul><li>Toxicity</li><li>Harmful content</li><li>Bias</li><li>PII/data leakage</li><li>Prompt injection</li><li>Jailbreak resistance</li></ul></div>
+<div class="card"><h3>3. Operations</h3><p>Can the application run reliably and economically in production?</p><ul><li>Latency</li><li>Cost/request</li><li>Token efficiency</li><li>Error rate</li><li>Latency under load</li><li>Reliability</li></ul></div>
+</div>
+</section>
+
+<section id="metrics"><h2>7. Risk and Metric Matrix</h2>
+<h3>General LLM Applications</h3>
+<table><tr><th>Risk category</th><th>What to ask</th><th>Example metric / test</th></tr>
+<tr><td>Correctness / accuracy</td><td>Is the answer factually correct?</td><td>Exact match, rubric score, LLM-as-judge</td></tr>
+<tr><td>Relevance</td><td>Does it answer the user's actual question?</td><td>Relevance score</td></tr>
+<tr><td>Completeness</td><td>Did it address all requested parts?</td><td>Checklist / rubric evaluation</td></tr>
+<tr><td>Instruction following</td><td>Did it follow requested format, length, constraints?</td><td>Schema/format validation</td></tr></table>
+
+<h3>RAG Applications</h3>
+<table><tr><th>Metric / risk</th><th>Meaning</th></tr>
+<tr><td>Context relevance</td><td>Are retrieved documents relevant to the query?</td></tr>
+<tr><td>Retriever recall@K</td><td>Does the top-K retrieval set contain the needed evidence?</td></tr>
+<tr><td>Faithfulness / groundedness</td><td>Is the answer supported by the supplied context?</td></tr>
+<tr><td>Citation accuracy</td><td>Do citations actually support the claims they are attached to?</td></tr></table>
+
+<h3>Agent Applications</h3>
+<table><tr><th>Risk</th><th>Question</th></tr>
+<tr><td>Tool selection</td><td>Did the agent select the appropriate tool?</td></tr>
+<tr><td>Parameter correctness</td><td>Were correct arguments passed to the tool?</td></tr>
+<tr><td>Task completion</td><td>Was the requested task actually completed?</td></tr>
+<tr><td>Error recovery</td><td>Can the agent recover when a tool or intermediate step fails?</td></tr></table>
+
+<h3>Multi-Turn Chatbots</h3>
+<table><tr><th>Risk</th><th>Question</th></tr>
+<tr><td>Context retention</td><td>Does the chatbot remember relevant earlier conversation?</td></tr>
+<tr><td>Clarification behavior</td><td>Does it ask for clarification when the user's intent is ambiguous?</td></tr></table>
+
+<h3>Safety</h3>
+<table><tr><th>Safety dimension</th><th>Example evaluation</th></tr>
+<tr><td>Toxicity</td><td>Detect toxic or abusive outputs</td></tr>
+<tr><td>Harmful content</td><td>Test disallowed or dangerous requests</td></tr>
+<tr><td>Bias</td><td>Evaluate behavior across controlled demographic variations</td></tr>
+<tr><td>Privacy / PII leakage</td><td>Test whether private information can be extracted</td></tr>
+<tr><td>Prompt injection</td><td>Test malicious instructions embedded in user-controlled data</td></tr>
+<tr><td>Jailbreak resistance</td><td>Test attempts to bypass application constraints</td></tr></table>
+
+<h3>Operations</h3>
+<table><tr><th>Operational metric</th><th>Meaning</th></tr>
+<tr><td>Latency</td><td>Total time from request to final response</td></tr>
+<tr><td>TTFT</td><td>Time until the first generated token is received</td></tr>
+<tr><td>Cost/request</td><td>Estimated cost to serve one request</td></tr>
+<tr><td>Token efficiency</td><td>Useful output relative to tokens consumed</td></tr>
+<tr><td>Error/failure rate</td><td>Percentage of requests that fail</td></tr>
+<tr><td>Latency under load</td><td>Performance as concurrency/traffic increases</td></tr></table>
+</section>
+
+<section id="code"><h2>8. Practical Code Examples</h2>
+<h3>8.1 A Simple Evaluation Record</h3>
+<pre><code>from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class EvalResult:
+    name: str
+    score: float
+    passed: bool
+    details: Optional[str] = None
+
+def threshold_eval(name: str, score: float, threshold: float) -&gt; EvalResult:
+    return EvalResult(
+        name=name,
+        score=score,
+        passed=score &gt;= threshold,
+        details=f"threshold={threshold}"
+    )
+
+result = threshold_eval(
+    name="retriever_recall_at_5",
+    score=0.92,
+    threshold=0.90
+)
+
+print(result)
+</code></pre>
+
+<h3>8.2 Retriever Recall@K</h3>
+<p>A simplified version: the test passes if the expected relevant document appears in the retrieved top-K results.</p>
+<pre><code>def recall_at_k(retrieved_ids, relevant_ids, k):
+    retrieved = set(retrieved_ids[:k])
+    relevant = set(relevant_ids)
+
+    if not relevant:
+        return 0.0
+
+    return len(retrieved &amp; relevant) / len(relevant)
+
+
+retrieved = ["doc_17", "doc_04", "doc_21", "doc_08", "doc_99"]
+relevant = ["doc_99"]
+
+score = recall_at_k(retrieved, relevant, k=5)
+
+print(f"Recall@5 = {score:.2f}")
+# Recall@5 = 1.00
+</code></pre>
+<div class="callout"><strong>Important distinction:</strong> Recall@5 = 1 does not mean the best document was ranked first. It only tells us that the relevant document exists somewhere in the top five.</div>
+
+<h3>8.3 A Basic Groundedness Check</h3>
+<p>For production systems, use a robust evaluator or model-based judge rather than the toy word-overlap example below. This example only illustrates the concept.</p>
+<pre><code>def simple_groundedness(answer: str, context: str) -&gt; float:
+    # Educational toy metric only.
+    # Real systems should use claim-level evaluation,
+    # an LLM judge, NLI-style evaluation, or a specialized
+    # groundedness evaluator.
+    answer_words = set(answer.lower().split())
+    context_words = set(context.lower().split())
+
+    if not answer_words:
+        return 0.0
+
+    return len(answer_words &amp; context_words) / len(answer_words)
+
+
+context = "The Machine Learning course duration is 8 weeks."
+answer = "The Machine Learning course duration is 8 weeks."
+
+print(simple_groundedness(answer, context))
+</code></pre>
+
+<h3>8.4 Application-Level Latency Evaluation</h3>
+<pre><code>import time
+
+def evaluate_latency(app, query, threshold_seconds=2.0):
+    start = time.perf_counter()
+
+    response = app(query)
+
+    elapsed = time.perf_counter() - start
+
+    return {
+        "response": response,
+        "latency_seconds": round(elapsed, 3),
+        "passed": elapsed &lt;= threshold_seconds
+    }
+</code></pre>
+
+<h3>8.5 Combine Multiple Evaluations</h3>
+<pre><code>def production_gate(results):
+    # Every required evaluation must pass.
+    failed = [r for r in results if not r["passed"]]
+
+    return {
+        "ready": len(failed) == 0,
+        "failed_checks": failed
+    }
+
+
+checks = [
+    {"name": "retrieval_recall", "passed": True},
+    {"name": "groundedness", "passed": True},
+    {"name": "latency", "passed": False},
+    {"name": "safety", "passed": True},
+]
+
+print(production_gate(checks))
+</code></pre>
+
+<h3>8.6 Example Evaluation Configuration</h3>
+<pre><code>eval_config = {
+    "component": {
+        "retriever": {
+            "recall_at_5": {"threshold": 0.90},
+        },
+        "generator": {
+            "groundedness": {"threshold": 0.90},
+        },
+    },
+
+    "workflow": {
+        "rag_answer_correctness": {"threshold": 0.90},
+        "citation_accuracy": {"threshold": 0.95},
+    },
+
+    "application": {
+        "latency_seconds": {"max": 2.0},
+        "cost_per_request": {"max": 0.03},
+        "error_rate": {"max": 0.01},
+    },
+
+    "safety": {
+        "pii_leakage": {"max": 0.0},
+        "jailbreak_success_rate": {"max": 0.0},
+    },
+}
+</code></pre>
+</section>
+
+<section id="checklist"><h2>9. Production Evaluation Checklist</h2>
+<div class="card"><ul class="checklist">
+<li>☐ Identify every major component and define its job.</li><li>☐ Create component-level evaluations.</li><li>☐ Create workflow-level tests for component interactions.</li>
+<li>☐ Define application-level success criteria.</li><li>☐ Separate quality, safety, and operational evaluations.</li><li>☐ Test normal and adversarial inputs.</li>
+<li>☐ Test retrieval quality separately from final-answer quality.</li><li>☐ Measure latency and TTFT separately where relevant.</li><li>☐ Track cost per request and token usage.</li>
+<li>☐ Add privacy/PII leakage tests.</li><li>☐ Add prompt-injection and jailbreak tests.</li><li>☐ Run evaluations on a representative evaluation dataset.</li>
+<li>☐ Establish thresholds before production release.</li><li>☐ Re-run evaluations whenever prompts, models, retrieval, tools, or data change.</li>
+</ul></div>
+</section>
+
+<section id="cheatsheet"><h2>10. Interview & Revision Cheat Sheet</h2>
+<div class="card"><h3>Q1. Why do we need multiple eval pipelines?</h3><p><strong>Answer:</strong> Because an LLM application has multiple failure points and multiple risk dimensions. We need separate evaluations for components, their interactions, the overall application, and dimensions such as quality, safety, and operations.</p></div>
+<div class="card"><h3>Q2. If the retriever and generator both pass their individual evaluations, is the RAG application guaranteed to be correct?</h3><p><strong>Answer:</strong> No. The interaction between them can still fail. For example, the correct document may be retrieved but ranked too low, causing the generator to use less relevant context.</p></div>
+<div class="card"><h3>Q3. What are the three evaluation levels?</h3><p><strong>Component → Workflow → Application.</strong></p></div>
+<div class="card"><h3>Q4. What are the three broad risk categories?</h3><p><strong>Application Quality → Safety → Operations.</strong></p></div>
+<div class="card"><h3>Q5. What does faithfulness / groundedness measure?</h3><p>Whether the generated answer is supported by the supplied context rather than introducing unsupported facts.</p></div>
+<div class="card"><h3>Q6. What does Recall@K tell us?</h3><p>Whether the relevant evidence appears within the top K retrieved results. It does not, by itself, tell us that the relevant document is ranked first.</p></div>
+<div class="card"><h3>Q7. Give examples of application-level operational evaluations.</h3><p>End-to-end latency, time to first token, cost per request, token efficiency, error rate, reliability, and latency under load.</p></div>
+<div class="callout success"><strong>One-line mental model:</strong><br><strong>“Did each component work?” → “Did the components work together?” → “Did the whole application satisfy user and production requirements?”</strong></div>
+</section>
+
+<footer class="footer"><p><strong>Study note:</strong> These notes are a structured interpretation of the supplied lecture transcript. Exact evaluation thresholds should be chosen according to the application's requirements and representative evaluation dataset.</p></footer>
+</div>
+</body>
+</html>
