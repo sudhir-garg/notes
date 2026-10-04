@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM Application Evaluation Workflow — Comprehensive Learning Notes</title>
+<style>
+:root{
+  --bg:#f6f8fb; --surface:#fff; --text:#172033; --muted:#5e6b7e;
+  --border:#dfe5ee; --accent:#315efb; --accent2:#eaf0ff;
+  --good:#13795b; --goodbg:#e9f8f2; --warn:#9a6700; --warnbg:#fff7df;
+  --code:#111827; --shadow:0 8px 28px rgba(25,40,70,.08);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.7 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.container{max-width:1120px;margin:auto;padding:0 22px}
+article{background:var(--surface);margin:32px auto;box-shadow:var(--shadow);border:1px solid var(--border);border-radius:18px;overflow:hidden}
+header.hero{padding:56px 7%;background:linear-gradient(135deg,#eef3ff,#fff)}
+.kicker{color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:.82rem}
+h1{font-size:clamp(2.2rem,5vw,4rem);line-height:1.08;margin:.35em 0}
+h2{font-size:2rem;margin-top:2.2em;border-bottom:1px solid var(--border);padding-bottom:.35em}
+h3{font-size:1.3rem;margin-top:1.7em}
+h4{margin-bottom:.3em}
+p{max-width:88ch}
+.lead{font-size:1.15rem;color:var(--muted);max-width:82ch}
+main{padding:0 7% 60px}
+.toc{background:#fbfcff;border:1px solid var(--border);border-radius:14px;padding:22px;margin:28px 0}
+.toc strong{display:block;margin-bottom:8px}
+.toc ol{margin:0;padding-left:22px}
+.toc a{color:var(--accent);text-decoration:none}
+.toc a:hover{text-decoration:underline}
+.callout{border-left:5px solid var(--accent);background:var(--accent2);padding:16px 20px;border-radius:8px;margin:20px 0}
+.callout.good{border-color:var(--good);background:var(--goodbg)}
+.callout.warn{border-color:var(--warn);background:var(--warnbg)}
+table{width:100%;border-collapse:collapse;margin:20px 0;font-size:.95rem}
+th,td{border:1px solid var(--border);padding:12px 13px;text-align:left;vertical-align:top}
+th{background:#f2f5fa}
+code{background:#eef1f6;padding:.12em .35em;border-radius:5px}
+pre{background:var(--code);color:#e7edf7;padding:18px;border-radius:12px;overflow:auto;line-height:1.55}
+pre code{background:none;padding:0;color:inherit}
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px;margin:22px 0}
+.step{flex:1 1 180px;min-width:150px;border:1px solid var(--border);border-radius:12px;padding:14px;background:#fff}
+.step b{display:block;color:var(--accent);margin-bottom:5px}
+.arrow{display:flex;align-items:center;font-size:1.5rem;color:var(--muted)}
+.diagram{border:1px solid var(--border);background:#fcfdff;border-radius:14px;padding:18px;margin:22px 0;overflow:auto}
+svg{max-width:100%;height:auto}
+.badge{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:3px 9px;font-size:.8rem;margin:2px}
+.small{font-size:.9rem;color:var(--muted)}
+.checklist li{margin:7px 0}
+footer{border-top:1px solid var(--border);padding:24px 7%;color:var(--muted);font-size:.9rem}
+@media(max-width:700px){
+  main,header.hero,footer{padding-left:5%;padding-right:5%}
+  article{margin:0;border-radius:0}
+  .arrow{display:none}
+}
+</style>
+</head>
+<body>
+<article>
+<header class="hero">
+  <div class="kicker">LLM Evaluation · Application Engineering</div>
+  <h1>LLM Application Evaluation Workflow</h1>
+  <p class="lead">A practical, end-to-end guide to evaluating an LLM-based application—from defining the task and building a golden dataset to iterative improvement, deployment monitoring, and feeding production failures back into evaluation.</p>
+  <p><span class="badge">Task & Target</span><span class="badge">Metrics</span><span class="badge">Golden Dataset</span><span class="badge">Evaluation Methods</span><span class="badge">Iteration</span><span class="badge">Production Monitoring</span></p>
+</header>
+
+<main>
+<nav class="toc" id="toc">
+  <strong>Table of Contents</strong>
+  <ol>
+    <li><a href="#context">1. Why Evaluate an LLM Application?</a></li>
+    <li><a href="#example">2. Running Example: Email Classification</a></li>
+    <li><a href="#workflow">3. The Complete Evaluation Workflow</a></li>
+    <li><a href="#step1">4. Step 1 — Define the Task and Target</a></li>
+    <li><a href="#step2">5. Step 2 — Define Success Criteria and Metrics</a></li>
+    <li><a href="#step3">6. Step 3 — Build a Golden Evaluation Dataset</a></li>
+    <li><a href="#step4">7. Step 4 — Choose an Evaluation Method</a></li>
+    <li><a href="#step5">8. Step 5 — Run the Model on the Dataset</a></li>
+    <li><a href="#step6">9. Step 6 — Evaluate and Analyze Results</a></li>
+    <li><a href="#step7">10. Step 7 — Improve the System</a></li>
+    <li><a href="#step8">11. Step 8 — Iterate Until the System Is Ready</a></li>
+    <li><a href="#step9">12. Step 9 — Deploy and Monitor in Production</a></li>
+    <li><a href="#failures">13. Production Failures → Dataset Expansion</a></li>
+    <li><a href="#multiple">14. Why One LLM Application Can Need Multiple Evaluations</a></li>
+    <li><a href="#code">15. Practical Python Example</a></li>
+    <li><a href="#cheatsheet">16. Interview / Revision Cheat Sheet</a></li>
+  </ol>
+</nav>
+
+<section id="context">
+<h2>1. Why Evaluate an LLM Application?</h2>
+<p>The lecture distinguishes between <strong>model evaluations</strong> and <strong>application evaluations</strong>. The workflow in these notes focuses on the <strong>application-evaluation perspective</strong>: evaluating the complete LLM-based system that users actually interact with.</p>
+
+<div class="callout">
+<strong>Core idea:</strong> Building an LLM application is not the same as proving that it works. The application should be evaluated before deployment, improved using evidence from evaluation, and continuously monitored after deployment.
+</div>
+
+<p>The same general workflow can be applied to simple LLM applications as well as more complex systems such as RAG applications and agents. The lecture presents a simple classification application so the mechanics of evaluation are easy to understand.</p>
+</section>
+
+<section id="example">
+<h2>2. Running Example: Email Classification</h2>
+<p>Imagine a large company receiving many customer emails every day. Instead of manually reading each email and routing it to the appropriate team, an LLM application classifies each email into a category.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1000 260" role="img" aria-label="Email classification routing architecture">
+  <rect x="30" y="80" width="180" height="90" rx="14" fill="#eef3ff" stroke="#315efb"/>
+  <text x="120" y="120" text-anchor="middle" font-size="20" font-weight="700">Customer Email</text>
+  <text x="120" y="148" text-anchor="middle" font-size="14">Message content</text>
+  <line x1="210" y1="125" x2="330" y2="125" stroke="#5e6b7e" stroke-width="3"/>
+  <polygon points="330,125 315,116 315,134" fill="#5e6b7e"/>
+  <rect x="330" y="55" width="300" height="140" rx="14" fill="#fff" stroke="#315efb" stroke-width="2"/>
+  <text x="480" y="95" text-anchor="middle" font-size="21" font-weight="700">LLM Application</text>
+  <text x="480" y="125" text-anchor="middle" font-size="14">Prompt + LLM</text>
+  <text x="480" y="150" text-anchor="middle" font-size="14">Classify email</text>
+  <text x="480" y="175" text-anchor="middle" font-size="14">billing / technical / general</text>
+  <line x1="630" y1="125" x2="750" y2="125" stroke="#5e6b7e" stroke-width="3"/>
+  <polygon points="750,125 735,116 735,134" fill="#5e6b7e"/>
+  <rect x="750" y="25" width="210" height="200" rx="14" fill="#f8fafc" stroke="#dfe5ee"/>
+  <text x="855" y="62" text-anchor="middle" font-size="17" font-weight="700">Routing</text>
+  <text x="855" y="100" text-anchor="middle" font-size="14">Billing → Billing Team</text>
+  <text x="855" y="140" text-anchor="middle" font-size="14">Technical → Technical Team</text>
+  <text x="855" y="180" text-anchor="middle" font-size="14">General → Support Team</text>
+</svg>
+</div>
+
+<table>
+<thead><tr><th>Email example</th><th>Expected category</th><th>Downstream route</th></tr></thead>
+<tbody>
+<tr><td>“My card was charged twice.”</td><td>Billing</td><td>Billing team</td></tr>
+<tr><td>“The app crashes on login.”</td><td>Technical</td><td>Technical team</td></tr>
+<tr><td>“What are your working hours?”</td><td>General</td><td>Customer support</td></tr>
+</tbody>
+</table>
+
+<p>The application may be technically easy to build, but deployment should come <strong>after evaluation</strong>. The central question is not merely “Can the LLM produce an answer?” but “Does the application perform its intended task reliably enough for its use case?”</p>
+</section>
+
+<section id="workflow">
+<h2>3. The Complete Evaluation Workflow</h2>
+
+<div class="flow">
+  <div class="step"><b>1</b>Define task & target</div><div class="arrow">→</div>
+  <div class="step"><b>2</b>Define success criteria & metrics</div><div class="arrow">→</div>
+  <div class="step"><b>3</b>Build golden dataset</div><div class="arrow">→</div>
+  <div class="step"><b>4</b>Choose evaluation method</div><div class="arrow">→</div>
+  <div class="step"><b>5</b>Run the application</div><div class="arrow">→</div>
+  <div class="step"><b>6</b>Evaluate & analyze</div><div class="arrow">→</div>
+  <div class="step"><b>7</b>Improve system</div>
+</div>
+
+<div class="diagram">
+<svg viewBox="0 0 1000 390" role="img" aria-label="Iterative LLM application evaluation lifecycle">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#315efb"/>
+    </marker>
+  </defs>
+  <rect x="60" y="35" width="250" height="70" rx="12" fill="#eef3ff" stroke="#315efb"/>
+  <text x="185" y="64" text-anchor="middle" font-size="18" font-weight="700">Define + Measure</text>
+  <text x="185" y="88" text-anchor="middle" font-size="13">Task, target, criteria, metric</text>
+  <rect x="375" y="35" width="250" height="70" rx="12" fill="#eef3ff" stroke="#315efb"/>
+  <text x="500" y="64" text-anchor="middle" font-size="18" font-weight="700">Golden Dataset</text>
+  <text x="500" y="88" text-anchor="middle" font-size="13">Inputs + expected outputs</text>
+  <rect x="690" y="35" width="250" height="70" rx="12" fill="#eef3ff" stroke="#315efb"/>
+  <text x="815" y="64" text-anchor="middle" font-size="18" font-weight="700">Evaluate</text>
+  <text x="815" y="88" text-anchor="middle" font-size="13">Run + score + analyze</text>
+  <line x1="310" y1="70" x2="375" y2="70" stroke="#315efb" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="625" y1="70" x2="690" y2="70" stroke="#315efb" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="690" y="190" width="250" height="70" rx="12" fill="#fff" stroke="#315efb"/>
+  <text x="815" y="219" text-anchor="middle" font-size="18" font-weight="700">Improve System</text>
+  <text x="815" y="243" text-anchor="middle" font-size="13">Prompt, model, etc.</text>
+  <line x1="815" y1="105" x2="815" y2="190" stroke="#315efb" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="375" y="190" width="250" height="70" rx="12" fill="#fff" stroke="#315efb"/>
+  <text x="500" y="219" text-anchor="middle" font-size="18" font-weight="700">Re-evaluate</text>
+  <text x="500" y="243" text-anchor="middle" font-size="13">Same evaluation dataset</text>
+  <line x1="690" y1="225" x2="625" y2="225" stroke="#315efb" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M500 260 C500 330, 185 330, 185 105" fill="none" stroke="#315efb" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="330" y="350" text-anchor="middle" font-size="15" font-weight="700">Iterate until the system meets the required bar</text>
+  <rect x="60" y="190" width="250" height="70" rx="12" fill="#e9f8f2" stroke="#13795b"/>
+  <text x="185" y="219" text-anchor="middle" font-size="18" font-weight="700">Deploy</text>
+  <text x="185" y="243" text-anchor="middle" font-size="13">When ready for production</text>
+  <line x1="375" y1="225" x2="310" y2="225" stroke="#315efb" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="60" y="300" width="250" height="60" rx="12" fill="#fff7df" stroke="#9a6700"/>
+  <text x="185" y="326" text-anchor="middle" font-size="17" font-weight="700">Monitor Production</text>
+  <text x="185" y="347" text-anchor="middle" font-size="13">Capture failures</text>
+  <line x1="185" y1="260" x2="185" y2="300" stroke="#9a6700" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M310 330 C570 390, 880 350, 940 260" fill="none" stroke="#9a6700" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="690" y="365" text-anchor="middle" font-size="14">Production failures enrich the dataset</text>
+</svg>
+</div>
+</section>
+
+<section id="step1">
+<h2>4. Step 1 — Define the Task and Target</h2>
+<p>Before measuring anything, explicitly state <strong>what is being evaluated</strong> and <strong>what task the application must perform</strong>.</p>
+
+<table>
+<thead><tr><th>Question</th><th>Answer for the running example</th></tr></thead>
+<tbody>
+<tr><td>What is the target?</td><td>The complete email-classification system / workflow.</td></tr>
+<tr><td>What is the task?</td><td>Classify an email into billing, technical, or general.</td></tr>
+<tr><td>What must be evaluated?</td><td>Whether the application performs the classification correctly.</td></tr>
+</tbody>
+</table>
+
+<div class="callout"><strong>Key lesson:</strong> A vague evaluation target produces vague measurements. Define the task before choosing the metric.</div>
+</section>
+
+<section id="step2">
+<h2>5. Step 2 — Define Success Criteria and Metrics</h2>
+<p>The lecture's classification example uses <strong>accuracy</strong> as the metric.</p>
+
+<p>If 100 emails are evaluated and 90 are classified correctly:</p>
+<pre><code>accuracy = correct_predictions / total_predictions
+         = 90 / 100
+         = 0.90 = 90%</code></pre>
+
+<table>
+<thead><tr><th>Concept</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>Success criterion</td><td>The behavior you want the application to achieve—for this example, correct classification.</td></tr>
+<tr><td>Metric</td><td>The quantitative measurement used to assess that criterion—for this example, accuracy.</td></tr>
+</tbody>
+</table>
+
+<div class="callout warn"><strong>Important:</strong> The lecture uses accuracy for this simple classification example. In a real application, the appropriate metric depends on the task and its failure costs; do not assume accuracy is universally sufficient.</div>
+</section>
+
+<section id="step3">
+<h2>6. Step 3 — Build a Golden Evaluation Dataset</h2>
+<p>Create a dataset containing representative inputs and their manually established expected outputs. The lecture calls this a <strong>golden dataset</strong>.</p>
+
+<table>
+<thead><tr><th>Input</th><th>Expected output / label</th></tr></thead>
+<tbody>
+<tr><td>My card was charged twice.</td><td>Billing</td></tr>
+<tr><td>The app crashes on login.</td><td>Technical</td></tr>
+<tr><td>What are your hours?</td><td>General</td></tr>
+</tbody>
+</table>
+
+<h3>How to create it</h3>
+<ol>
+<li>Prefer real historical application data when appropriate.</li>
+<li>For the example, past customer chats/emails can be used as the raw material.</li>
+<li>Have people label the examples with the expected category.</li>
+<li>Keep the labeled inputs and expected outputs as a reusable evaluation set.</li>
+</ol>
+
+<p>The lecture mentions a rough example of <strong>50–500 examples</strong> for the dataset, while emphasizing that the actual size depends on the use case.</p>
+
+<div class="callout good"><strong>Why the golden dataset matters:</strong> It provides a stable reference point. When you change a prompt or model, you can run the same dataset again and compare the resulting evaluation.</div>
+</section>
+
+<section id="step4">
+<h2>7. Step 4 — Choose an Evaluation Method</h2>
+<p>After preparing the expected results, decide <strong>who or what will judge the application output</strong>.</p>
+
+<table>
+<thead><tr><th>Method</th><th>How it works</th><th>Example fit</th></tr></thead>
+<tbody>
+<tr><td><strong>Automated</strong></td><td>Code compares generated outputs with expected outputs.</td><td>Classification labels where exact/structured comparison is possible.</td></tr>
+<tr><td><strong>Human</strong></td><td>A person reviews the generated output.</td><td>Cases where quality requires human semantic judgment.</td></tr>
+<tr><td><strong>LLM-based</strong></td><td>Another LLM evaluates the generated answer against criteria or a reference.</td><td>Long-form answers where semantic similarity or qualitative criteria matter.</td></tr>
+</tbody>
+</table>
+
+<h3>Why the method changes with the task</h3>
+<p>For a short classification label such as <code>billing</code>, ordinary code can compare the generated label with the expected label. For long-form responses, literal string comparison is often inadequate because two answers can express the same meaning with different wording.</p>
+
+<div class="callout">
+<strong>Decision principle:</strong> Match the evaluation method to the type of output and the kind of correctness you need to measure.
+</div>
+</section>
+
+<section id="step5">
+<h2>8. Step 5 — Run the Model on the Evaluation Dataset</h2>
+<p>Now send the golden evaluation inputs through the LLM application and record its outputs.</p>
+
+<pre><code>Golden dataset
+      ↓
+LLM application
+      ↓
+Predicted outputs
+      ↓
+Compare with expected outputs
+      ↓
+Evaluation score</code></pre>
+
+<p>For the running example, the system might return:</p>
+
+<table>
+<thead><tr><th>Email</th><th>Expected</th><th>Predicted</th><th>Correct?</th></tr></thead>
+<tbody>
+<tr><td>Card charged twice</td><td>Billing</td><td>Billing</td><td>Yes</td></tr>
+<tr><td>App crashes on login</td><td>Technical</td><td>General</td><td>No</td></tr>
+<tr><td>Working hours?</td><td>General</td><td>General</td><td>Yes</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="step6">
+<h2>9. Step 6 — Evaluate and Analyze Results</h2>
+<p>Evaluation produces a measurement; analysis explains <strong>where and why the application is failing</strong>.</p>
+
+<p>For example, suppose the application achieves 80% accuracy on 100 examples. That means 80 examples were classified correctly and 20 were incorrect under the lecture's simple accuracy setup.</p>
+
+<h3>Do not stop at the score</h3>
+<p>The important engineering question is: <em>What patterns exist among the failures?</em></p>
+
+<ul class="checklist">
+<li>Are billing and technical emails being confused?</li>
+<li>Are some categories systematically harder?</li>
+<li>Are there ambiguous examples in the dataset?</li>
+<li>Does the prompt fail to clearly define category boundaries?</li>
+<li>Is the selected LLM struggling with the task?</li>
+</ul>
+
+<div class="callout"><strong>Evaluation tells you <em>how much</em> is working. Error analysis helps you understand <em>what to change</em>.</strong></div>
+</section>
+
+<section id="step7">
+<h2>10. Step 7 — Improve the System</h2>
+<p>The lecture identifies several possible improvement directions. The key point is that you improve the <strong>system</strong>, not merely treat the model as an isolated component.</p>
+
+<table>
+<thead><tr><th>Potential change</th><th>Reason to investigate it</th></tr></thead>
+<tbody>
+<tr><td>Prompt improvement</td><td>The instructions may not clearly distinguish categories.</td></tr>
+<tr><td>Model change</td><td>The selected model may not perform the task sufficiently well.</td></tr>
+<tr><td>Other system changes</td><td>Application logic, routing, or other components may contribute to errors.</td></tr>
+</tbody>
+</table>
+
+<p>After making a change, do not simply assume it improved the application. Run the evaluation again.</p>
+
+<pre><code>Change system
+     ↓
+Run same evaluation dataset
+     ↓
+Measure result
+     ↓
+Analyze errors
+     ↓
+Decide next change</code></pre>
+</section>
+
+<section id="step8">
+<h2>11. Step 8 — Iterate Until the System Is Ready</h2>
+<p>This is the central feedback loop in the lecture.</p>
+
+<table>
+<thead><tr><th>Iteration</th><th>System change</th><th>Example result</th></tr></thead>
+<tbody>
+<tr><td>Baseline</td><td>Initial prompt + model</td><td>80% accuracy</td></tr>
+<tr><td>Iteration 1</td><td>Prompt improved</td><td>90% accuracy</td></tr>
+<tr><td>Iteration 2</td><td>Model changed</td><td>95% accuracy</td></tr>
+</tbody>
+</table>
+
+<p>These numbers are illustrative examples from the lecture's explanation of iteration, not a universal threshold for deployment.</p>
+
+<div class="callout good">
+<strong>Repeatable evaluation is what makes iteration useful.</strong> Because the same golden dataset can be reused, changes to the system can be evaluated consistently.
+</div>
+
+<p>Eventually, the team reaches a point where the application meets the requirements for deployment.</p>
+</section>
+
+<section id="step9">
+<h2>12. Step 9 — Deploy and Monitor in Production</h2>
+<p>Deployment is not the end of evaluation. Production introduces real inputs that may differ from the evaluation dataset.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 900 240" role="img" aria-label="Production monitoring feedback loop">
+  <defs>
+    <marker id="arrow2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#315efb"/>
+    </marker>
+  </defs>
+  <rect x="30" y="75" width="180" height="80" rx="12" fill="#e9f8f2" stroke="#13795b"/>
+  <text x="120" y="108" text-anchor="middle" font-size="18" font-weight="700">Production</text>
+  <text x="120" y="132" text-anchor="middle" font-size="13">Real user inputs</text>
+  <line x1="210" y1="115" x2="330" y2="115" stroke="#315efb" stroke-width="3" marker-end="url(#arrow2)"/>
+  <rect x="330" y="75" width="210" height="80" rx="12" fill="#fff" stroke="#315efb"/>
+  <text x="435" y="108" text-anchor="middle" font-size="18" font-weight="700">Monitor</text>
+  <text x="435" y="132" text-anchor="middle" font-size="13">Detect incorrect outputs</text>
+  <line x1="540" y1="115" x2="660" y2="115" stroke="#315efb" stroke-width="3" marker-end="url(#arrow2)"/>
+  <rect x="660" y="75" width="210" height="80" rx="12" fill="#fff7df" stroke="#9a6700"/>
+  <text x="765" y="108" text-anchor="middle" font-size="18" font-weight="700">Golden Dataset</text>
+  <text x="765" y="132" text-anchor="middle" font-size="13">Add validated failures</text>
+  <path d="M765 155 C765 215, 435 215, 435 155" fill="none" stroke="#315efb" stroke-width="3" marker-end="url(#arrow2)"/>
+  <text x="600" y="210" text-anchor="middle" font-size="14">Re-evaluate → analyze → improve → redeploy</text>
+</svg>
+</div>
+
+<p>A system can perform well on its test dataset and still make mistakes on new production inputs. Therefore, production failures should be captured, reviewed, and—when appropriate—added to the evaluation dataset.</p>
+</section>
+
+<section id="failures">
+<h2>13. Production Failures → Dataset Expansion</h2>
+<p>The lecture gives a concrete feedback mechanism: when a customer case is incorrectly routed, the responsible downstream team can flag the error. That case can then be added to the golden dataset.</p>
+
+<ol>
+<li>A production email is incorrectly classified.</li>
+<li>The downstream team identifies the incorrect routing.</li>
+<li>The case is flagged as a failure.</li>
+<li>The email and correct label are added to the evaluation dataset.</li>
+<li>The system is improved.</li>
+<li>The expanded dataset is used for re-evaluation.</li>
+<li>The improved system is deployed again when appropriate.</li>
+</ol>
+
+<div class="callout good">
+<strong>Golden dataset as a living asset:</strong> Over time, the dataset can become richer because it incorporates real failure cases discovered in production.
+</div>
+
+<h3>Conceptual lifecycle</h3>
+<pre><code>Initial dataset
+      ↓
+Evaluate
+      ↓
+Improve
+      ↓
+Deploy
+      ↓
+Monitor
+      ↓
+Production failure
+      ↓
+Validate + label failure
+      ↓
+Add to golden dataset
+      ↓
+Evaluate again
+      ↺</code></pre>
+</section>
+
+<section id="multiple">
+<h2>14. Why One LLM Application Can Need Multiple Evaluations</h2>
+<p>A particularly important point from the lecture is that <strong>one LLM-based application may have several evaluations</strong>. A single application-level score does not necessarily describe every component or quality dimension.</p>
+
+<p>For a RAG application, the lecture gives examples of separate evaluations for:</p>
+
+<table>
+<thead><tr><th>Evaluation focus</th><th>What it can investigate</th></tr></thead>
+<tbody>
+<tr><td>Retriever</td><td>Whether the retrieval component is performing as intended.</td></tr>
+<tr><td>Embedding model</td><td>Whether the embedding component is performing adequately.</td></tr>
+<tr><td>Full RAG workflow</td><td>Whether the end-to-end application works correctly.</td></tr>
+<tr><td>Latency</td><td>How quickly the system responds.</td></tr>
+</tbody>
+</table>
+
+<div class="callout">
+<strong>Important mental model:</strong> Think of evaluation as a set of tests around an application—not necessarily one universal “LLM score.”
+</div>
+
+<p>The same principle can extend to agentic systems, where different evaluations can examine individual tools/components as well as the complete workflow.</p>
+</section>
+
+<section id="code">
+<h2>15. Practical Python Example</h2>
+<p>For the simple classification example, the lecture explains that an automated evaluation can be implemented with ordinary Python because the expected and generated labels are directly comparable.</p>
+
+<h3>Minimal accuracy evaluator</h3>
+<pre><code>def accuracy(expected, predicted):
+    if len(expected) != len(predicted):
+        raise ValueError("Both lists must have the same length")
+
+    correct = sum(
+        exp == pred
+        for exp, pred in zip(expected, predicted)
+    )
+
+    return correct / len(expected)
+
+
+expected = [
+    "billing",
+    "technical",
+    "general",
+    "billing",
+    "general",
+]
+
+predicted = [
+    "billing",
+    "general",
+    "general",
+    "billing",
+    "technical",
+]
+
+score = accuracy(expected, predicted)
+
+print(f"Accuracy: {score:.0%}")</code></pre>
+
+<p>Expected output:</p>
+<pre><code>Accuracy: 60%</code></pre>
+
+<h3>Adding failure analysis</h3>
+<pre><code>def find_failures(expected, predicted, inputs):
+    failures = []
+
+    for item, exp, pred in zip(inputs, expected, predicted):
+        if exp != pred:
+            failures.append({
+                "input": item,
+                "expected": exp,
+                "predicted": pred,
+            })
+
+    return failures
+
+
+inputs = [
+    "My card was charged twice.",
+    "The app crashes on login.",
+    "What are your hours?",
+    "Please refund my duplicate charge.",
+    "Where is your nearest store?",
+]
+
+failures = find_failures(expected, predicted, inputs)
+
+for failure in failures:
+    print(failure)</code></pre>
+
+<p>This second step is important because a single accuracy number does not reveal <em>which</em> examples failed. Failure records provide the raw material for error analysis and system improvement.</p>
+
+<div class="callout warn">
+<strong>Scope note:</strong> This Python example mirrors the lecture's simple classification setup. It is not a complete production evaluation framework and does not implement an LLM, prompt management, experiment tracking, or production monitoring.
+</div>
+</section>
+
+<section id="cheatsheet">
+<h2>16. Interview / Revision Cheat Sheet</h2>
+
+<table>
+<thead><tr><th>#</th><th>Step</th><th>What you do</th><th>Key question</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Define task & target</td><td>Specify the application and task being evaluated.</td><td>What exactly are we testing?</td></tr>
+<tr><td>2</td><td>Success criteria & metrics</td><td>Define what success means and how to measure it.</td><td>How will we know it works?</td></tr>
+<tr><td>3</td><td>Golden dataset</td><td>Collect representative inputs with expected outputs.</td><td>What should the correct result be?</td></tr>
+<tr><td>4</td><td>Evaluation method</td><td>Choose automated, human, or LLM-based evaluation as appropriate.</td><td>Who/what judges correctness?</td></tr>
+<tr><td>5</td><td>Run the application</td><td>Send the evaluation dataset through the system.</td><td>What does the application produce?</td></tr>
+<tr><td>6</td><td>Evaluate & analyze</td><td>Calculate metrics and inspect failures.</td><td>How well did it perform and where did it fail?</td></tr>
+<tr><td>7</td><td>Improve system</td><td>Change prompt, model, or other system components.</td><td>What can we change?</td></tr>
+<tr><td>8</td><td>Iterate</td><td>Re-run evaluation after changes.</td><td>Did the change actually improve results?</td></tr>
+<tr><td>9</td><td>Deploy & monitor</td><td>Release when ready and continuously observe production.</td><td>Does it continue to work on real inputs?</td></tr>
+</tbody>
+</table>
+
+<h3>One-line memory trick</h3>
+<pre><code>DEFINE → MEASURE → BUILD GOLDEN DATA → CHOOSE EVAL
+→ RUN → SCORE → ANALYZE → IMPROVE → REPEAT
+→ DEPLOY → MONITOR → ADD FAILURES → RE-EVALUATE</code></pre>
+
+<h3>Key distinctions to remember</h3>
+<ul>
+<li><strong>Task</strong> = what the application must do.</li>
+<li><strong>Success criterion</strong> = what acceptable behavior looks like.</li>
+<li><strong>Metric</strong> = how that behavior is measured.</li>
+<li><strong>Golden dataset</strong> = labeled reference examples used for repeatable evaluation.</li>
+<li><strong>Evaluation method</strong> = automated code, human judgment, or an LLM-based judge, depending on the task.</li>
+<li><strong>Evaluation</strong> = measure performance.</li>
+<li><strong>Error analysis</strong> = understand failure patterns.</li>
+<li><strong>Iteration</strong> = change the system and evaluate again.</li>
+<li><strong>Production monitoring</strong> = observe real-world behavior after deployment.</li>
+<li><strong>Dataset expansion</strong> = turn validated production failures into new evaluation cases.</li>
+<li><strong>Multiple evaluations</strong> = one application may need separate evaluations for components and quality dimensions.</li>
+</ul>
+
+<aside class="callout">
+<strong>Big picture:</strong> Reliable LLM applications are built through an evaluation loop, not through a one-time test. The reusable golden dataset provides the reference point; evaluation provides evidence; error analysis identifies improvement opportunities; and production monitoring supplies new failure cases that can make the evaluation set increasingly representative.
+</aside>
+</section>
+
+</main>
+<footer>
+  <strong>Source basis:</strong> These notes are derived from the supplied lecture transcript on the LLM Application Evaluation Workflow. The terminology, sequence, examples, and core explanations follow the source. Additional code and diagrams are instructional representations of the same concepts.
+</footer>
+</article>
+</body>
+</html>
