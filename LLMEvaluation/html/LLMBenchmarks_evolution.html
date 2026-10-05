@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>LLM Knowledge Benchmarks — From MMLU to Humanity's Last Exam</title>
+
+<style>
+:root{
+  --bg:#f6f8fc;
+  --surface:#ffffff;
+  --surface2:#f1f5fb;
+  --text:#172033;
+  --muted:#5f6b7a;
+  --border:#dce3ee;
+  --primary:#2457d6;
+  --primary-dark:#173b96;
+  --green:#138a5b;
+  --orange:#c76b00;
+  --red:#c53b45;
+  --shadow:0 10px 30px rgba(30,55,90,.08);
+}
+
+*{box-sizing:border-box}
+
+html{scroll-behavior:smooth}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,
+               "Segoe UI",sans-serif;
+  line-height:1.7;
+}
+
+.page{
+  max-width:1500px;
+  margin:auto;
+  display:grid;
+  grid-template-columns:270px minmax(0,1fr);
+  gap:32px;
+  padding:30px;
+}
+
+.toc{
+  position:sticky;
+  top:20px;
+  align-self:start;
+  max-height:calc(100vh - 40px);
+  overflow:auto;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:20px;
+  box-shadow:var(--shadow);
+}
+
+.toc h3{
+  margin-top:0;
+  font-size:15px;
+}
+
+.toc a{
+  display:block;
+  color:var(--muted);
+  text-decoration:none;
+  font-size:13px;
+  padding:6px 0;
+}
+
+.toc a:hover{color:var(--primary)}
+
+article{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  overflow:hidden;
+  box-shadow:var(--shadow);
+}
+
+.hero{
+  padding:60px;
+  color:white;
+  background:
+    radial-gradient(circle at 80% 20%,rgba(255,255,255,.18),transparent 28%),
+    linear-gradient(135deg,#173b96,#2457d6 55%,#3978e8);
+}
+
+.hero h1{
+  margin:0 0 15px;
+  font-size:clamp(34px,5vw,58px);
+  line-height:1.08;
+}
+
+.hero p{
+  max-width:900px;
+  font-size:18px;
+  opacity:.94;
+}
+
+.content{
+  padding:45px 55px 70px;
+}
+
+h2{
+  margin-top:65px;
+  padding-bottom:10px;
+  border-bottom:2px solid var(--border);
+  font-size:30px;
+}
+
+h3{
+  margin-top:35px;
+  font-size:22px;
+}
+
+h4{
+  margin-top:25px;
+  font-size:18px;
+}
+
+p{margin:13px 0}
+
+strong{color:#101a2c}
+
+.card-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+  gap:18px;
+  margin:25px 0;
+}
+
+.card{
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:20px;
+  background:var(--surface);
+}
+
+.card h3{
+  margin-top:0;
+  font-size:19px;
+}
+
+.callout{
+  margin:25px 0;
+  padding:20px 22px;
+  border-radius:12px;
+  border-left:5px solid var(--primary);
+  background:#eef4ff;
+}
+
+.callout.tip{
+  border-color:var(--green);
+  background:#edf9f4;
+}
+
+.callout.warning{
+  border-color:var(--orange);
+  background:#fff7e9;
+}
+
+.callout.danger{
+  border-color:var(--red);
+  background:#fff0f1;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin:25px 0;
+  font-size:14px;
+}
+
+th,td{
+  padding:13px 14px;
+  border:1px solid var(--border);
+  vertical-align:top;
+  text-align:left;
+}
+
+th{
+  background:var(--surface2);
+  font-weight:700;
+}
+
+pre{
+  background:#111827;
+  color:#e8edf7;
+  padding:20px;
+  border-radius:12px;
+  overflow:auto;
+  font-size:13px;
+  line-height:1.55;
+}
+
+code{
+  font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+}
+
+.inline-code{
+  background:#eef2f7;
+  border:1px solid var(--border);
+  padding:2px 6px;
+  border-radius:5px;
+  font-family:monospace;
+}
+
+.diagram{
+  margin:30px 0;
+  padding:25px;
+  background:#fbfcff;
+  border:1px solid var(--border);
+  border-radius:16px;
+  overflow:auto;
+}
+
+.diagram svg{
+  width:100%;
+  min-width:800px;
+  height:auto;
+}
+
+.metric{
+  font-size:30px;
+  font-weight:800;
+  color:var(--primary);
+}
+
+.timeline{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:12px;
+  margin:30px 0;
+}
+
+.timeline div{
+  padding:17px;
+  border-radius:12px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+}
+
+.checklist li{margin:8px 0}
+
+footer{
+  margin-top:60px;
+  padding-top:25px;
+  border-top:1px solid var(--border);
+  color:var(--muted);
+  font-size:13px;
+}
+
+@media(max-width:900px){
+  .page{grid-template-columns:1fr;padding:15px}
+  .toc{position:relative;top:auto;max-height:none}
+  .content{padding:30px 22px 50px}
+  .hero{padding:40px 25px}
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="page">
+
+<aside class="toc">
+  <h3>On this page</h3>
+
+<a href="#intro">1. Introduction & Recap</a> <a href="#capabilities">2. Core LLM Capabilities</a> <a href="#knowledge">3. Knowledge Capability</a> <a href="#mmlu">4. MMLU</a> <a href="#truthfulqa">5. TruthfulQA</a> <a href="#agieval">6. AGI Eval</a> <a href="#gpqa">7. GPQA</a> <a href="#mmlupro">8. MMLU-Pro</a> <a href="#simpleqa">9. SimpleQA</a> <a href="#hle">10. Humanity's Last Exam</a> <a href="#roadmap">11. Benchmark Roadmap</a> <a href="#benchwiki">12. BenchWiki</a> <a href="#mmlu-deep">13. MMLU Deep Dive</a> <a href="#truth-deep">14. TruthfulQA Deep Dive</a> <a href="#agi-deep">15. AGI Eval Deep Dive</a> <a href="#gpqa-deep">16. GPQA Deep Dive</a> <a href="#pro-deep">17. MMLU-Pro Deep Dive</a> <a href="#simple-deep">18. SimpleQA Deep Dive</a> <a href="#hle-deep">19. HLE Deep Dive</a> <a href="#comparison">20. Comparison Table</a> <a href="#code">21. Evaluation Code</a> <a href="#takeaways">22. Key Takeaways</a>
+
+</aside>
+
+<article>
+
+<header class="hero">
+  <h1>LLM Knowledge Benchmarks</h1>
+  <p>
+    From broad academic knowledge with MMLU to difficult expert reasoning,
+    factuality, calibration, and frontier-level evaluation with GPQA,
+    SimpleQA, MMLU-Pro, and Humanity's Last Exam.
+  </p>
+</header>
+
+<div class="content">
+
+<section id="intro">
+<h2>1. Introduction &amp; Recap of Model Evaluation</h2>
+
+<p>
+LLM evaluation is the process of systematically measuring how well a language
+model performs against a defined capability, task, or quality criterion.
+Instead of asking only whether a model produces fluent text, evaluation asks:
+<strong>What can the model actually do, how reliably can it do it, and where does it fail?</strong>
+</p>
+
+<div class="callout">
+<strong>Important distinction:</strong>
+A benchmark is not simply a collection of questions. It is an evaluation
+instrument with a defined dataset, task format, scoring methodology, and
+interpretation of the resulting score.
+</div>
+
+<p>
+The benchmark discussion in this lesson moves toward <strong>model-level
+evaluation</strong>. The focus shifts from evaluating a complete application
+such as an LLM-powered classifier or RAG system to evaluating the underlying
+capabilities of the model itself.
+</p>
+
+</section>
+
+<section id="capabilities">
+<h2>2. The Core LLM Capabilities</h2>
+
+<p>
+A useful way to understand LLM benchmarks is to first decompose the overall
+capability of an LLM into smaller dimensions.
+</p>
+
+<div class="card-grid">
+
+<div class="card">
+<h3>Knowledge</h3>
+<p>Can the model retrieve or demonstrate information learned during training?</p>
+</div>
+
+<div class="card">
+<h3>Reasoning</h3>
+<p>Can it combine information and derive an answer rather than merely recall one?</p>
+</div>
+
+<div class="card">
+<h3>Truthfulness</h3>
+<p>Does the model distinguish factual information from plausible but incorrect claims?</p>
+</div>
+
+<div class="card">
+<h3>Instruction Following</h3>
+<p>Can the model follow the requested task, constraints, format, and behavior?</p>
+</div>
+
+<div class="card">
+<h3>Language</h3>
+<p>Can it understand and generate language across domains and languages?</p>
+</div>
+
+<div class="card">
+<h3>Multimodality</h3>
+<p>Can it reason over inputs such as images, diagrams, or other modalities?</p>
+</div>
+
+<div class="card">
+<h3>Calibration</h3>
+<p>Does the model's confidence correspond reasonably well to correctness?</p>
+</div>
+
+<div class="card">
+<h3>Robustness</h3>
+<p>Does performance remain reliable when questions become unfamiliar or adversarial?</p>
+</div>
+
+</div>
+
+<div class="callout tip">
+The key lesson is that <strong>“model quality” is multidimensional</strong>.
+A single benchmark score cannot completely describe an LLM.
+</div>
+
+</section>
+
+<section id="knowledge">
+<h2>3. What Is Knowledge Capability?</h2>
+
+<h3>Parametric Memory</h3>
+
+<p>
+An LLM learns statistical representations of information during pretraining.
+This information is often referred to as <strong>parametric knowledge</strong>
+because it is encoded implicitly in the model parameters rather than retrieved
+from an external database at inference time.
+</p>
+
+<p>
+Knowledge benchmarks attempt to measure whether that learned knowledge can be
+successfully accessed and used when answering questions.
+</p>
+
+<div class="diagram">
+
+<svg viewBox="0 0 1100 360" role="img"
+  aria-label="LLM knowledge evaluation pipeline">
+
+<defs>
+  <marker id="arrow" markerWidth="10" markerHeight="10"
+          refX="9" refY="3" orient="auto">
+    <path d="M0,0 L10,3 L0,6 Z" fill="#2457d6"/>
+  </marker>
+</defs>
+
+<rect x="40" y="110" width="210" height="100" rx="16"
+   fill="#eef4ff" stroke="#2457d6"/> <text x="145" y="150" text-anchor="middle"
+   font-size="22" font-weight="700">Benchmark</text> <text x="145" y="180" text-anchor="middle"
+   font-size="15">Questions + Answers</text>
+
+<line x1="250" y1="160" x2="370" y2="160"
+   stroke="#2457d6" stroke-width="4"
+   marker-end="url(#arrow)"/>
+
+<rect x="370" y="110" width="240" height="100" rx="16"
+   fill="#edf9f4" stroke="#138a5b"/> <text x="490" y="150" text-anchor="middle"
+   font-size="22" font-weight="700">LLM</text> <text x="490" y="180" text-anchor="middle"
+   font-size="15">Generate / Select Answer</text>
+
+<line x1="610" y1="160" x2="730" y2="160"
+   stroke="#2457d6" stroke-width="4"
+   marker-end="url(#arrow)"/>
+
+<rect x="730" y="110" width="250" height="100" rx="16"
+   fill="#fff7e9" stroke="#c76b00"/> <text x="855" y="150" text-anchor="middle"
+   font-size="22" font-weight="700">Evaluator</text> <text x="855" y="180" text-anchor="middle"
+   font-size="15">Compare & Score</text>
+
+<text x="550" y="285" text-anchor="middle"
+   font-size="18" fill="#5f6b7a">
+Knowledge score is evidence of benchmark performance — not a complete measure of intelligence. </text>
+
+</svg>
+
+</div>
+
+</section>
+
+<section id="mmlu">
+<h2>4. MMLU — Measuring Broad Knowledge</h2>
+
+<p>
+<strong>MMLU</strong> (Massive Multitask Language Understanding) became an
+important benchmark for measuring broad academic and professional knowledge.
+The supplied course outline specifically introduces MMLU as a benchmark covering
+<strong>57 subjects</strong>.
+</p>
+
+<p>
+The central idea is simple: instead of evaluating a model on one narrow topic,
+test it across many different disciplines.
+</p>
+
+<h3>What MMLU Attempts to Measure</h3>
+
+<ul>
+<li>Broad factual and academic knowledge</li>
+<li>Performance across many subject areas</li>
+<li>Multiple-choice question answering</li>
+<li>Ability to transfer knowledge across domains</li>
+</ul>
+
+<h3>Why Multiple Subjects Matter</h3>
+
+<p>
+A model can perform extremely well on programming questions while being weak in
+law, medicine, history, or philosophy. A broad benchmark exposes this
+cross-domain variation.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Evaluation Approach</th>
+<th>What It Reveals</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Single-domain benchmark</td>
+<td>Depth in a particular capability</td>
+</tr>
+<tr>
+<td>Multi-domain benchmark</td>
+<td>Breadth of knowledge</td>
+</tr>
+<tr>
+<td>Multiple-choice evaluation</td>
+<td>Controlled answer space and straightforward scoring</td>
+</tr>
+<tr>
+<td>Open-ended evaluation</td>
+<td>More realistic generation, but harder scoring</td>
+</tr>
+</tbody>
+</table>
+
+<div class="callout warning">
+<strong>Benchmark saturation:</strong>
+As increasingly capable models perform very well on an older benchmark,
+the benchmark may become less useful for distinguishing newer models.
+This motivates the development of harder or better-designed evaluations.
+</div>
+
+</section>
+
+<section id="truthfulqa">
+<h2>5. TruthfulQA — Testing Reliability and Truthfulness</h2>
+
+<p>
+The next branch in the benchmark progression is <strong>TruthfulQA</strong>.
+The course outline explicitly frames this branch around
+<strong>testing reliability</strong> and later discusses
+<strong>misconceptions</strong> and possible contamination introduced during
+alignment stages.
+</p>
+
+<h3>Why Knowledge Alone Is Not Enough</h3>
+
+<p>
+A model may have access to enormous amounts of information and still generate
+an answer that sounds convincing but is false.
+</p>
+
+<p>
+Truthfulness therefore asks a different question:
+</p>
+
+<blockquote>
+Can the model resist producing commonly repeated misconceptions or plausible
+falsehoods when answering questions?
+</blockquote>
+
+<div class="card-grid">
+
+<div class="card">
+<h3>Knowledge</h3>
+<p>Does the model know information?</p>
+</div>
+
+<div class="card">
+<h3>Truthfulness</h3>
+<p>Does the model state what is actually true?</p>
+</div>
+
+<div class="card">
+<h3>Reliability</h3>
+<p>Does the behavior remain dependable across problematic questions?</p>
+</div>
+
+</div>
+
+<div class="callout">
+<strong>Key idea:</strong>
+A benchmark can intentionally probe the gap between
+<strong>“what a model can say”</strong> and
+<strong>“what a model should say because it is true.”</strong>
+</div>
+
+</section>
+
+<section id="agieval">
+<h2>6. AGI Eval — Human Exam Baselines</h2>
+
+<p>
+The course outline introduces <strong>AGI Eval</strong> as another branch,
+specifically connecting it with <strong>human exam baselines</strong> and
+<strong>bilingual exams</strong>.
+</p>
+
+<p>
+The important evaluation concept here is comparison against exams or
+question formats designed for human learners. This creates an intuitive
+reference point: instead of asking only whether an LLM scores highly, we can
+ask how its performance compares with human-level examination performance.
+</p>
+
+<h3>Why Human Baselines Matter</h3>
+
+<p>
+A raw score is difficult to interpret without context. Consider:
+</p>
+
+<pre><code>Model A: 82%
+Model B: 78%</code></pre>
+
+<p>
+The numbers alone do not tell us whether 82% represents excellent,
+human-comparable performance or a mediocre result on an easy benchmark.
+</p>
+
+<p>
+A benchmark with meaningful human baselines provides additional interpretive
+context.
+</p>
+
+</section>
+
+<section id="gpqa">
+<h2>7. GPQA — Depth of Knowledge</h2>
+
+<p>
+The course outline introduces <strong>GPQA</strong> as a benchmark for
+<strong>depth of knowledge</strong> and later expands it as
+“Google-Proof Q&amp;A” with a <strong>Diamond</strong> dataset.
+</p>
+
+<h3>Why “Google-Proof” Questions?</h3>
+
+<p>
+A useful difficult benchmark should ideally distinguish genuine reasoning and
+expert knowledge from superficial retrieval or memorization.
+</p>
+
+<p>
+GPQA therefore targets difficult questions in which simply recognizing a
+familiar phrase is insufficient.
+</p>
+
+<div class="diagram">
+
+<svg viewBox="0 0 1100 430" role="img"
+aria-label="Difficulty progression from recall to expert reasoning">
+
+<defs>
+<marker id="arrow2" markerWidth="10" markerHeight="10"
+refX="9" refY="3" orient="auto">
+<path d="M0,0 L10,3 L0,6 Z" fill="#2457d6"/>
+</marker>
+</defs>
+
+<rect x="60" y="120" width="250" height="130" rx="18"
+fill="#eef4ff" stroke="#2457d6"/> <text x="185" y="165" text-anchor="middle"
+font-size="23" font-weight="700">Basic Recall</text> <text x="185" y="200" text-anchor="middle"
+font-size="15">Recognize facts</text> <text x="185" y="223" text-anchor="middle"
+font-size="15">Low reasoning demand</text>
+
+<line x1="310" y1="185" x2="420" y2="185"
+stroke="#2457d6" stroke-width="4" marker-end="url(#arrow2)"/>
+
+<rect x="420" y="120" width="250" height="130" rx="18"
+fill="#edf9f4" stroke="#138a5b"/> <text x="545" y="165" text-anchor="middle"
+font-size="23" font-weight="700">Application</text> <text x="545" y="200" text-anchor="middle"
+font-size="15">Combine concepts</text> <text x="545" y="223" text-anchor="middle"
+font-size="15">Moderate reasoning</text>
+
+<line x1="670" y1="185" x2="780" y2="185"
+stroke="#2457d6" stroke-width="4" marker-end="url(#arrow2)"/>
+
+<rect x="780" y="120" width="260" height="130" rx="18"
+fill="#fff7e9" stroke="#c76b00"/> <text x="910" y="165" text-anchor="middle"
+font-size="23" font-weight="700">Expert Reasoning</text> <text x="910" y="200" text-anchor="middle"
+font-size="15">Specialized knowledge</text> <text x="910" y="223" text-anchor="middle"
+font-size="15">High reasoning demand</text>
+
+<text x="550" y="330" text-anchor="middle"
+font-size="18" fill="#5f6b7a">
+Harder benchmarks deliberately move beyond simple factual recall. </text>
+
+</svg>
+
+</div>
+
+</section>
+
+<section id="mmlupro">
+<h2>8. MMLU-Pro — Fixing Weaknesses in Traditional MMLU</h2>
+
+<p>
+The course outline describes <strong>MMLU-Pro</strong> as an upgrade involving
+<strong>10 answer options</strong>, <strong>14 disciplines</strong>, and a
+stronger emphasis on reasoning.
+</p>
+
+<h3>Why Create MMLU-Pro?</h3>
+
+<p>
+When a benchmark becomes too familiar or too easy for modern models,
+researchers need to make the evaluation more discriminative.
+</p>
+
+<p>
+The progression can be understood as:
+</p>
+
+<pre><code>Older benchmark
+      ↓
+Models improve
+      ↓
+Scores become compressed
+      ↓
+Benchmark becomes less discriminative
+      ↓
+Harder / better benchmark
+      ↓
+MMLU-Pro</code></pre>
+
+<h3>Reasoning Bias</h3>
+
+<p>
+The deeper purpose is not merely adding more answer choices. A stronger
+benchmark should make shallow pattern matching less effective and require the
+model to reason about the underlying problem.
+</p>
+
+<div class="callout tip">
+<strong>Interview perspective:</strong>
+When asked why newer benchmarks are necessary, answer:
+“Because benchmark saturation reduces their ability to distinguish between
+increasingly capable models.”
+</div>
+
+</section>
+
+<section id="simpleqa">
+<h2>9. SimpleQA — Open-Ended Short Answers</h2>
+
+<p>
+The course outline introduces <strong>SimpleQA</strong> as an
+<strong>open-ended short-answer</strong> benchmark and specifically calls out
+<strong>calibration metrics</strong>.
+</p>
+
+<h3>Why Move Beyond Multiple Choice?</h3>
+
+<p>
+Multiple-choice evaluation provides a constrained answer space:
+</p>
+
+<pre><code>A
+B
+C
+D</code></pre>
+
+<p>
+Open-ended evaluation removes that constraint. The model must actually produce
+the answer, which introduces additional evaluation challenges:
+</p>
+
+<ul>
+<li>Exact correctness</li>
+<li>Equivalent wording</li>
+<li>Partial correctness</li>
+<li>Abstention behavior</li>
+<li>Confidence and calibration</li>
+</ul>
+
+<h3>Calibration</h3>
+
+<p>
+A well-calibrated model should have confidence that roughly corresponds to the
+probability that its answer is correct.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Model Behavior</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>High confidence + correct</td>
+<td>Good confidence</td>
+</tr>
+<tr>
+<td>Low confidence + incorrect</td>
+<td>Reasonable uncertainty</td>
+</tr>
+<tr>
+<td>High confidence + incorrect</td>
+<td>Potentially dangerous overconfidence</td>
+</tr>
+</tbody>
+</table>
+
+</section>
+
+<section id="hle">
+<h2>10. Humanity's Last Exam — The Modern Frontier</h2>
+
+<p>
+The supplied outline positions <strong>Humanity's Last Exam (HLE)</strong> as
+a modern frontier benchmark and connects it with <strong>breadth × depth</strong>,
+<strong>multimodality</strong>, and <strong>private evaluation sets</strong>.
+
+</p>
+
+<h3>Breadth × Depth</h3>
+
+<p>
+The fundamental idea is that a strong evaluation should not test only a narrow
+specialization or only simple factual recall.
+</p>
+
+<div class="card-grid">
+
+<div class="card">
+<div class="metric">Breadth</div>
+<p>How many areas of knowledge can the model handle?</p>
+</div>
+
+<div class="card">
+<div class="metric">Depth</div>
+<p>How difficult and specialized are the questions?</p>
+</div>
+
+<div class="card">
+<div class="metric">Multimodality</div>
+<p>Can the model reason using information beyond plain text?</p>
+</div>
+
+</div>
+
+<h3>Why Private Evaluation Sets Matter</h3>
+
+<p>
+If benchmark questions become publicly available and are included in model
+training data, benchmark scores can become contaminated. A model may then
+appear to perform well partly because it has encountered the evaluation data
+during training.
+</p>
+
+<div class="callout danger">
+<strong>Evaluation contamination:</strong>
+A benchmark is most informative when success reflects the capability being
+measured rather than memorization of the test set.
+</div>
+
+</section>
+
+<section id="roadmap">
+<h2>11. Roadmap of the Key Knowledge Benchmarks</h2>
+
+<div class="timeline">
+
+<div>
+<strong>01</strong>
+<h4>MMLU</h4>
+<p>Broad knowledge across many subjects.</p>
+</div>
+
+<div>
+<strong>02</strong>
+<h4>TruthfulQA</h4>
+<p>Truthfulness and resistance to misconceptions.</p>
+</div>
+
+<div>
+<strong>03</strong>
+<h4>AGI Eval</h4>
+<p>Human-style examination and baseline comparison.</p>
+</div>
+
+<div>
+<strong>04</strong>
+<h4>GPQA</h4>
+<p>Deep expert-level knowledge and reasoning.</p>
+</div>
+
+<div>
+<strong>05</strong>
+<h4>MMLU-Pro</h4>
+<p>Harder, more discriminative academic evaluation.</p>
+</div>
+
+<div>
+<strong>06</strong>
+<h4>SimpleQA</h4>
+<p>Open-ended factual answers and calibration.</p>
+</div>
+
+<div>
+<strong>07</strong>
+<h4>HLE</h4>
+<p>Broad, deep, frontier-level evaluation.</p>
+</div>
+
+</div>
+
+</section>
+
+<section id="benchwiki">
+<h2>12. BenchWiki — Open Benchmark Database</h2>
+
+<p>
+The course outline next introduces <strong>BenchWiki</strong> as an
+<strong>open benchmark database</strong>.
+</p>
+
+<p>
+Conceptually, a benchmark database is useful because the LLM evaluation
+ecosystem contains many datasets, each measuring different capabilities.
+Keeping benchmark information organized makes it easier to answer questions
+such as:
+</p>
+
+<ul>
+<li>What capability does this benchmark test?</li>
+<li>Is it multiple-choice or open-ended?</li>
+<li>What is the target difficulty?</li>
+<li>Is the dataset public or private?</li>
+<li>What metric is used?</li>
+<li>Is there a human baseline?</li>
+<li>Could benchmark contamination affect interpretation?</li>
+</ul>
+
+</section>
+
+<section id="mmlu-deep">
+<h2>13. Deep Dive — MMLU Architecture, Log-Likelihoods &amp; Saturated Limits</h2>
+
+<p>
+The outline specifically identifies three deeper MMLU topics:
+<strong>architecture, log-likelihoods, and saturated limits</strong>.
+
+</p>
+
+<h3>Log-Likelihood Based Evaluation</h3>
+
+<p>
+For multiple-choice evaluation, one possible approach is to compare the model's
+likelihood of candidate answers rather than relying only on generated text.
+</p>
+
+<pre><code>Question:
+What is 2 + 2?
+
+A. 3
+B. 4
+C. 5
+D. 6
+
+Model scores:
+P(A) = 0.02
+P(B) = 0.94
+P(C) = 0.03
+P(D) = 0.01
+
+Predicted answer = B</code></pre>
+
+<p>
+This illustrates the general idea of selecting the answer associated with the
+highest model likelihood.
+</p>
+
+<h3>Saturation</h3>
+
+<p>
+If successive models all approach the upper end of a benchmark's score range,
+the benchmark loses discriminatory power.
+</p>
+
+<pre><code>Model A   ███████████████░░░  76%
+Model B   █████████████████░  85%
+Model C   ██████████████████  91%
+Model D   ██████████████████  94%
+
+        ↓
+
+Less room to distinguish future models</code></pre>
+
+</section>
+
+<section id="truth-deep">
+<h2>14. Deep Dive — TruthfulQA, Misconceptions &amp; Contamination</h2>
+
+<p>
+The instructor-outline explicitly highlights <strong>misconceptions</strong>
+and <strong>alignment-stage contamination</strong> as part of this deep dive.
+
+</p>
+
+<h3>Why Misconceptions Are Important</h3>
+
+<p>
+The web contains huge amounts of repeated information. Repetition does not
+automatically make information true.
+</p>
+
+<p>
+An LLM trained to model language distributions can therefore encounter a
+failure mode where a widely repeated misconception becomes a highly probable
+continuation.
+</p>
+
+<div class="callout warning">
+<strong>Core lesson:</strong>
+Language-model likelihood and factual truth are different concepts.
+</div>
+
+</section>
+
+<section id="agi-deep">
+<h2>15. Deep Dive — AGI Eval</h2>
+
+<p>
+The supplied outline identifies three aspects for this section:
+<strong>bilingual exams</strong>, <strong>human baselines</strong>, and the
+broader examination setting.
+</p>
+
+<p>
+Bilingual or multilingual examination data is particularly useful for
+investigating whether performance depends on the language in which the
+question is presented.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>What We Learn</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Does the model answer correctly in English?</td>
+<td>Baseline task performance</td>
+</tr>
+<tr>
+<td>Does performance change in another language?</td>
+<td>Language-dependent capability</td>
+</tr>
+<tr>
+<td>How does it compare with human performance?</td>
+<td>Context for interpreting the score</td>
+</tr>
+</tbody>
+</table>
+
+</section>
+
+<section id="gpqa-deep">
+<h2>16. Deep Dive — GPQA and the Diamond Dataset</h2>
+
+<p>
+The outline specifically identifies the <strong>Google-Proof Q&amp;A</strong>
+framing and the <strong>Diamond Dataset</strong>.
+</p>
+
+<p>
+The important conceptual progression is:
+</p>
+
+<pre><code>General knowledge
+      ↓
+Academic knowledge
+      ↓
+Difficult domain knowledge
+      ↓
+Expert-level reasoning
+      ↓
+Questions designed to resist superficial lookup</code></pre>
+
+<p>
+This makes GPQA useful for studying whether a model can operate at a much
+deeper level than conventional broad-knowledge benchmarks.
+</p>
+
+</section>
+
+<section id="pro-deep">
+<h2>17. Deep Dive — MMLU-Pro</h2>
+
+<p>
+The instructor outline identifies three central aspects:
+<strong>10 options</strong>, <strong>14 disciplines</strong>, and
+<strong>reasoning bias</strong>.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>MMLU</th>
+<th>MMLU-Pro</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Question format</td>
+<td>Multiple choice</td>
+<td>More challenging multiple choice</td>
+</tr>
+<tr>
+<td>Answer choices</td>
+<td>Traditional option count</td>
+<td>10 options</td>
+</tr>
+<tr>
+<td>Disciplines</td>
+<td>Broad subject coverage</td>
+<td>14 disciplines highlighted in the course</td>
+</tr>
+<tr>
+<td>Difficulty goal</td>
+<td>Broad knowledge</td>
+<td>More demanding reasoning</td>
+</tr>
+<tr>
+<td>Main motivation</td>
+<td>Measure broad knowledge</td>
+<td>Improve discrimination as models improve</td>
+</tr>
+</tbody>
+</table>
+
+</section>
+
+<section id="simple-deep">
+<h2>18. Deep Dive — SimpleQA</h2>
+
+<p>
+The outline describes SimpleQA through three ideas:
+<strong>open-ended short answers</strong>, <strong>calibration</strong>, and
+<strong>metrics</strong>.
+</p>
+
+<h3>Why Open-Ended Evaluation Is Harder</h3>
+
+<p>
+Suppose the reference answer is:
+</p>
+
+<pre><code>Paris</code></pre>
+
+<p>
+The model might answer:
+</p>
+
+<pre><code>The capital city of France is Paris.</code></pre>
+
+<p>
+A useful evaluator must recognize semantic correctness rather than blindly
+requiring exact string equality.
+</p>
+
+<p>
+This makes evaluation design itself an important engineering problem.
+</p>
+
+</section>
+
+<section id="hle-deep">
+<h2>19. Deep Dive — Humanity's Last Exam</h2>
+
+<p>
+The supplied outline identifies four important themes:
+<strong>breadth × depth</strong>, <strong>multimodality</strong>, and
+<strong>private sets</strong>.
+</p>
+
+<div class="diagram">
+
+<svg viewBox="0 0 1000 520" role="img"
+aria-label="HLE evaluation dimensions">
+
+<rect x="90" y="80" width="250" height="140" rx="18"
+fill="#eef4ff" stroke="#2457d6"/> <text x="215" y="125" text-anchor="middle"
+font-size="24" font-weight="700">Breadth</text> <text x="215" y="160" text-anchor="middle"
+font-size="15">Many disciplines</text> <text x="215" y="185" text-anchor="middle"
+font-size="15">Wide knowledge space</text>
+
+<rect x="375" y="80" width="250" height="140" rx="18"
+fill="#edf9f4" stroke="#138a5b"/> <text x="500" y="125" text-anchor="middle"
+font-size="24" font-weight="700">Depth</text> <text x="500" y="160" text-anchor="middle"
+font-size="15">Expert-level questions</text> <text x="500" y="185" text-anchor="middle"
+font-size="15">Complex reasoning</text>
+
+<rect x="660" y="80" width="250" height="140" rx="18"
+fill="#fff7e9" stroke="#c76b00"/> <text x="785" y="125" text-anchor="middle"
+font-size="24" font-weight="700">Multimodality</text> <text x="785" y="160" text-anchor="middle"
+font-size="15">Text + visual information</text> <text x="785" y="185" text-anchor="middle"
+font-size="15">Cross-modal reasoning</text>
+
+<line x1="215" y1="220" x2="500" y2="350"
+stroke="#2457d6" stroke-width="3"/> <line x1="500" y1="220" x2="500" y2="350"
+stroke="#2457d6" stroke-width="3"/> <line x1="785" y1="220" x2="500" y2="350"
+stroke="#2457d6" stroke-width="3"/>
+
+<rect x="310" y="350" width="380" height="100" rx="18"
+fill="#f1f5fb" stroke="#7a8798"/> <text x="500" y="392" text-anchor="middle"
+font-size="25" font-weight="700">Frontier Evaluation</text> <text x="500" y="420" text-anchor="middle"
+font-size="15">Harder to game • harder to saturate</text>
+
+</svg>
+
+</div>
+
+</section>
+
+<section id="comparison">
+<h2>20. Comparing the Benchmarks</h2>
+
+<table>
+<thead>
+<tr>
+<th>Benchmark</th>
+<th>Primary Focus</th>
+<th>Answer Style</th>
+<th>Core Evaluation Question</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td><strong>MMLU</strong></td>
+<td>Broad knowledge</td>
+<td>Multiple choice</td>
+<td>Does the model know across many academic subjects?</td>
+</tr>
+
+<tr>
+<td><strong>TruthfulQA</strong></td>
+<td>Truthfulness</td>
+<td>Question answering</td>
+<td>Can the model avoid misconceptions and false claims?</td>
+</tr>
+
+<tr>
+<td><strong>AGI Eval</strong></td>
+<td>Human-style exams</td>
+<td>Exam questions</td>
+<td>How does model performance compare with human exam baselines?</td>
+</tr>
+
+<tr>
+<td><strong>GPQA</strong></td>
+<td>Expert knowledge</td>
+<td>Difficult Q&amp;A</td>
+<td>Can the model solve challenging expert-level questions?</td>
+</tr>
+
+<tr>
+<td><strong>MMLU-Pro</strong></td>
+<td>Harder academic reasoning</td>
+<td>Multiple choice</td>
+<td>Can the model handle more discriminative reasoning tasks?</td>
+</tr>
+
+<tr>
+<td><strong>SimpleQA</strong></td>
+<td>Factuality + calibration</td>
+<td>Open-ended short answer</td>
+<td>Can the model produce concise correct answers and appropriate confidence?</td>
+</tr>
+
+<tr>
+<td><strong>HLE</strong></td>
+<td>Frontier breadth + depth</td>
+<td>Advanced evaluation</td>
+<td>How far can the model perform across extremely difficult knowledge tasks?</td>
+</tr>
+
+</tbody>
+</table>
+
+</section>
+
+<section id="code">
+<h2>21. Practical Evaluation Example</h2>
+
+<p>
+The following simplified Python example demonstrates the basic mechanics of a
+multiple-choice benchmark evaluator. It is intentionally framework-neutral so
+that the evaluation logic remains easy to understand.
+</p>
+
+<pre><code>questions = [
+    {
+        "question": "What is the capital of France?",
+        "choices": ["London", "Paris", "Berlin", "Madrid"],
+        "answer": "Paris"
+    },
+    {
+        "question": "What is 2 + 2?",
+        "choices": ["3", "4", "5", "6"],
+        "answer": "4"
+    }
+]
+
+predictions = ["Paris", "4"]
+
+correct = 0
+
+for item, prediction in zip(questions, predictions):
+    if prediction.strip().lower() == item["answer"].lower():
+        correct += 1
+
+accuracy = correct / len(questions)
+
+print(f"Accuracy: {accuracy:.2%}")</code></pre>
+
+<p>Expected output:</p>
+
+<pre><code>Accuracy: 100.00%</code></pre>
+
+<h3>Benchmark Evaluation Pipeline</h3>
+
+<pre><code>Benchmark Dataset
+       ↓
+Prompt / Question
+       ↓
+LLM
+       ↓
+Prediction
+       ↓
+Evaluator
+       ↓
+Metric
+       ↓
+Aggregate Score
+       ↓
+Error Analysis</code></pre>
+
+<div class="callout tip">
+In production evaluation, do not stop at the aggregate score. Store individual
+predictions so that you can perform <strong>error analysis</strong>.
+</div>
+
+</section>
+
+<section id="takeaways">
+<h2>22. Key Takeaways</h2>
+
+<ul class="checklist">
+
+<li>
+<strong>LLM capability is multidimensional.</strong>
+Knowledge, reasoning, truthfulness, calibration, and multimodal reasoning are
+different evaluation dimensions.
+</li>
+
+<li>
+<strong>MMLU measures breadth.</strong>
+It is useful for understanding broad academic and professional knowledge.
+</li>
+
+<li>
+<strong>TruthfulQA changes the question.</strong>
+Knowing information is different from consistently stating the truth.
+</li>
+
+<li>
+<strong>Human examination benchmarks provide context.</strong>
+Human baselines can make model scores easier to interpret.
+</li>
+
+<li>
+<strong>GPQA pushes toward depth.</strong>
+The focus moves toward difficult expert-level knowledge and reasoning.
+</li>
+
+<li>
+<strong>MMLU-Pro addresses benchmark limitations.</strong>
+Harder questions and a more demanding evaluation setup can improve
+discrimination between capable models.
+</li>
+
+<li>
+<strong>SimpleQA demonstrates the challenge of open-ended evaluation.</strong>
+Evaluators need to handle short answers, correctness, and calibration.
+</li>
+
+<li>
+<strong>HLE represents a frontier-style direction.</strong>
+Breadth, depth, multimodality, and resistance to contamination become
+increasingly important.
+</li>
+
+<li>
+<strong>Benchmark saturation is a real problem.</strong>
+A benchmark that becomes too easy stops being useful for distinguishing
+future models.
+</li>
+
+<li>
+<strong>A benchmark score is not intelligence.</strong>
+It is evidence about performance on a particular evaluation instrument.
+</li>
+
+</ul>
+
+<div class="callout">
+<h3>One-Line Mental Model</h3>
+
+<p>
+<strong>
+MMLU → breadth → TruthfulQA → truthfulness → AGI Eval → human exam comparison
+→ GPQA → expert depth → MMLU-Pro → harder reasoning → SimpleQA → open-ended
+factuality/calibration → HLE → frontier breadth × depth.
+</strong>
+</p>
+</div>
+
+<footer>
+
+<p>
+<strong>Source note:</strong>
+The provided course material establishes the benchmark roadmap and the
+deep-dive topics. The uploaded source itself contains headings rather than the
+full instructor explanations. Detailed explanatory material in this document
+has therefore been presented as conceptual study guidance rather than being
+attributed verbatim to the instructor.
+</p>
+
+<p>
+The next useful step is to enrich these notes with the actual instructor notes,
+including any benchmark-specific numbers, diagrams, examples, formulas,
+historical context, or terminology used in the lecture.
+</p>
+
+</footer>
+
+</div>
+</article>
+
+</div>
+
+</body>
+</html>
