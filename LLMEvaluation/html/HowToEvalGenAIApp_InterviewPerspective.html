@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG Evaluation: From Component Testing to Continuous Online Evaluation</title>
+<style>
+:root{
+  --bg:#f5f7fb; --surface:#ffffff; --surface2:#f8fafc; --text:#172033;
+  --muted:#607086; --border:#dfe5ee; --primary:#183b6b; --primary2:#245b9b;
+  --accent:#0f766e; --warn:#a16207; --danger:#b42318; --shadow:0 8px 28px rgba(23,32,51,.08);
+  --code:#111827; --codeText:#e5e7eb;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.72}
+a{color:var(--primary2);text-decoration:none}
+a:hover{text-decoration:underline}
+.page{display:grid;grid-template-columns:260px minmax(0,900px);gap:30px;max-width:1240px;margin:auto;padding:28px 22px}
+.toc{position:sticky;top:20px;height:max-content;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--shadow)}
+.toc h3{margin:0 0 12px;font-size:15px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.toc a{display:block;padding:7px 4px;font-size:14px}
+main{min-width:0}
+.hero{background:linear-gradient(135deg,#102f57,#245b9b);color:white;border-radius:22px;padding:42px 44px;box-shadow:var(--shadow);margin-bottom:26px}
+.hero .eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:12px;opacity:.82;font-weight:700}
+.hero h1{font-size:clamp(30px,5vw,48px);line-height:1.08;margin:10px 0 16px}
+.hero p{font-size:18px;max-width:760px;color:#e8f0fb;margin:0}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}
+.badge{padding:6px 10px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.10);font-size:12px}
+section{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:30px;margin:22px 0;box-shadow:0 4px 18px rgba(23,32,51,.045)}
+h2{font-size:28px;line-height:1.25;margin:0 0 16px;color:var(--primary)}
+h3{font-size:20px;margin:26px 0 10px}
+h4{margin:20px 0 8px}
+.lead{font-size:17px;color:#334155}
+.callout{border-left:5px solid var(--primary2);background:#eef5ff;padding:16px 18px;border-radius:10px;margin:18px 0}
+.callout.tip{border-left-color:var(--accent);background:#ecfdf5}
+.callout.warn{border-left-color:var(--warn);background:#fffbeb}
+.callout.danger{border-left-color:var(--danger);background:#fff1f2}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{border:1px solid var(--border);border-radius:14px;padding:18px;background:var(--surface2)}
+.card h3{margin-top:0;font-size:18px}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+th,td{border:1px solid var(--border);padding:11px 12px;text-align:left;vertical-align:top}
+th{background:#edf2f8;color:#243b5a}
+tr:nth-child(even) td{background:#fbfcfe}
+pre{background:var(--code);color:var(--codeText);padding:18px;border-radius:12px;overflow:auto;font-size:13px;line-height:1.55}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
+:not(pre)>code{background:#eef2f7;padding:2px 5px;border-radius:5px;color:#27364a}
+.kpi{font-size:26px;font-weight:800;color:var(--primary)}
+.small{font-size:13px;color:var(--muted)}
+.diagram{background:#fbfdff;border:1px solid var(--border);border-radius:14px;padding:14px;margin:20px 0;overflow:auto}
+.diagram svg{display:block;width:100%;height:auto;min-width:720px}
+.flow{display:flex;align-items:stretch;gap:10px;overflow:auto;padding:8px 0}
+.flow .box{min-width:150px;border:1px solid #cbd5e1;border-radius:12px;padding:14px;background:#fff;text-align:center}
+.flow .arrow{align-self:center;font-size:24px;color:#64748b}
+.metric-list{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.metric{border:1px solid var(--border);border-radius:12px;padding:15px;background:#fff}
+.metric strong{display:block;color:var(--primary)}
+.tag{display:inline-block;background:#e9eef6;color:#27415f;border-radius:999px;padding:3px 8px;font-size:12px;margin:2px}
+footer{color:var(--muted);font-size:13px;text-align:center;padding:24px 0 50px}
+@media(max-width:900px){
+ .page{grid-template-columns:1fr}
+ .toc{position:relative;top:auto}
+ .grid,.metric-list{grid-template-columns:1fr}
+ .hero{padding:30px 24px}
+ section{padding:22px}
+}
+</style>
+</head>
+
+<body>
+<div class="page">
+
+<aside class="toc">
+  <h3>Contents</h3>
+  <a href="#recap">1. Curriculum Recap</a>
+  <a href="#app-types">2. Why RAG & Agents</a>
+  <a href="#case-study">3. CampusX Doubt Solver</a>
+  <a href="#framework">4. 3-Level Evaluation Framework</a>
+  <a href="#component">5. Level 1 — Component</a>
+  <a href="#pipeline">6. Level 2 — Pipeline / RAG Triad</a>
+  <a href="#application">7. Level 3 — Application</a>
+  <a href="#safety-ops">8. Safety & Operations</a>
+  <a href="#eval-suite">9. Evaluation Suite</a>
+  <a href="#deepeval">10. DeepEval Strategy</a>
+  <a href="#regression">11. Regression Testing</a>
+  <a href="#experiments">12. Baselines & Experiment Tracking</a>
+  <a href="#ci">13. CI/CD Release Gates</a>
+  <a href="#online">14. Online Evaluation</a>
+  <a href="#feedback">15. Self-Improving Loop</a>
+  <a href="#interview">16. Interview Answer</a>
+  <a href="#roadmap">17. Practical Roadmap</a>
+</aside>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">LLM Evaluation • RAG • MLOps</div>
+  <h1>RAG Evaluation: From Component Testing to Continuous Online Evaluation</h1>
+  <p>A practical framework for evaluating a RAG chatbot across retriever quality, generator quality, pipeline behavior, application correctness, safety, operations, regression testing, CI/CD, and production monitoring.</p>
+  <div class="badges">
+    <span class="badge">Component Evaluation</span>
+    <span class="badge">RAG Triad</span>
+    <span class="badge">Application Evals</span>
+    <span class="badge">Regression Testing</span>
+    <span class="badge">Online Evals</span>
+  </div>
+</header>
+
+<section id="recap">
+<h2>1. Curriculum Recap: Where We Are in the LLM Evaluation Journey</h2>
+<p class="lead">The course has moved through two major milestones: first understanding evaluation fundamentals and model-level evaluation, and now moving into the most application-oriented part — evaluating complete LLM applications.</p>
+
+<div class="grid">
+  <div class="card"><div class="kpi">01</div><h3>Evaluation Fundamentals</h3><p>Why evaluations matter, what an LLM evaluation is, reference-based vs. reference-free evaluation, and offline vs. online evaluation.</p></div>
+  <div class="card"><div class="kpi">02</div><h3>Model Evaluations</h3><p>Standardized benchmarks for model capabilities plus custom model evaluations built around an application's own data.</p></div>
+  <div class="card"><div class="kpi">03</div><h3>Application Evaluations</h3><p>Evaluate the behavior of the complete system — including RAG pipelines, agents, safety, quality, and production behavior.</p></div>
+</div>
+
+<div class="callout">
+<strong>Key distinction:</strong> A model evaluation asks, “How capable is this model?” An application evaluation asks, “Does my actual product work correctly, safely, consistently, and efficiently for its intended use case?”
+</div>
+
+<h3>Model Evaluation vs. Application Evaluation</h3>
+<table>
+<thead><tr><th>Dimension</th><th>Model Evaluation</th><th>Application Evaluation</th></tr></thead>
+<tbody>
+<tr><td>Target</td><td>Foundation / LLM model</td><td>Complete LLM-powered product or workflow</td></tr>
+<tr><td>Examples</td><td>Knowledge, reasoning, coding, math benchmarks</td><td>RAG chatbot, agent, classifier, customer-support assistant</td></tr>
+<tr><td>Data</td><td>Standardized or custom benchmark datasets</td><td>Golden datasets, real application inputs, production traces</td></tr>
+<tr><td>Focus</td><td>General model capability</td><td>Task-specific quality and system behavior</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="app-types">
+<h2>2. Why Focus on RAG and Agentic Applications?</h2>
+<p>LLM applications can take many forms: simple chatbots, RAG systems, agents, multimodal applications, and fixed-schema classification or extraction systems.</p>
+
+<div class="grid">
+  <div class="card"><h3>Simple Chatbot</h3><p>An LLM responds directly to a user's conversation without retrieval or external tools.</p></div>
+  <div class="card"><h3>RAG Application</h3><p>The system retrieves external knowledge and supplies it to the generator before producing an answer.</p></div>
+  <div class="card"><h3>Agent</h3><p>The LLM reasons about a task and invokes tools or actions to accomplish it.</p></div>
+</div>
+
+<div class="callout tip">
+<strong>Why RAG + Agents?</strong> They represent common production design patterns. If you can evaluate a more complex RAG or agentic system systematically, simpler LLM applications become easier to evaluate by applying the same principles at fewer layers.
+</div>
+
+<h3>Other Application Types</h3>
+<table>
+<thead><tr><th>Application</th><th>Typical Output</th><th>Evaluation Focus</th></tr></thead>
+<tbody>
+<tr><td>Multimodal app</td><td>Text + image/audio/video</td><td>Modality-specific correctness and quality</td></tr>
+<tr><td>Fixed-schema classifier</td><td>Structured label / JSON</td><td>Classification correctness, schema validity</td></tr>
+<tr><td>RAG chatbot</td><td>Answer + evidence</td><td>Retrieval quality, faithfulness, relevance, correctness</td></tr>
+<tr><td>Agent</td><td>Answer + tool actions</td><td>Tool selection, execution, task completion, safety</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="case-study">
+<h2>3. Case Study: CampusX Course Doubt Solver</h2>
+<p>The evaluation framework is demonstrated using a deliberately simple RAG application: a chatbot that answers questions about an LLM Evaluation course using lecture transcripts as its knowledge base.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1000 270" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CampusX RAG doubt solver architecture">
+<defs>
+<marker id="arrow1" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#245b9b"/></marker>
+</defs>
+<rect x="25" y="80" width="180" height="90" rx="14" fill="#eef5ff" stroke="#245b9b"/>
+<text x="115" y="113" text-anchor="middle" font-size="17" font-weight="700" fill="#183b6b">Lecture</text>
+<text x="115" y="138" text-anchor="middle" font-size="15" fill="#334155">Transcripts</text>
+<text x="115" y="159" text-anchor="middle" font-size="13" fill="#607086">Course knowledge</text>
+
+<rect x="260" y="80" width="180" height="90" rx="14" fill="#f8fafc" stroke="#64748b"/>
+<text x="350" y="113" text-anchor="middle" font-size="17" font-weight="700" fill="#243b5a">Chunking +</text>
+<text x="350" y="138" text-anchor="middle" font-size="15" fill="#334155">Embeddings</text>
+<text x="350" y="159" text-anchor="middle" font-size="13" fill="#607086">Vector index</text>
+
+<rect x="495" y="80" width="180" height="90" rx="14" fill="#ecfdf5" stroke="#0f766e"/>
+<text x="585" y="113" text-anchor="middle" font-size="17" font-weight="700" fill="#0f766e">Retriever</text>
+<text x="585" y="138" text-anchor="middle" font-size="15" fill="#334155">Relevant chunks</text>
+<text x="585" y="159" text-anchor="middle" font-size="13" fill="#607086">+ metadata</text>
+
+<rect x="730" y="80" width="240" height="90" rx="14" fill="#fff" stroke="#183b6b" stroke-width="2"/>
+<text x="850" y="113" text-anchor="middle" font-size="17" font-weight="700" fill="#183b6b">Generator / LLM</text>
+<text x="850" y="138" text-anchor="middle" font-size="15" fill="#334155">Answer + citation</text>
+<text x="850" y="159" text-anchor="middle" font-size="13" fill="#607086">to lecture/session</text>
+
+<line x1="205" y1="125" x2="260" y2="125" stroke="#245b9b" stroke-width="3" marker-end="url(#arrow1)"/>
+<line x1="440" y1="125" x2="495" y2="125" stroke="#245b9b" stroke-width="3" marker-end="url(#arrow1)"/>
+<line x1="675" y1="125" x2="730" y2="125" stroke="#245b9b" stroke-width="3" marker-end="url(#arrow1)"/>
+
+<text x="500" y="225" text-anchor="middle" font-size="16" font-weight="700" fill="#183b6b">User question → retrieve evidence → generate grounded answer → cite source</text>
+</svg>
+</div>
+
+<div class="callout warn">
+<strong>Important:</strong> The objective of this case study is not to build a sophisticated RAG product. The objective is to learn how to evaluate even a simple RAG system rigorously.
+</div>
+
+<h3>Why the Transcript-Based Use Case Works Well</h3>
+<ul>
+<li>There is a known knowledge corpus: course lecture transcripts.</li>
+<li>Questions can be constructed from the material and converted into golden evaluation examples.</li>
+<li>Each answer can be linked back to a source lecture or transcript segment.</li>
+<li>The system naturally exposes retrieval, generation, citation, correctness, and completeness concerns.</li>
+</ul>
+</section>
+
+<section id="framework">
+<h2>4. The 3-Level RAG Evaluation Framework</h2>
+<p>A robust RAG evaluation should not be a single metric or a single test run. The system is evaluated progressively at three levels.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1000 430" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three level RAG evaluation framework">
+<defs>
+<marker id="arrow2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#183b6b"/></marker>
+</defs>
+<rect x="55" y="35" width="890" height="95" rx="18" fill="#eef5ff" stroke="#245b9b"/>
+<text x="500" y="67" text-anchor="middle" font-size="21" font-weight="700" fill="#183b6b">LEVEL 1 — COMPONENT EVALUATION</text>
+<text x="500" y="95" text-anchor="middle" font-size="16" fill="#334155">Retriever: Recall, Precision • Generator: Faithfulness, Answer Relevance, Citation Accuracy</text>
+
+<line x1="500" y1="130" x2="500" y2="160" stroke="#183b6b" stroke-width="3" marker-end="url(#arrow2)"/>
+
+<rect x="55" y="165" width="890" height="95" rx="18" fill="#ecfdf5" stroke="#0f766e"/>
+<text x="500" y="197" text-anchor="middle" font-size="21" font-weight="700" fill="#0f766e">LEVEL 2 — PIPELINE EVALUATION</text>
+<text x="500" y="225" text-anchor="middle" font-size="16" fill="#334155">RAG Triad: Context Relevance • Faithfulness • Answer Relevance</text>
+
+<line x1="500" y1="260" x2="500" y2="290" stroke="#183b6b" stroke-width="3" marker-end="url(#arrow2)"/>
+
+<rect x="55" y="295" width="890" height="95" rx="18" fill="#fffaf0" stroke="#a16207"/>
+<text x="500" y="327" text-anchor="middle" font-size="21" font-weight="700" fill="#8a5700">LEVEL 3 — APPLICATION / SYSTEM EVALUATION</text>
+<text x="500" y="355" text-anchor="middle" font-size="16" fill="#334155">Correctness • Completeness • Style • Safety • PII • Jailbreak • Latency • Cost • Tokens</text>
+</svg>
+</div>
+
+<div class="callout">
+<strong>Core engineering principle:</strong> Build and evaluate together. Do not wait until the entire RAG application is finished before testing it. Validate components first, then the connected pipeline, then the complete application.
+</div>
+</section>
+
+<section id="component">
+<h2>5. Level 1 — Component-Level Evaluation</h2>
+<p>At component level, the retriever and generator are evaluated independently. This isolates defects before they become difficult to diagnose inside the complete RAG pipeline.</p>
+
+<h3>5.1 Retriever Evaluation</h3>
+<p>The retriever receives a query and returns the most relevant documents or chunks from the vector store.</p>
+
+<div class="flow">
+<div class="box"><strong>Question</strong><br><span class="small">User query</span></div>
+<div class="arrow">→</div>
+<div class="box"><strong>Retriever</strong><br><span class="small">Search vector index</span></div>
+<div class="arrow">→</div>
+<div class="box"><strong>Top-k Context</strong><br><span class="small">Retrieved chunks</span></div>
+</div>
+
+<table>
+<thead><tr><th>Metric</th><th>Question</th><th>Interpretation</th></tr></thead>
+<tbody>
+<tr><td><strong>Recall</strong></td><td>Of all relevant documents, how many did the retriever retrieve?</td><td>Measures coverage of relevant evidence.</td></tr>
+<tr><td><strong>Precision</strong></td><td>Of the retrieved documents, how many are actually relevant?</td><td>Measures retrieval cleanliness / relevance.</td></tr>
+</tbody>
+</table>
+
+<div class="callout tip">
+<strong>Memory aid:</strong> Recall asks “Did I find the relevant evidence?” Precision asks “How much of what I found was actually useful?”
+</div>
+
+<h3>Retriever Evaluation Example</h3>
+<pre><code>query = "What is the difference between offline and online evaluation?"
+
+retrieved = retriever.invoke(query)
+
+for doc in retrieved:
+    print(doc.page_content)
+    print(doc.metadata)
+</code></pre>
+
+<p>A golden retriever dataset can define which chunks or source documents are expected for each query. The evaluation then compares actual retrieval against the expected relevant set.</p>
+
+<h3>5.2 Generator Evaluation</h3>
+<p>The generator is evaluated independently by manually or programmatically supplying a question together with known-good context.</p>
+
+<div class="flow">
+<div class="box"><strong>Question</strong></div>
+<div class="arrow">+</div>
+<div class="box"><strong>Golden Context</strong></div>
+<div class="arrow">→</div>
+<div class="box"><strong>Generator / LLM</strong></div>
+<div class="arrow">→</div>
+<div class="box"><strong>Answer + Citation</strong></div>
+</div>
+
+<table>
+<thead><tr><th>Metric</th><th>What it checks</th><th>Failure example</th></tr></thead>
+<tbody>
+<tr><td><strong>Faithfulness</strong></td><td>Is the answer supported by the supplied context?</td><td>The model invents a fact absent from the retrieved transcript.</td></tr>
+<tr><td><strong>Answer Relevance</strong></td><td>Does the answer actually address the user's question?</td><td>A technically correct but unrelated explanation.</td></tr>
+<tr><td><strong>Citation Accuracy</strong></td><td>Does the cited source genuinely support the claim?</td><td>The answer cites the wrong lecture or an unrelated transcript section.</td></tr>
+</tbody>
+</table>
+
+<div class="callout">
+<strong>Isolation matters:</strong> At this stage the generator is not connected to the retriever. This makes it possible to distinguish “bad retrieval” from “bad generation.”
+</div>
+</section>
+
+<section id="pipeline">
+<h2>6. Level 2 — Pipeline-Level Evaluation: The RAG Triad</h2>
+<p>Once the retriever and generator work independently, connect them into the RAG pipeline and evaluate the behavior of the combined retrieval-generation flow.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1000 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="RAG Triad">
+<defs>
+<marker id="arrow3" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#245b9b"/></marker>
+</defs>
+<circle cx="500" cy="190" r="100" fill="#eef5ff" stroke="#245b9b" stroke-width="3"/>
+<text x="500" y="183" text-anchor="middle" font-size="23" font-weight="800" fill="#183b6b">RAG</text>
+<text x="500" y="210" text-anchor="middle" font-size="15" fill="#334155">Pipeline</text>
+
+<rect x="55" y="140" width="190" height="100" rx="15" fill="#fff" stroke="#64748b"/>
+<text x="150" y="175" text-anchor="middle" font-size="18" font-weight="700">Question</text>
+<text x="150" y="202" text-anchor="middle" font-size="14" fill="#607086">User intent</text>
+
+<rect x="755" y="55" width="190" height="100" rx="15" fill="#ecfdf5" stroke="#0f766e"/>
+<text x="850" y="90" text-anchor="middle" font-size="18" font-weight="700" fill="#0f766e">Context</text>
+<text x="850" y="117" text-anchor="middle" font-size="14" fill="#607086">Retrieved evidence</text>
+
+<rect x="755" y="225" width="190" height="100" rx="15" fill="#fffaf0" stroke="#a16207"/>
+<text x="850" y="260" text-anchor="middle" font-size="18" font-weight="700" fill="#8a5700">Answer</text>
+<text x="850" y="287" text-anchor="middle" font-size="14" fill="#607086">Generated response</text>
+
+<line x1="245" y1="190" x2="400" y2="190" stroke="#245b9b" stroke-width="3" marker-end="url(#arrow3)"/>
+<line x1="585" y1="145" x2="755" y2="105" stroke="#245b9b" stroke-width="3" marker-end="url(#arrow3)"/>
+<line x1="585" y1="235" x2="755" y2="275" stroke="#245b9b" stroke-width="3" marker-end="url(#arrow3)"/>
+
+<text x="645" y="88" text-anchor="middle" font-size="14" font-weight="700" fill="#183b6b">Context Relevance</text>
+<text x="650" y="285" text-anchor="middle" font-size="14" font-weight="700" fill="#183b6b">Faithfulness</text>
+<text x="500" y="340" text-anchor="middle" font-size="14" font-weight="700" fill="#183b6b">Answer Relevance = Question ↔ Answer</text>
+</svg>
+</div>
+
+<h3>The Three RAG Triad Metrics</h3>
+<table>
+<thead><tr><th>Relationship</th><th>Metric</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>Question ↔ Context</td><td><strong>Context Relevance</strong></td><td>Did retrieval bring context that is relevant to the question?</td></tr>
+<tr><td>Context ↔ Answer</td><td><strong>Faithfulness</strong></td><td>Is the generated answer grounded in the retrieved context?</td></tr>
+<tr><td>Question ↔ Answer</td><td><strong>Answer Relevance</strong></td><td>Does the final answer address the user's question?</td></tr>
+</tbody>
+</table>
+
+<div class="callout tip">
+<strong>Diagnostic value:</strong> The RAG Triad is more useful than a single “answer quality” score because it helps localize the failure. Low context relevance suggests retrieval problems; low faithfulness suggests grounding/generation problems; low answer relevance suggests the response does not satisfy the query.
+</div>
+</section>
+
+<section id="application">
+<h2>7. Level 3 — Application / System-Level Evaluation</h2>
+<p>At the application level, the question changes from “Are the components working?” to “Does the product actually solve the user's problem?”</p>
+
+<div class="metric-list">
+<div class="metric"><strong>Correctness</strong>Is the final answer factually correct?</div>
+<div class="metric"><strong>Completeness</strong>Does it address all important parts of the question?</div>
+<div class="metric"><strong>Style / Tone</strong>Does it follow the expected communication style?</div>
+<div class="metric"><strong>Task Success</strong>Did the application achieve its intended user-facing objective?</div>
+</div>
+
+<h3>Correctness vs. Completeness</h3>
+<p>These are related but not interchangeable. Suppose a user asks a two-part question and the answer correctly addresses only the first part. The response may be correct for what it says, but incomplete for what the user asked.</p>
+
+<table>
+<thead><tr><th>Question</th><th>Answer</th><th>Correctness</th><th>Completeness</th></tr></thead>
+<tbody>
+<tr><td>“Explain offline and online evals and give one use case for each.”</td><td>Correctly explains offline evals but omits online evals and examples.</td><td>Partial / potentially correct</td><td>Low</td></tr>
+<tr><td>Same question</td><td>Accurately explains both and provides appropriate examples.</td><td>High</td><td>High</td></tr>
+</tbody>
+</table>
+
+<h3>Style Evaluation</h3>
+<p>For the CampusX-style doubt solver, style can be evaluated against the desired instructional voice. For example, the application might be expected to provide structured explanations, practical examples, and terminology consistent with the course.</p>
+</section>
+
+<section id="safety-ops">
+<h2>8. Safety and Operational Evaluations</h2>
+
+<h3>8.1 Safety</h3>
+<div class="grid">
+<div class="card"><h3>Toxicity</h3><p>Check whether generated responses contain abusive, hateful, or otherwise unacceptable language.</p></div>
+<div class="card"><h3>PII Leakage</h3><p>Check whether the system exposes personally identifiable information that it should not reveal.</p></div>
+<div class="card"><h3>Jailbreak Resistance</h3><p>Test whether adversarial prompts can bypass intended instructions, restrictions, or system boundaries.</p></div>
+</div>
+
+<h3>8.2 Operations</h3>
+<table>
+<thead><tr><th>Operational Metric</th><th>Question</th></tr></thead>
+<tbody>
+<tr><td><strong>Latency</strong></td><td>How long does the application take to answer?</td></tr>
+<tr><td><strong>Cost</strong></td><td>How much does each query or session cost?</td></tr>
+<tr><td><strong>Token Usage</strong></td><td>How many input/output tokens are consumed?</td></tr>
+</tbody>
+</table>
+
+<div class="callout warn">
+<strong>Quality alone is not enough.</strong> A system that produces excellent answers but costs too much or takes 20 seconds to respond may still be unsuitable for production.
+</div>
+</section>
+
+<section id="eval-suite">
+<h2>9. The Complete Evaluation Suite</h2>
+<p>The individual evaluations combine into one reusable test suite. A production-quality evaluation strategy should cover the system from isolated components through live production behavior.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1000 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Evaluation suite hierarchy">
+<defs>
+<marker id="arrow4" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#183b6b"/></marker>
+</defs>
+<rect x="330" y="20" width="340" height="62" rx="14" fill="#183b6b"/>
+<text x="500" y="59" text-anchor="middle" font-size="21" font-weight="800" fill="#fff">RAG EVALUATION SUITE</text>
+
+<line x1="500" y1="82" x2="500" y2="112" stroke="#183b6b" stroke-width="3" marker-end="url(#arrow4)"/>
+
+<rect x="70" y="120" width="260" height="90" rx="14" fill="#eef5ff" stroke="#245b9b"/>
+<text x="200" y="153" text-anchor="middle" font-size="18" font-weight="700" fill="#183b6b">Component Tests</text>
+<text x="200" y="180" text-anchor="middle" font-size="14" fill="#334155">Retriever + Generator</text>
+
+<rect x="370" y="120" width="260" height="90" rx="14" fill="#ecfdf5" stroke="#0f766e"/>
+<text x="500" y="153" text-anchor="middle" font-size="18" font-weight="700" fill="#0f766e">Pipeline Tests</text>
+<text x="500" y="180" text-anchor="middle" font-size="14" fill="#334155">RAG Triad</text>
+
+<rect x="670" y="120" width="260" height="90" rx="14" fill="#fffaf0" stroke="#a16207"/>
+<text x="800" y="153" text-anchor="middle" font-size="18" font-weight="700" fill="#8a5700">Application Tests</text>
+<text x="800" y="180" text-anchor="middle" font-size="14" fill="#334155">Quality + Safety + Ops</text>
+
+<line x1="500" y1="210" x2="500" y2="260" stroke="#183b6b" stroke-width="3" marker-end="url(#arrow4)"/>
+<rect x="270" y="270" width="460" height="75" rx="14" fill="#f8fafc" stroke="#64748b"/>
+<text x="500" y="300" text-anchor="middle" font-size="18" font-weight="700">Regression Testing</text>
+<text x="500" y="326" text-anchor="middle" font-size="14" fill="#607086">Compare current version against baseline</text>
+
+<line x1="500" y1="345" x2="500" y2="395" stroke="#183b6b" stroke-width="3" marker-end="url(#arrow4)"/>
+<rect x="270" y="405" width="460" height="75" rx="14" fill="#eef5ff" stroke="#245b9b"/>
+<text x="500" y="435" text-anchor="middle" font-size="18" font-weight="700" fill="#183b6b">Deployment + Online Evaluation</text>
+<text x="500" y="461" text-anchor="middle" font-size="14" fill="#607086">Monitor live behavior and feed failures back offline</text>
+</svg>
+</div>
+
+<p>Golden datasets are especially important for deterministic or judge-based evaluations where expected behavior must be known in advance. Some operational signals, such as latency and token count, can be measured directly from live execution.</p>
+</section>
+
+<section id="deepeval">
+<h2>10. Tooling Strategy: DeepEval</h2>
+<p>Implementing every evaluation metric from scratch would create a large engineering project. A dedicated evaluation framework can provide reusable metrics and a test-oriented workflow.</p>
+
+<div class="callout">
+<strong>Course choice:</strong> DeepEval is selected for the practical implementation because it provides RAG-oriented metrics such as faithfulness, answer relevance, contextual precision/recall and contextual relevance, along with safety-oriented evaluations.
+</div>
+
+<h3>Why a Dedicated Evaluation Library?</h3>
+<ul>
+<li>Reusable evaluation metrics reduce custom implementation work.</li>
+<li>A test-oriented syntax makes evaluations easier to organize and automate.</li>
+<li>The same framework can extend beyond RAG into agents and other LLM applications.</li>
+<li>The conceptual approach transfers across tools even if the library changes.</li>
+</ul>
+
+<h3>DeepEval-Style Test Structure</h3>
+<pre><code># Illustrative structure — adapt imports/API to the installed DeepEval version.
+
+from deepeval import evaluate
+from deepeval.test_case import LLMTestCase
+from deepeval.metrics import AnswerRelevancyMetric, FaithfulnessMetric
+
+test_case = LLMTestCase(
+    input="What is the difference between offline and online evaluation?",
+    actual_output=actual_answer,
+    retrieval_context=retrieved_context
+)
+
+metrics = [
+    AnswerRelevancyMetric(threshold=0.8),
+    FaithfulnessMetric(threshold=0.8),
+]
+
+evaluate([test_case], metrics)
+</code></pre>
+
+<div class="callout warn">
+<strong>Tool vs. concept:</strong> Evaluation frameworks evolve. Learn the evaluation concepts — what each metric measures, how the test data is constructed, how thresholds work, and how results affect deployment — rather than memorizing one library's API.
+</div>
+
+<h3>DeepEval vs. Ragas — Conceptual Choice</h3>
+<table>
+<thead><tr><th>Dimension</th><th>DeepEval</th><th>Ragas</th></tr></thead>
+<tbody>
+<tr><td>RAG evaluation</td><td>Strong support</td><td>Strong support</td></tr>
+<tr><td>Broader LLM app testing</td><td>Broad scope</td><td>More evaluation-focused around RAG/LLM pipelines</td></tr>
+<tr><td>Test-oriented workflow</td><td>Strong</td><td>Available through its own evaluation abstractions</td></tr>
+<tr><td>Learning objective</td><td>Use as practical course framework</td><td>Useful alternative worth knowing</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="regression">
+<h2>11. Regression Testing: Proving the New Version Did Not Get Worse</h2>
+<p>Once the evaluation suite exists, the next question is how to use it whenever the application changes.</p>
+
+<div class="callout">
+<strong>Definition:</strong> Regression testing means rerunning the evaluation suite on a new version and comparing the results against an established baseline to detect quality regressions.
+</div>
+
+<div class="diagram">
+<svg viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Regression testing flow">
+<defs>
+<marker id="arrow5" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#245b9b"/></marker>
+</defs>
+<rect x="40" y="90" width="180" height="100" rx="14" fill="#f8fafc" stroke="#64748b"/>
+<text x="130" y="125" text-anchor="middle" font-size="18" font-weight="700">Code Change</text>
+<text x="130" y="152" text-anchor="middle" font-size="14" fill="#607086">New version</text>
+
+<rect x="300" y="90" width="180" height="100" rx="14" fill="#eef5ff" stroke="#245b9b"/>
+<text x="390" y="125" text-anchor="middle" font-size="18" font-weight="700">Eval Suite</text>
+<text x="390" y="152" text-anchor="middle" font-size="14" fill="#607086">Run all tests</text>
+
+<rect x="560" y="90" width="180" height="100" rx="14" fill="#fffaf0" stroke="#a16207"/>
+<text x="650" y="125" text-anchor="middle" font-size="18" font-weight="700">Compare</text>
+<text x="650" y="152" text-anchor="middle" font-size="14" fill="#607086">vs. baseline</text>
+
+<rect x="820" y="40" width="140" height="70" rx="14" fill="#ecfdf5" stroke="#0f766e"/>
+<text x="890" y="82" text-anchor="middle" font-size="17" font-weight="700" fill="#0f766e">PASS → Deploy</text>
+<rect x="820" y="165" width="140" height="70" rx="14" fill="#fff1f2" stroke="#b42318"/>
+<text x="890" y="207" text-anchor="middle" font-size="17" font-weight="700" fill="#b42318">FAIL → Block</text>
+
+<line x1="220" y1="140" x2="300" y2="140" stroke="#245b9b" stroke-width="3" marker-end="url(#arrow5)"/>
+<line x1="480" y1="140" x2="560" y2="140" stroke="#245b9b" stroke-width="3" marker-end="url(#arrow5)"/>
+<line x1="740" y1="115" x2="820" y2="75" stroke="#0f766e" stroke-width="3" marker-end="url(#arrow5)"/>
+<line x1="740" y1="165" x2="820" y2="200" stroke="#b42318" stroke-width="3" marker-end="url(#arrow5)"/>
+</svg>
+</div>
+
+<h3>Illustrative Project Structure</h3>
+<pre><code>rag-doubt-solver/
+├── src/
+│   ├── retriever.py
+│   ├── generator.py
+│   ├── rag_pipeline.py
+│   ├── api.py
+│   └── app.py
+│
+├── evals/
+│   ├── eval_retriever.py
+│   ├── eval_generator.py
+│   ├── eval_rag.py
+│   ├── eval_application.py
+│   ├── eval_safety.py
+│   └── eval_operations.py
+│
+├── datasets/
+│   ├── retriever_golden.json
+│   └── application_golden.json
+│
+└── run_evals.py
+</code></pre>
+
+<h3>The Central Runner</h3>
+<pre><code># Simplified orchestration pattern
+
+def run_eval_suite():
+    results = {}
+
+    results["retriever"] = run_retriever_evals()
+    results["generator"] = run_generator_evals()
+    results["rag"] = run_rag_evals()
+    results["application"] = run_application_evals()
+    results["safety"] = run_safety_evals()
+    results["operations"] = run_operational_evals()
+
+    return results
+
+if __name__ == "__main__":
+    report = run_eval_suite()
+    save_report(report)
+</code></pre>
+</section>
+
+<section id="experiments">
+<h2>12. Baselines and Experiment Tracking</h2>
+<p>Regression testing becomes more powerful when evaluation runs are treated as experiments.</p>
+
+<div class="grid">
+<div class="card"><h3>Run 1 — Baseline</h3><p>Record configuration and metrics for the initial system.</p><p><strong>Example:</strong> Recall 0.82, Precision 0.68</p></div>
+<div class="card"><h3>Run 2 — Changed Config</h3><p>Modify chunk size, overlap, embedding model, prompt, temperature, or another parameter.</p></div>
+<div class="card"><h3>Compare</h3><p>Compare the new metric vector against the baseline and determine whether the change improved the system.</p></div>
+</div>
+
+<h3>What Should Be Tracked?</h3>
+<table>
+<thead><tr><th>Configuration</th><th>Evaluation Results</th></tr></thead>
+<tbody>
+<tr><td>Chunk size</td><td>Retriever recall / precision</td></tr>
+<tr><td>Chunk overlap</td><td>Context relevance</td></tr>
+<tr><td>Embedding model</td><td>Retrieval and downstream RAG metrics</td></tr>
+<tr><td>LLM / model version</td><td>Faithfulness, relevance, correctness</td></tr>
+<tr><td>Prompt version</td><td>Correctness, completeness, style</td></tr>
+<tr><td>Temperature / generation settings</td><td>Quality + consistency</td></tr>
+</tbody>
+</table>
+
+<div class="callout tip">
+<strong>Baseline principle:</strong> A baseline is a recorded reference point, not merely “the previous run.” It should represent the version against which the team has decided to judge future changes.
+</div>
+
+<p>Experiment-tracking platforms can visualize metric history across runs, making it easier to see whether a metric is consistently improving, degrading, or oscillating.</p>
+</section>
+
+<section id="ci">
+<h2>13. CI/CD Release Gates</h2>
+<p>Regression testing can be automated through Continuous Integration. A code change can trigger the evaluation suite, compare the results against thresholds, and block deployment when quality regresses.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1000 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CI evaluation release gate">
+<defs>
+<marker id="arrow6" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#183b6b"/></marker>
+</defs>
+<rect x="30" y="110" width="170" height="90" rx="14" fill="#f8fafc" stroke="#64748b"/>
+<text x="115" y="145" text-anchor="middle" font-size="17" font-weight="700">Git Push</text>
+<text x="115" y="171" text-anchor="middle" font-size="13" fill="#607086">Code/config change</text>
+
+<rect x="260" y="110" width="190" height="90" rx="14" fill="#eef5ff" stroke="#245b9b"/>
+<text x="355" y="145" text-anchor="middle" font-size="17" font-weight="700">CI Pipeline</text>
+<text x="355" y="171" text-anchor="middle" font-size="13" fill="#607086">Run evaluation suite</text>
+
+<rect x="510" y="110" width="190" height="90" rx="14" fill="#fffaf0" stroke="#a16207"/>
+<text x="605" y="145" text-anchor="middle" font-size="17" font-weight="700">Threshold Gate</text>
+<text x="605" y="171" text-anchor="middle" font-size="13" fill="#607086">Compare to baseline</text>
+
+<rect x="760" y="45" width="190" height="80" rx="14" fill="#ecfdf5" stroke="#0f766e"/>
+<text x="855" y="78" text-anchor="middle" font-size="17" font-weight="700" fill="#0f766e">PASS</text>
+<text x="855" y="102" text-anchor="middle" font-size="13">Allow deployment</text>
+
+<rect x="760" y="190" width="190" height="80" rx="14" fill="#fff1f2" stroke="#b42318"/>
+<text x="855" y="223" text-anchor="middle" font-size="17" font-weight="700" fill="#b42318">FAIL</text>
+<text x="855" y="247" text-anchor="middle" font-size="13">Block deployment</text>
+
+<line x1="200" y1="155" x2="260" y2="155" stroke="#183b6b" stroke-width="3" marker-end="url(#arrow6)"/>
+<line x1="450" y1="155" x2="510" y2="155" stroke="#183b6b" stroke-width="3" marker-end="url(#arrow6)"/>
+<line x1="700" y1="130" x2="760" y2="90" stroke="#0f766e" stroke-width="3" marker-end="url(#arrow6)"/>
+<line x1="700" y1="180" x2="760" y2="230" stroke="#b42318" stroke-width="3" marker-end="url(#arrow6)"/>
+</svg>
+</div>
+
+<h3>Illustrative CI Gate Logic</h3>
+<pre><code>BASELINE = {
+    "retrieval_recall": 0.82,
+    "faithfulness": 0.88,
+    "correctness": 0.90
+}
+
+MIN_ALLOWED_DROP = 0.03
+
+def passes_gate(current):
+    for metric, baseline in BASELINE.items():
+        if current[metric] < baseline - MIN_ALLOWED_DROP:
+            return False
+    return True
+
+if not passes_gate(current_results):
+    raise SystemExit("Evaluation gate failed: deployment blocked")
+
+print("Evaluation gate passed: deployment allowed")
+</code></pre>
+
+<div class="callout">
+<strong>Important:</strong> Thresholds should be metric-specific. Not every metric needs to increase monotonically, and some metrics have different acceptable trade-offs. The gate should encode product requirements rather than blindly enforcing “every number must be higher.”
+</div>
+</section>
+
+<section id="online">
+<h2>14. Post-Deployment Online Evaluation</h2>
+<p>Passing offline evaluation does not mean evaluation is finished. Production introduces real user behavior, unexpected questions, distribution shifts, and failure modes that may not exist in the golden dataset.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1000 390" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Online evaluation monitoring loop">
+<defs>
+<marker id="arrow7" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#245b9b"/></marker>
+</defs>
+<rect x="50" y="130" width="170" height="90" rx="14" fill="#ecfdf5" stroke="#0f766e"/>
+<text x="135" y="165" text-anchor="middle" font-size="18" font-weight="700">Live Traffic</text>
+<text x="135" y="191" text-anchor="middle" font-size="13">User interactions</text>
+
+<rect x="290" y="130" width="170" height="90" rx="14" fill="#eef5ff" stroke="#245b9b"/>
+<text x="375" y="165" text-anchor="middle" font-size="18" font-weight="700">Observability</text>
+<text x="375" y="191" text-anchor="middle" font-size="13">Logs + traces</text>
+
+<rect x="530" y="130" width="170" height="90" rx="14" fill="#fffaf0" stroke="#a16207"/>
+<text x="615" y="165" text-anchor="middle" font-size="18" font-weight="700">Online Evals</text>
+<text x="615" y="191" text-anchor="middle" font-size="13">Quality signals</text>
+
+<rect x="770" y="130" width="170" height="90" rx="14" fill="#fff1f2" stroke="#b42318"/>
+<text x="855" y="165" text-anchor="middle" font-size="18" font-weight="700">Alerts / Actions</text>
+<text x="855" y="191" text-anchor="middle" font-size="13">Investigate + improve</text>
+
+<line x1="220" y1="175" x2="290" y2="175" stroke="#245b9b" stroke-width="3" marker-end="url(#arrow7)"/>
+<line x1="460" y1="175" x2="530" y2="175" stroke="#245b9b" stroke-width="3" marker-end="url(#arrow7)"/>
+<line x1="700" y1="175" x2="770" y2="175" stroke="#245b9b" stroke-width="3" marker-end="url(#arrow7)"/>
+
+<path d="M855 235 C855 330, 135 330, 135 220" fill="none" stroke="#183b6b" stroke-width="3" marker-end="url(#arrow7)"/>
+<text x="500" y="315" text-anchor="middle" font-size="15" font-weight="700" fill="#183b6b">Failures become learning data → enrich offline golden datasets</text>
+</svg>
+</div>
+
+<h3>Signals Captured from Live Traffic</h3>
+<div class="grid">
+<div class="card"><h3>Latency</h3><p>Response time experienced by the user.</p></div>
+<div class="card"><h3>Cost / Tokens</h3><p>Resource consumption per request or session.</p></div>
+<div class="card"><h3>User Feedback</h3><p>Signals such as thumbs-up / thumbs-down or explicit feedback.</p></div>
+</div>
+
+<h3>Online Quality Evaluation</h3>
+<p>Some offline quality metrics can also be computed on sampled production interactions, such as faithfulness, answer relevance, or correctness. This provides a live view of whether quality remains stable after deployment.</p>
+
+<h3>Drift Detection</h3>
+<p>Drift means the observed behavior or performance changes over time. For example, if a faithfulness metric remains stable for most of the day and then falls sharply over several hours, the monitoring system should surface that change for investigation.</p>
+
+<div class="callout warn">
+<strong>Offline ≠ production:</strong> Offline evaluation gives controlled, repeatable evidence. Online evaluation exposes the system to the messy, evolving distribution of real users.
+</div>
+</section>
+
+<section id="feedback">
+<h2>15. The Self-Improving Evaluation Loop</h2>
+<p>A mature evaluation system creates a feedback loop between production and offline testing.</p>
+
+<ol>
+<li>A new RAG version passes offline evaluation.</li>
+<li>The application is deployed.</li>
+<li>Production traces and user feedback are collected.</li>
+<li>Bad or surprising interactions are identified.</li>
+<li>Important failure cases are converted into new golden evaluation examples.</li>
+<li>The offline dataset becomes richer.</li>
+<li>Future versions are tested against these newly discovered failure modes.</li>
+</ol>
+
+<div class="callout tip">
+<strong>Why this matters:</strong> Your golden dataset should not be static forever. Production failures reveal blind spots in the evaluation suite. Feeding those failures back into offline testing makes the suite progressively more representative.
+</div>
+
+<h3>Closed-Loop Architecture</h3>
+<pre><code>Offline Golden Dataset
+        ↓
+Build / Change Application
+        ↓
+Run Evaluation Suite
+        ↓
+Regression Gate
+        ↓
+Deploy
+        ↓
+Production Monitoring
+        ↓
+Discover Failures / Drift
+        ↓
+Curate Important Failures
+        ↓
+Add to Golden Dataset
+        ↺
+</code></pre>
+</section>
+
+<section id="interview">
+<h2>16. The #1 GenAI Interview Question: “How Do You Evaluate a RAG Chatbot?”</h2>
+<p>A weak answer is simply: “I will check recall, precision, faithfulness and answer relevance.” Those metrics are useful, but they do not describe an evaluation strategy.</p>
+
+<div class="callout">
+<strong>Strong interview framing:</strong> Present evaluation as a layered framework rather than a list of metrics.
+</div>
+
+<h3>Model Answer</h3>
+<blockquote style="margin:0;padding:20px;border-left:5px solid #245b9b;background:#f8fafc;border-radius:10px">
+<p>“I would build an evaluation suite and evaluate the RAG application at three levels. First, at the <strong>component level</strong>, I would evaluate the retriever using metrics such as recall and precision, and evaluate the generator independently using faithfulness, answer relevance and citation accuracy.</p>
+<p>Second, at the <strong>pipeline level</strong>, after connecting the retriever and generator, I would evaluate the RAG Triad: context relevance, faithfulness and answer relevance.</p>
+<p>Third, at the <strong>application level</strong>, I would evaluate end-user quality such as correctness, completeness and style, along with safety checks such as toxicity, PII leakage and jailbreak resistance, and operational metrics such as latency, cost and token usage.</p>
+<p>Once the evaluation suite is established, I would use it for <strong>regression testing</strong>. I would establish a baseline, compare every new version against it, and progressively automate the process with experiment tracking and CI/CD release gates.</p>
+<p>After deployment, evaluation would continue through <strong>online monitoring</strong>. I would collect production traces, latency, cost, user feedback and sampled quality metrics, monitor for drift, and feed important production failures back into the offline golden dataset. This creates a continuous evaluation and improvement loop.”</p>
+</blockquote>
+
+<h3>Interview Cheat Sheet</h3>
+<table>
+<thead><tr><th>Stage</th><th>Say This</th></tr></thead>
+<tbody>
+<tr><td>1. Component</td><td>Retriever → Recall + Precision; Generator → Faithfulness + Answer Relevance + Citation Accuracy</td></tr>
+<tr><td>2. Pipeline</td><td>RAG Triad → Context Relevance + Faithfulness + Answer Relevance</td></tr>
+<tr><td>3. Application</td><td>Correctness + Completeness + Style / Task Success</td></tr>
+<tr><td>4. Safety</td><td>Toxicity + PII leakage + Jailbreak resistance</td></tr>
+<tr><td>5. Operations</td><td>Latency + Cost + Tokens</td></tr>
+<tr><td>6. Regression</td><td>Baseline → rerun suite → compare → gate release</td></tr>
+<tr><td>7. Online</td><td>Observe production → evaluate → detect drift → improve</td></tr>
+<tr><td>8. Feedback</td><td>Production failures → enrich golden dataset → stronger future evals</td></tr>
+</tbody>
+</table>
+
+<div class="callout danger">
+<strong>Common interview mistake:</strong> Listing three or four metrics without explaining where they are applied, what failure they diagnose, how regression is handled, and what happens after deployment.
+</div>
+</section>
+
+<section id="roadmap">
+<h2>17. Practical Roadmap for the Next Four Sessions</h2>
+<table>
+<thead><tr><th>Session</th><th>Implementation Focus</th><th>Expected Outcome</th></tr></thead>
+<tbody>
+<tr><td><strong>1</strong></td><td>Build retriever + evaluate retriever; build generator + evaluate generator</td><td>Component-level evaluation</td></tr>
+<tr><td><strong>2</strong></td><td>Connect retriever and generator; run RAG Triad</td><td>Pipeline-level evaluation</td></tr>
+<tr><td><strong>3</strong></td><td>Run application quality, safety and operational evaluations</td><td>System-level evaluation</td></tr>
+<tr><td><strong>4</strong></td><td>Regression testing + online evaluation</td><td>Production-oriented evaluation lifecycle</td></tr>
+</tbody>
+</table>
+
+<h3>End-to-End Mental Model</h3>
+<div class="diagram">
+<svg viewBox="0 0 1000 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="End to end RAG evaluation lifecycle">
+<defs>
+<marker id="arrow8" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#183b6b"/></marker>
+</defs>
+<rect x="30" y="85" width="155" height="80" rx="13" fill="#eef5ff" stroke="#245b9b"/>
+<text x="107" y="118" text-anchor="middle" font-size="16" font-weight="700">Build</text>
+<text x="107" y="143" text-anchor="middle" font-size="13">Components</text>
+
+<rect x="225" y="85" width="155" height="80" rx="13" fill="#ecfdf5" stroke="#0f766e"/>
+<text x="302" y="118" text-anchor="middle" font-size="16" font-weight="700">Evaluate</text>
+<text x="302" y="143" text-anchor="middle" font-size="13">Pipeline + App</text>
+
+<rect x="420" y="85" width="155" height="80" rx="13" fill="#fffaf0" stroke="#a16207"/>
+<text x="497" y="118" text-anchor="middle" font-size="16" font-weight="700">Regress</text>
+<text x="497" y="143" text-anchor="middle" font-size="13">Baseline + Gate</text>
+
+<rect x="615" y="85" width="155" height="80" rx="13" fill="#f8fafc" stroke="#64748b"/>
+<text x="692" y="118" text-anchor="middle" font-size="16" font-weight="700">Deploy</text>
+<text x="692" y="143" text-anchor="middle" font-size="13">Production</text>
+
+<rect x="810" y="85" width="155" height="80" rx="13" fill="#fff1f2" stroke="#b42318"/>
+<text x="887" y="118" text-anchor="middle" font-size="16" font-weight="700">Monitor</text>
+<text x="887" y="143" text-anchor="middle" font-size="13">Online + Drift</text>
+
+<line x1="185" y1="125" x2="225" y2="125" stroke="#183b6b" stroke-width="3" marker-end="url(#arrow8)"/>
+<line x1="380" y1="125" x2="420" y2="125" stroke="#183b6b" stroke-width="3" marker-end="url(#arrow8)"/>
+<line x1="575" y1="125" x2="615" y2="125" stroke="#183b6b" stroke-width="3" marker-end="url(#arrow8)"/>
+<line x1="770" y1="125" x2="810" y2="125" stroke="#183b6b" stroke-width="3" marker-end="url(#arrow8)"/>
+<path d="M887 165 C887 220, 107 220, 107 165" fill="none" stroke="#183b6b" stroke-width="3" marker-end="url(#arrow8)"/>
+<text x="500" y="213" text-anchor="middle" font-size="14" font-weight="700" fill="#183b6b">Production failures enrich the next offline evaluation cycle</text>
+</svg>
+</div>
+
+<h3>Final Takeaways</h3>
+<ul>
+<li><strong>RAG evaluation is a framework, not a metric.</strong></li>
+<li><strong>Evaluate incrementally:</strong> component → pipeline → application.</li>
+<li><strong>Separate retrieval failures from generation failures</strong> before judging the whole application.</li>
+<li><strong>The RAG Triad</strong> provides a useful pipeline-level diagnostic view.</li>
+<li><strong>Application evaluation goes beyond answer quality</strong> to correctness, completeness, style, safety and operations.</li>
+<li><strong>Regression testing turns evaluations into an engineering control mechanism.</strong></li>
+<li><strong>Baselines and experiment tracking</strong> make changes measurable and reproducible.</li>
+<li><strong>CI/CD gates</strong> can prevent objectively worse versions from reaching production.</li>
+<li><strong>Online evaluation is essential</strong> because production traffic exposes failure modes that offline datasets miss.</li>
+<li><strong>A mature system closes the loop:</strong> production failures become new evaluation cases.</li>
+</ul>
+
+<div class="callout tip">
+<strong>One-line mental model:</strong> <em>Build → Evaluate components → Evaluate the RAG pipeline → Evaluate the application → Regression-test → Deploy → Monitor online → Feed failures back into offline evals.</em>
+</div>
+</section>
+
+<footer>
+  <p>LLM Evaluation Learning Notes • RAG Application Evaluation • Structured from the provided lecture transcript</p>
+</footer>
+</main>
+</div>
+</body>
+</html>
