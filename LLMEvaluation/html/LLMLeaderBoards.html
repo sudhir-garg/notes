@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Leaderboards: A Practical Guide for AI Engineers</title>
+<style>
+:root{
+  --bg:#f5f7fb; --surface:#ffffff; --surface2:#f8fafc; --text:#172033;
+  --muted:#5f6b7a; --border:#dfe5ee; --primary:#2457d6; --primary2:#173b9b;
+  --green:#16794c; --orange:#a85b00; --red:#b42318; --shadow:0 10px 28px rgba(20,35,70,.08);
+  --radius:16px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.72 Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a{color:var(--primary);text-decoration:none}
+a:hover{text-decoration:underline}
+.page{max-width:1280px;margin:auto;padding:28px}
+.hero{
+  background:linear-gradient(135deg,#11275c,#2457d6 60%,#5a7bea);
+  color:white;border-radius:24px;padding:56px 52px;box-shadow:var(--shadow);margin-bottom:28px
+}
+.hero .eyebrow{font-size:13px;text-transform:uppercase;letter-spacing:.14em;opacity:.8;font-weight:700}
+.hero h1{font-size:clamp(34px,5vw,58px);line-height:1.08;margin:12px 0 16px}
+.hero p{font-size:19px;max-width:900px;opacity:.92;margin:0}
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:28px;align-items:start}
+.toc{position:sticky;top:18px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+.toc h3{margin:0 0 12px;font-size:14px;text-transform:uppercase;letter-spacing:.08em}
+.toc a{display:block;padding:7px 4px;color:var(--muted);font-size:14px;line-height:1.35}
+.toc a:hover{color:var(--primary)}
+article{min-width:0}
+section.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:30px;margin-bottom:24px;box-shadow:0 5px 20px rgba(20,35,70,.04)}
+h2{font-size:30px;line-height:1.2;margin:0 0 14px}
+h3{font-size:21px;line-height:1.3;margin:26px 0 9px}
+h4{margin:18px 0 7px}
+p{margin:10px 0}
+.lead{font-size:18px;color:#39475a}
+.callout{border-left:5px solid var(--primary);background:#eef4ff;padding:16px 18px;border-radius:10px;margin:18px 0}
+.callout.warning{border-color:#c77900;background:#fff7e8}
+.callout.danger{border-color:#c62828;background:#fff0f0}
+.callout.success{border-color:#168452;background:#edf9f2}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.tile{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:18px}
+.tile h3{margin-top:0;font-size:18px}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+th,td{border:1px solid var(--border);padding:12px 13px;text-align:left;vertical-align:top}
+th{background:#eef2f8;font-weight:750}
+tr:nth-child(even) td{background:#fbfcfe}
+pre{background:#101827;color:#e8edf7;padding:18px;border-radius:12px;overflow:auto;line-height:1.55}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
+:not(pre)>code{background:#eef1f6;padding:2px 6px;border-radius:6px;font-size:.92em}
+.badge{display:inline-block;border:1px solid var(--border);background:#f7f9fc;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:700;margin:2px}
+svg{width:100%;height:auto;display:block}
+.diagram{border:1px solid var(--border);border-radius:14px;background:#fbfcff;padding:16px;margin:20px 0}
+.caption{font-size:13px;color:var(--muted);text-align:center;margin-top:8px}
+.quote{font-size:20px;font-weight:650;line-height:1.5;border-left:4px solid var(--primary);padding:10px 18px;margin:18px 0;background:#f5f8ff}
+.checklist li{margin:8px 0}
+.footer{color:var(--muted);font-size:13px;text-align:center;padding:20px 0 50px}
+@media(max-width:900px){
+  .layout{grid-template-columns:1fr}.toc{position:static}.grid,.grid3{grid-template-columns:1fr}
+  .hero{padding:38px 26px}
+  section.card{padding:22px}
+}
+</style>
+</head>
+
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="eyebrow">LLM Evaluation • Model Selection • AI Engineering</div>
+  <h1>LLM Leaderboards</h1>
+  <p>A practical guide to understanding benchmark rankings, human-preference scores, application-specific evaluations, leaderboard pitfalls, Goodhart's Law, and the path from public benchmarks to custom model evaluation.</p>
+</header>
+
+<div class="layout">
+<nav class="toc" aria-label="Table of contents">
+  <h3>Contents</h3>
+  <a href="#intro">1. What Are LLM Leaderboards?</a>
+  <a href="#why">2. Why Do Leaderboards Exist?</a>
+  <a href="#stakeholders">3. Who Uses Them?</a>
+  <a href="#stealth">4. Stealth / Unannounced Models</a>
+  <a href="#types">5. Four Types of Leaderboards</a>
+  <a href="#pitfalls">6. Seven Critical Pitfalls</a>
+  <a href="#goodhart">7. Goodhart's Law</a>
+  <a href="#framework">8. AI Engineer Reading Framework</a>
+  <a href="#golden">9. The Golden Rule</a>
+  <a href="#custom">10. Moving to Custom Evals</a>
+  <a href="#recap">11. Quick Revision</a>
+</nav>
+
+<article>
+
+<section class="card" id="intro">
+<h2>1. What Are LLM Leaderboards?</h2>
+<p class="lead">An LLM leaderboard is a ranking system that compares language models according to one or more evaluation signals.</p>
+<p>At a high level, a leaderboard takes models, runs them through a benchmark or evaluation procedure, calculates scores, and presents the results in a comparable ranking.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 980 280" role="img" aria-label="LLM leaderboard evaluation flow">
+  <defs>
+    <marker id="arrow1" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#2457d6"/></marker>
+  </defs>
+  <rect x="35" y="85" width="180" height="100" rx="16" fill="#eef4ff" stroke="#2457d6"/>
+  <text x="125" y="122" text-anchor="middle" font-weight="700" fill="#172033">Models</text>
+  <text x="125" y="148" text-anchor="middle" fill="#5f6b7a">A • B • C • D</text>
+  <line x1="215" y1="135" x2="300" y2="135" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow1)"/>
+  <rect x="300" y="85" width="190" height="100" rx="16" fill="#f8fafc" stroke="#b7c1d0"/>
+  <text x="395" y="122" text-anchor="middle" font-weight="700" fill="#172033">Evaluation</text>
+  <text x="395" y="148" text-anchor="middle" fill="#5f6b7a">Benchmark / Judge</text>
+  <line x1="490" y1="135" x2="575" y2="135" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow1)"/>
+  <rect x="575" y="85" width="165" height="100" rx="16" fill="#edf9f2" stroke="#168452"/>
+  <text x="657" y="122" text-anchor="middle" font-weight="700" fill="#172033">Scores</text>
+  <text x="657" y="148" text-anchor="middle" fill="#5f6b7a">Accuracy / Elo / etc.</text>
+  <line x1="740" y1="135" x2="825" y2="135" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow1)"/>
+  <rect x="825" y="70" width="120" height="130" rx="16" fill="#fff7e8" stroke="#c77900"/>
+  <text x="885" y="110" text-anchor="middle" font-weight="700" fill="#172033">Rank</text>
+  <text x="885" y="136" text-anchor="middle" fill="#5f6b7a">#1</text>
+  <text x="885" y="158" text-anchor="middle" fill="#5f6b7a">#2</text>
+  <text x="885" y="180" text-anchor="middle" fill="#5f6b7a">#3</text>
+</svg>
+<div class="caption">Conceptual leaderboard pipeline: models → evaluation procedure → score → ranking.</div>
+</div>
+
+<div class="callout warning"><strong>Important:</strong> A leaderboard score is not a universal measure of “how good” a model is. It is evidence about performance under a particular evaluation setup.</div>
+</section>
+
+<section class="card" id="why">
+<h2>2. Why Do Leaderboards Exist?</h2>
+<div class="grid">
+  <div class="tile"><h3>1. Trust &amp; Transparency</h3><p>Independent or standardized evaluations give users a reference point beyond vendor marketing claims.</p></div>
+  <div class="tile"><h3>2. Model Comparison</h3><p>They make it easier to compare many models using a common evaluation protocol.</p></div>
+  <div class="tile"><h3>3. Cost–Quality Decisions</h3><p>Teams can compare quality signals with price, latency, context limits, or throughput when those fields are available.</p></div>
+  <div class="tile"><h3>4. Saturation Tracking</h3><p>As benchmarks become easier for frontier models, score distributions reveal whether a benchmark is still discriminative.</p></div>
+</div>
+
+<h3>Benchmark saturation</h3>
+<p>A benchmark becomes less useful for ranking frontier models when many strong models cluster near the maximum score. A 95% score may sound impressive, but its information value depends on the distribution and difficulty of the benchmark.</p>
+
+<table>
+<thead><tr><th>Situation</th><th>What the score tells you</th><th>Concern</th></tr></thead>
+<tbody>
+<tr><td>Scores spread widely</td><td>Benchmark may discriminate between models well.</td><td>Still depends on task relevance.</td></tr>
+<tr><td>Most models near 100%</td><td>Models are strong on the benchmark.</td><td>Benchmark may be saturated.</td></tr>
+<tr><td>Only one model is far ahead</td><td>Potential capability difference.</td><td>Check sample size, test contamination, and statistical uncertainty.</td></tr>
+</tbody>
+</table>
+</section>
+
+<section class="card" id="stakeholders">
+<h2>3. Key Stakeholders: Who Uses Leaderboards and Why?</h2>
+<div class="grid3">
+  <div class="tile"><h3>AI Engineers</h3><p>Use rankings as an initial shortlist for models to test in their own applications.</p></div>
+  <div class="tile"><h3>Researchers</h3><p>Study capability trends, benchmark behavior, evaluation methodology, and model progress.</p></div>
+  <div class="tile"><h3>Product Teams</h3><p>Use them as an early signal when deciding which models deserve deeper product testing.</p></div>
+  <div class="tile"><h3>Developers</h3><p>Compare candidate models before integrating APIs or self-hosted systems.</p></div>
+  <div class="tile"><h3>Organizations</h3><p>Combine quality evidence with security, cost, latency, privacy, and operational constraints.</p></div>
+  <div class="tile"><h3>Model Providers</h3><p>Track competitive positioning and identify capability gaps.</p></div>
+</div>
+
+<div class="callout success"><strong>Best use:</strong> treat public leaderboards as a discovery and filtering mechanism. Then validate finalists on your own workload.</div>
+</section>
+
+<section class="card" id="stealth">
+<h2>4. Frontier Labs and Stealth / Unannounced Models</h2>
+<p>The outline references frontier labs using “stealth models” and gives <strong>Nano Banana</strong> as an example. Because the supplied source contains only the section title and does not provide supporting transcript details, the safe interpretation is conceptual: models may sometimes appear in evaluations before their exact product identity, architecture, or release context is fully known.</p>
+
+<h3>Why this matters</h3>
+<ul>
+<li>A leaderboard can contain a model label that does not tell you everything about the underlying system.</li>
+<li>Model identity, version, system prompt, inference settings, and serving configuration can affect results.</li>
+<li>A ranking without reproducibility information is harder to interpret.</li>
+</ul>
+
+<div class="callout danger"><strong>Do not infer too much from a mysterious model name.</strong> Ask what exactly was evaluated, under which settings, with which version, and whether the result is independently reproducible.</div>
+</section>
+
+<section class="card" id="types">
+<h2>5. Four Types of LLM Leaderboards</h2>
+
+<h3>Type 1 — Benchmark-Specific Leaderboards</h3>
+<p>These rank models on one particular benchmark or task family. The outline uses <strong>Humanity's Last Exam</strong> as an example.</p>
+<table>
+<tr><th>Property</th><th>Meaning</th></tr>
+<tr><td>Focus</td><td>One benchmark and its task definition.</td></tr>
+<tr><td>Strength</td><td>Detailed signal about a specific capability.</td></tr>
+<tr><td>Weakness</td><td>Performance may not generalize to unrelated workloads.</td></tr>
+<tr><td>Best use</td><td>Capability-specific comparison.</td></tr>
+</table>
+
+<h3>Type 2 — Multi-Benchmark Leaderboards</h3>
+<p>The outline names <strong>LiveBench</strong> and <strong>Artificial Analysis</strong>. These systems aggregate or present results across multiple dimensions rather than relying on one benchmark alone.</p>
+<p>The benefit is breadth: a model may be strong in reasoning but weaker in coding, instruction following, or another dimension. A multi-dimensional view can expose that profile.</p>
+
+<h3>Type 3 — Human Preference Leaderboards</h3>
+<p>The outline names the <strong>LMSYS Chatbot Arena</strong>. Human-preference evaluation compares model responses through user judgments or pairwise preferences, producing a ranking intended to reflect perceived response quality.</p>
+<div class="diagram">
+<svg viewBox="0 0 980 300" role="img" aria-label="Human preference evaluation">
+  <defs>
+    <marker id="arrow2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#2457d6"/></marker>
+  </defs>
+  <rect x="35" y="95" width="180" height="95" rx="16" fill="#eef4ff" stroke="#2457d6"/>
+  <text x="125" y="132" text-anchor="middle" font-weight="700">User Prompt</text>
+  <text x="125" y="158" text-anchor="middle" fill="#5f6b7a">Same task</text>
+  <line x1="215" y1="142" x2="300" y2="142" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow2)"/>
+  <rect x="300" y="45" width="190" height="95" rx="16" fill="#f8fafc" stroke="#b7c1d0"/>
+  <text x="395" y="82" text-anchor="middle" font-weight="700">Model A</text>
+  <text x="395" y="108" text-anchor="middle" fill="#5f6b7a">Response A</text>
+  <rect x="300" y="165" width="190" height="95" rx="16" fill="#f8fafc" stroke="#b7c1d0"/>
+  <text x="395" y="202" text-anchor="middle" font-weight="700">Model B</text>
+  <text x="395" y="228" text-anchor="middle" fill="#5f6b7a">Response B</text>
+  <line x1="490" y1="92" x2="600" y2="120" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow2)"/>
+  <line x1="490" y1="213" x2="600" y2="178" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow2)"/>
+  <rect x="600" y="95" width="175" height="95" rx="16" fill="#fff7e8" stroke="#c77900"/>
+  <text x="687" y="132" text-anchor="middle" font-weight="700">Human Preference</text>
+  <text x="687" y="158" text-anchor="middle" fill="#5f6b7a">A wins / B wins / tie</text>
+  <line x1="775" y1="142" x2="850" y2="142" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow2)"/>
+  <rect x="850" y="95" width="95" height="95" rx="16" fill="#edf9f2" stroke="#168452"/>
+  <text x="897" y="132" text-anchor="middle" font-weight="700">Rating</text>
+  <text x="897" y="158" text-anchor="middle" fill="#5f6b7a">Rank</text>
+</svg>
+<div class="caption">Conceptual pairwise human-preference flow.</div>
+</div>
+
+<h3>Type 4 — Application-Specific Leaderboards</h3>
+<p>The outline names the <strong>Berkeley Function Calling</strong> benchmark as an example. These evaluations focus on a practical capability rather than general language quality.</p>
+<div class="callout"><strong>Key idea:</strong> application-specific evaluation is often closer to engineering reality because it measures a capability that a real system actually depends on.</div>
+</section>
+
+<section class="card" id="pitfalls">
+<h2>6. Seven Critical Pitfalls: Why You Cannot Blindly Trust Leaderboard Scores</h2>
+
+<div class="grid">
+<div class="tile"><h3>1. Benchmark mismatch</h3><p>A model can rank highly on a benchmark that has little relationship to your application.</p></div>
+<div class="tile"><h3>2. Data contamination</h3><p>If evaluation material overlaps with model training data, the measured performance can be misleading.</p></div>
+<div class="tile"><h3>3. Metric limitations</h3><p>A single score compresses a multidimensional capability profile into one number.</p></div>
+<div class="tile"><h3>4. Evaluation variance</h3><p>Sampling, prompts, decoding settings, judge behavior, and test composition can affect results.</p></div>
+<div class="tile"><h3>5. Statistical uncertainty</h3><p>Small score differences may not represent meaningful differences without confidence intervals or repeated measurements.</p></div>
+<div class="tile"><h3>6. Hidden configuration</h3><p>Model version, system prompt, tools, context, and inference parameters can change the outcome.</p></div>
+<div class="tile"><h3>7. Optimization pressure</h3><p>Once a benchmark becomes important, developers may optimize specifically for it, reducing its value as a broad capability proxy.</p></div>
+</div>
+
+<h3>A score is evidence, not a verdict</h3>
+<table>
+<tr><th>Leaderboard says</th><th>Do not automatically conclude</th></tr>
+<tr><td>Model A is #1</td><td>Model A is best for every application.</td></tr>
+<tr><td>Model B has +3 points</td><td>Users will necessarily notice a +3-point improvement.</td></tr>
+<tr><td>Model C is best at reasoning</td><td>Model C is also best on cost, latency, safety, or reliability.</td></tr>
+<tr><td>Model D wins human preference</td><td>Model D will win every structured business task.</td></tr>
+</table>
+</section>
+
+<section class="card" id="goodhart">
+<h2>7. Goodhart's Law in AI</h2>
+<div class="quote">“When a measure becomes a target, it ceases to be a good measure.”</div>
+<p>In AI evaluation, Goodhart's Law describes what can happen when a benchmark score becomes an explicit optimization target. A model may improve its measured score without producing a proportional improvement in the broader capability we originally wanted to measure.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 980 330" role="img" aria-label="Goodhart's law in AI evaluation">
+  <defs>
+    <marker id="arrow3" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#2457d6"/></marker>
+  </defs>
+  <rect x="35" y="110" width="190" height="95" rx="16" fill="#eef4ff" stroke="#2457d6"/>
+  <text x="130" y="145" text-anchor="middle" font-weight="700">Desired Capability</text>
+  <text x="130" y="171" text-anchor="middle" fill="#5f6b7a">Real-world quality</text>
+  <line x1="225" y1="157" x2="315" y2="157" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow3)"/>
+  <rect x="315" y="110" width="190" height="95" rx="16" fill="#f8fafc" stroke="#b7c1d0"/>
+  <text x="410" y="145" text-anchor="middle" font-weight="700">Benchmark</text>
+  <text x="410" y="171" text-anchor="middle" fill="#5f6b7a">Proxy measurement</text>
+  <line x1="505" y1="157" x2="595" y2="157" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow3)"/>
+  <rect x="595" y="110" width="175" height="95" rx="16" fill="#fff7e8" stroke="#c77900"/>
+  <text x="682" y="145" text-anchor="middle" font-weight="700">Optimization</text>
+  <text x="682" y="171" text-anchor="middle" fill="#5f6b7a">Target the metric</text>
+  <line x1="770" y1="157" x2="855" y2="157" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow3)"/>
+  <rect x="855" y="90" width="90" height="135" rx="16" fill="#fff0f0" stroke="#b42318"/>
+  <text x="900" y="128" text-anchor="middle" font-weight="700">High</text>
+  <text x="900" y="153" text-anchor="middle" font-weight="700">score</text>
+  <text x="900" y="180" text-anchor="middle" fill="#5f6b7a">≠</text>
+  <text x="900" y="201" text-anchor="middle" fill="#5f6b7a">perfect</text>
+  <text x="900" y="218" text-anchor="middle" fill="#5f6b7a">quality</text>
+</svg>
+<div class="caption">The benchmark is a proxy. Optimizing the proxy can weaken its relationship with the underlying goal.</div>
+</div>
+
+<h3>How to reduce the risk</h3>
+<ul>
+<li>Use multiple evaluation dimensions rather than one metric.</li>
+<li>Maintain private or continuously refreshed test sets where appropriate.</li>
+<li>Evaluate real application traces and failure cases.</li>
+<li>Track robustness, not just average score.</li>
+<li>Combine benchmark results with human review and production-oriented evaluations.</li>
+</ul>
+</section>
+
+<section class="card" id="framework">
+<h2>8. Step-by-Step AI Engineer Framework: How to Correctly Read Leaderboards</h2>
+
+<ol class="checklist">
+<li><strong>Start with the task.</strong> Write down what your application actually needs the model to do.</li>
+<li><strong>Identify the relevant capability.</strong> Examples include coding, reasoning, tool calling, extraction, classification, long-context retrieval, or instruction following.</li>
+<li><strong>Check benchmark alignment.</strong> Ask whether the benchmark resembles your inputs, outputs, constraints, and failure modes.</li>
+<li><strong>Inspect methodology.</strong> Look for dataset construction, prompt format, judge method, sample count, scoring method, and model version.</li>
+<li><strong>Check uncertainty.</strong> Investigate whether score differences are statistically or practically meaningful.</li>
+<li><strong>Build a shortlist.</strong> Select several models rather than blindly choosing the first-ranked model.</li>
+<li><strong>Test your own data.</strong> Run an application-specific evaluation on representative examples.</li>
+<li><strong>Compare non-quality constraints.</strong> Include price, latency, throughput, context window, availability, privacy, and operational complexity.</li>
+<li><strong>Make the decision.</strong> Choose the model that best satisfies the complete system objective—not the leaderboard rank alone.</li>
+</ol>
+
+<div class="diagram">
+<svg viewBox="0 0 980 260" role="img" aria-label="Leaderboard decision framework">
+  <defs>
+    <marker id="arrow4" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#2457d6"/></marker>
+  </defs>
+  <rect x="25" y="85" width="150" height="90" rx="15" fill="#eef4ff" stroke="#2457d6"/>
+  <text x="100" y="120" text-anchor="middle" font-weight="700">Leaderboard</text>
+  <text x="100" y="146" text-anchor="middle" fill="#5f6b7a">Initial signal</text>
+  <line x1="175" y1="130" x2="255" y2="130" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow4)"/>
+  <rect x="255" y="85" width="160" height="90" rx="15" fill="#f8fafc" stroke="#b7c1d0"/>
+  <text x="335" y="120" text-anchor="middle" font-weight="700">Shortlist</text>
+  <text x="335" y="146" text-anchor="middle" fill="#5f6b7a">2–5 candidates</text>
+  <line x1="415" y1="130" x2="495" y2="130" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow4)"/>
+  <rect x="495" y="85" width="175" height="90" rx="15" fill="#fff7e8" stroke="#c77900"/>
+  <text x="582" y="120" text-anchor="middle" font-weight="700">Custom Eval</text>
+  <text x="582" y="146" text-anchor="middle" fill="#5f6b7a">Your real workload</text>
+  <line x1="670" y1="130" x2="750" y2="130" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow4)"/>
+  <rect x="750" y="85" width="205" height="90" rx="15" fill="#edf9f2" stroke="#168452"/>
+  <text x="852" y="120" text-anchor="middle" font-weight="700">Engineering Decision</text>
+  <text x="852" y="146" text-anchor="middle" fill="#5f6b7a">Quality + cost + latency</text>
+</svg>
+<div class="caption">Leaderboards narrow the search space; custom evaluations make the final decision.</div>
+</div>
+
+<h3>Example decision matrix</h3>
+<table>
+<thead><tr><th>Criterion</th><th>Weight</th><th>Model A</th><th>Model B</th><th>Model C</th></tr></thead>
+<tbody>
+<tr><td>Task quality</td><td>40%</td><td>8.8</td><td>9.1</td><td>8.5</td></tr>
+<tr><td>Reliability / consistency</td><td>20%</td><td>8.6</td><td>8.7</td><td>8.2</td></tr>
+<tr><td>Cost</td><td>15%</td><td>7.5</td><td>6.8</td><td>9.2</td></tr>
+<tr><td>Latency</td><td>15%</td><td>8.0</td><td>7.1</td><td>9.0</td></tr>
+<tr><td>Operational fit</td><td>10%</td><td>8.5</td><td>8.2</td><td>8.7</td></tr>
+</tbody>
+</table>
+<p>This illustrates why “highest benchmark score” and “best production choice” are different questions.</p>
+</section>
+
+<section class="card" id="golden">
+<h2>9. The Golden Rule: Leaderboards Are Filtering Tools, Not Decision Tools</h2>
+<div class="callout success">
+<strong>Use a leaderboard to answer:</strong> “Which models are worth investigating?”
+<br><br>
+<strong>Use your own evaluation to answer:</strong> “Which model should we deploy for this application?”
+</div>
+
+<table>
+<tr><th>Stage</th><th>Primary tool</th><th>Goal</th></tr>
+<tr><td>Discovery</td><td>Public leaderboards</td><td>Find promising candidates.</td></tr>
+<tr><td>Screening</td><td>Relevant benchmarks</td><td>Remove clearly unsuitable models.</td></tr>
+<tr><td>Validation</td><td>Custom offline evaluation</td><td>Measure performance on your workload.</td></tr>
+<tr><td>Pre-production</td><td>Stress / regression tests</td><td>Check robustness and release risk.</td></tr>
+<tr><td>Production</td><td>Online evaluation + monitoring</td><td>Detect drift and real-world failures.</td></tr>
+</table>
+</section>
+
+<section class="card" id="custom">
+<h2>10. Looking Ahead: Transitioning to Custom Model Evaluations</h2>
+<p>The natural next step after understanding public leaderboards is to build an evaluation system for your own application.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 980 360" role="img" aria-label="Custom model evaluation architecture">
+  <defs>
+    <marker id="arrow5" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#2457d6"/></marker>
+  </defs>
+  <rect x="35" y="125" width="180" height="100" rx="16" fill="#eef4ff" stroke="#2457d6"/>
+  <text x="125" y="163" text-anchor="middle" font-weight="700">Evaluation Dataset</text>
+  <text x="125" y="190" text-anchor="middle" fill="#5f6b7a">Inputs + expected behavior</text>
+  <line x1="215" y1="175" x2="295" y2="175" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow5)"/>
+  <rect x="295" y="125" width="175" height="100" rx="16" fill="#f8fafc" stroke="#b7c1d0"/>
+  <text x="382" y="163" text-anchor="middle" font-weight="700">Application</text>
+  <text x="382" y="190" text-anchor="middle" fill="#5f6b7a">LLM / RAG / Agent</text>
+  <line x1="470" y1="175" x2="550" y2="175" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow5)"/>
+  <rect x="550" y="125" width="180" height="100" rx="16" fill="#fff7e8" stroke="#c77900"/>
+  <text x="640" y="163" text-anchor="middle" font-weight="700">Candidate Outputs</text>
+  <text x="640" y="190" text-anchor="middle" fill="#5f6b7a">+ evaluation criteria</text>
+  <line x1="730" y1="175" x2="810" y2="110" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow5)"/>
+  <line x1="730" y1="175" x2="810" y2="175" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow5)"/>
+  <line x1="730" y1="175" x2="810" y2="240" stroke="#2457d6" stroke-width="3" marker-end="url(#arrow5)"/>
+  <rect x="810" y="65" width="135" height="65" rx="13" fill="#edf9f2" stroke="#168452"/>
+  <text x="877" y="92" text-anchor="middle" font-weight="700">Program</text>
+  <text x="877" y="113" text-anchor="middle" fill="#5f6b7a">Exact checks</text>
+  <rect x="810" y="143" width="135" height="65" rx="13" fill="#edf9f2" stroke="#168452"/>
+  <text x="877" y="170" text-anchor="middle" font-weight="700">Human</text>
+  <text x="877" y="191" text-anchor="middle" fill="#5f6b7a">Review</text>
+  <rect x="810" y="221" width="135" height="65" rx="13" fill="#edf9f2" stroke="#168452"/>
+  <text x="877" y="248" text-anchor="middle" font-weight="700">LLM Judge</text>
+  <text x="877" y="269" text-anchor="middle" fill="#5f6b7a">Rubric-based</text>
+</svg>
+<div class="caption">A custom evaluation system measures your application's behavior instead of relying only on public model rankings.</div>
+</div>
+
+<h3>Minimal Python example: comparing models on a task dataset</h3>
+<p>The following is a framework-neutral illustration. It shows the evaluation pattern rather than depending on a particular provider.</p>
+<pre><code>from statistics import mean
+
+test_cases = [
+    {"input": "Classify: My card was charged twice.", "expected": "billing"},
+    {"input": "Classify: The API returns HTTP 500.", "expected": "technical"},
+    {"input": "Classify: Tell me about your company.", "expected": "general"},
+]
+
+def evaluate(model, cases):
+    results = []
+
+    for case in cases:
+        prediction = model(case["input"])
+
+        results.append({
+            "input": case["input"],
+            "expected": case["expected"],
+            "prediction": prediction,
+            "correct": prediction == case["expected"],
+        })
+
+    accuracy = mean(r["correct"] for r in results)
+    return accuracy, results
+
+# accuracy, details = evaluate(my_model, test_cases)
+# print(f"Accuracy: {accuracy:.2%}")</code></pre>
+
+<h3>What a mature evaluation system adds</h3>
+<ul>
+<li><strong>Golden datasets:</strong> representative examples with expected outputs or evaluation criteria.</li>
+<li><strong>Deterministic checks:</strong> exact-match, schema validation, regex, SQL assertions, or business-rule checks.</li>
+<li><strong>Human evaluation:</strong> useful for nuanced qualities that are difficult to automate reliably.</li>
+<li><strong>LLM-as-a-judge:</strong> rubric-based grading for semantic qualities such as relevance, groundedness, or style.</li>
+<li><strong>Regression testing:</strong> rerun evaluations whenever prompts, models, tools, retrieval, or application logic changes.</li>
+<li><strong>Production monitoring:</strong> evaluate sampled live interactions to discover failures not represented in the offline dataset.</li>
+</ul>
+</section>
+
+<section class="card" id="recap">
+<h2>11. Quick Revision</h2>
+<table>
+<tr><th>Concept</th><th>Remember</th></tr>
+<tr><td>LLM leaderboard</td><td>A ranking produced from a defined evaluation procedure.</td></tr>
+<tr><td>Benchmark-specific</td><td>Deep signal for one benchmark or capability.</td></tr>
+<tr><td>Multi-benchmark</td><td>Broader comparison across several evaluation dimensions.</td></tr>
+<tr><td>Human preference</td><td>Measures perceived quality through human comparisons or preferences.</td></tr>
+<tr><td>Application-specific</td><td>Targets a concrete capability relevant to an application.</td></tr>
+<tr><td>Benchmark saturation</td><td>Scores cluster near the ceiling, reducing discriminatory power.</td></tr>
+<tr><td>Goodhart's Law</td><td>Optimizing a metric can weaken its usefulness as a proxy for the real goal.</td></tr>
+<tr><td>Custom evaluation</td><td>Tests models against your own data, criteria, constraints, and failure modes.</td></tr>
+</table>
+
+<div class="callout">
+<strong>One-line mental model:</strong>
+<br>
+<span class="badge">Leaderboard</span> → discover candidates →
+<span class="badge">Relevant benchmarks</span> → shortlist →
+<span class="badge">Custom eval</span> → validate →
+<span class="badge">Production monitoring</span> → continuously verify.
+</div>
+
+<h3>Interview-ready answer</h3>
+<p><strong>Q: Should an AI engineer choose the highest-ranked model on a leaderboard?</strong></p>
+<p><strong>A:</strong> No. A leaderboard is a useful filtering mechanism, but its score is conditional on a particular dataset, metric, evaluation protocol, and model configuration. An AI engineer should use relevant leaderboards to shortlist candidates and then run custom evaluations on representative application data, considering quality, reliability, cost, latency, safety, and operational constraints.</p>
+</section>
+
+<section class="card">
+<h2>Source Note</h2>
+<p>The supplied file is an outline containing the section headings covered by this lesson. It does not include the detailed transcript or speaker explanations. The structure above preserves those headings, while the explanatory material is an educational expansion intended to make the outline usable as standalone study notes.</p>
+<p><strong>Source outline:</strong> Introduction → reasons for leaderboards → stakeholders → stealth models → four leaderboard types → seven pitfalls → Goodhart's Law → reading framework → golden rule → custom evaluations.</p>
+</section>
+
+</article>
+</div>
+
+<div class="footer">
+  <p>LLM Leaderboards — practical study notes for AI engineers.</p>
+</div>
+</div>
+</body>
+</html>
