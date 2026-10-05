@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG Evaluation: Building and Benchmarking a Retriever Eval Suite</title>
+<style>
+:root{
+  --bg:#f6f8fc;--surface:#fff;--text:#182033;--muted:#5e6a7d;
+  --primary:#244a9b;--primary-soft:#eaf0ff;--border:#dfe5ef;
+  --success:#197a52;--success-soft:#eaf8f1;--warning:#9a6510;--warning-soft:#fff7df;
+  --danger:#a33b3b;--danger-soft:#fff0f0;--shadow:0 10px 30px rgba(25,40,75,.08);
+  --code:#111827;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.72}
+a{color:var(--primary);text-decoration:none}
+a:hover{text-decoration:underline}
+.page{display:grid;grid-template-columns:270px minmax(0,1fr);max-width:1500px;margin:auto}
+aside{position:sticky;top:0;height:100vh;padding:28px 18px;border-right:1px solid var(--border);background:rgba(246,248,252,.94);backdrop-filter:blur(8px);overflow:auto}
+aside h3{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 14px}
+.toc a{display:block;padding:7px 10px;border-radius:8px;color:#3e4a5f;font-size:14px}
+.toc a:hover{background:var(--primary-soft);text-decoration:none;color:var(--primary)}
+main{min-width:0}
+.hero{padding:70px 7vw 58px;background:linear-gradient(135deg,#162b59,#315db0);color:white}
+.hero .eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:12px;opacity:.78;font-weight:700}
+.hero h1{font-size:clamp(38px,5vw,66px);line-height:1.08;margin:12px 0 20px;max-width:1050px}
+.hero p{font-size:19px;max-width:900px;color:#e9efff}
+.content{padding:42px 7vw 80px;max-width:1200px}
+section{margin:0 0 58px}
+h2{font-size:32px;line-height:1.2;margin:0 0 18px;padding-top:14px}
+h3{font-size:22px;margin:30px 0 10px}
+h4{font-size:17px;margin:22px 0 8px}
+.lead{font-size:18px;color:#3e4a5f}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:var(--shadow);margin:18px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+.metric{border:1px solid var(--border);background:white;border-radius:14px;padding:20px}
+.metric strong{display:block;font-size:30px;color:var(--primary)}
+.callout{border-left:5px solid var(--primary);background:var(--primary-soft);padding:18px 20px;border-radius:10px;margin:20px 0}
+.callout.success{border-color:var(--success);background:var(--success-soft)}
+.callout.warning{border-color:var(--warning);background:var(--warning-soft)}
+.callout.danger{border-color:var(--danger);background:var(--danger-soft)}
+table{width:100%;border-collapse:collapse;background:white;border:1px solid var(--border);border-radius:12px;overflow:hidden;display:table}
+th,td{padding:13px 14px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:#eef2f8;font-size:14px}
+tr:last-child td{border-bottom:0}
+pre{background:var(--code);color:#e8edf7;border-radius:14px;padding:20px;overflow:auto;font-size:13px;line-height:1.6;box-shadow:var(--shadow)}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
+:not(pre)>code{background:#edf1f7;padding:2px 6px;border-radius:5px;font-size:.9em}
+.diagram{background:white;border:1px solid var(--border);border-radius:16px;padding:18px;margin:22px 0;overflow:auto}
+.diagram svg{display:block;width:100%;height:auto;min-width:760px}
+.caption{font-size:13px;color:var(--muted);margin-top:8px}
+.steps{counter-reset:step}
+.step{position:relative;padding:18px 18px 18px 64px;background:white;border:1px solid var(--border);border-radius:12px;margin:12px 0}
+.step:before{counter-increment:step;content:counter(step);position:absolute;left:18px;top:18px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--primary);color:#fff;font-weight:700}
+.formula{font-size:18px;background:#f0f4fa;border:1px dashed #b9c5d8;border-radius:10px;padding:16px;text-align:center;margin:16px 0}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:3px 8px;border-radius:999px;background:#edf1f7;color:#45536b;margin:2px}
+footer{border-top:1px solid var(--border);padding:30px 7vw;color:var(--muted);font-size:13px}
+@media(max-width:900px){
+ .page{display:block}.page aside{position:relative;height:auto;border-right:0;border-bottom:1px solid var(--border)}
+ .content{padding:32px 5vw 60px}.hero{padding:52px 5vw 45px}
+}
+</style>
+</head>
+<body>
+<div class="page">
+<aside>
+  <h3>Contents</h3>
+  <nav class="toc">
+    <a href="#overview">1. What This Lesson Builds</a>
+    <a href="#architecture">2. RAG Eval-Suite Architecture</a>
+    <a href="#setup">3. Project Setup</a>
+    <a href="#retriever">4. Build the Retriever</a>
+    <a href="#failures">5. Retriever Failure Modes</a>
+    <a href="#metrics">6. Recall vs Precision</a>
+    <a href="#golden-problem">7. Why Chunk-ID Goldens Fail</a>
+    <a href="#golden-solution">8. Question + Ideal Answer Goldens</a>
+    <a href="#contextual-recall">9. Contextual Recall</a>
+    <a href="#contextual-precision">10. Contextual Precision</a>
+    <a href="#golden-creation">11. Creating the Golden Dataset</a>
+    <a href="#deepeval">12. DeepEval Fundamentals</a>
+    <a href="#eval-code">13. Evaluation Script</a>
+    <a href="#benchmark">14. Benchmark & Improve</a>
+    <a href="#lessons">15. Key Lessons</a>
+  </nav>
+</aside>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">LLM Evaluation • RAG • Retriever Quality</div>
+  <h1>Building a RAG Evaluation Suite: From Retriever Construction to Benchmarking</h1>
+  <p>A practical learning guide based on the supplied lecture transcript. The lesson builds a retriever, defines robust golden data, evaluates contextual recall and contextual precision with an LLM-as-a-judge approach, and iteratively improves the retrieval stack.</p>
+</header>
+
+<div class="content">
+
+<section id="overview">
+<h2>1. What This Lesson Builds</h2>
+<p class="lead">The lesson starts from the RAG-evaluation roadmap established previously and focuses on the first layer: <strong>component-level evaluation</strong>.</p>
+<p>The overall evaluation suite is organized into three levels:</p>
+<div class="grid">
+  <div class="metric"><strong>01</strong><b>Component level</b><br>Evaluate individual RAG components such as the retriever and generator.</div>
+  <div class="metric"><strong>02</strong><b>Pipeline / workflow level</b><br>Evaluate how the complete RAG workflow behaves.</div>
+  <div class="metric"><strong>03</strong><b>Application level</b><br>Evaluate the end-user RAG application as a system.</div>
+</div>
+<div class="callout success"><b>End goal:</b> collect these evaluation pipelines into an evaluation suite that can be reused for regression testing as the RAG application evolves.</div>
+<p>This lesson completes the retriever portion of that plan. The transcript explicitly frames the development loop as: <b>build a component → evaluate it → improve it → move to the next component</b>.</p>
+</section>
+
+<section id="architecture">
+<h2>2. RAG Evaluation Architecture</h2>
+<p>A RAG system has two particularly important components in this lesson:</p>
+<ul>
+<li><b>Retriever:</b> takes a query and fetches relevant context from the vector database.</li>
+<li><b>Generator:</b> receives the query plus retrieved context and produces the answer.</li>
+</ul>
+
+<div class="diagram">
+<svg viewBox="0 0 1050 390" role="img" aria-label="RAG evaluation architecture">
+<defs><marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#315db0"/></marker></defs>
+<rect x="40" y="140" width="180" height="85" rx="14" fill="#eef3ff" stroke="#315db0"/>
+<text x="130" y="174" text-anchor="middle" font-size="18" font-weight="700" fill="#182033">User Query</text>
+<text x="130" y="201" text-anchor="middle" font-size="13" fill="#5e6a7d">question</text>
+<line x1="220" y1="182" x2="335" y2="182" stroke="#315db0" stroke-width="3" marker-end="url(#arr)"/>
+<rect x="335" y="115" width="210" height="135" rx="14" fill="#fff" stroke="#315db0" stroke-width="2"/>
+<text x="440" y="151" text-anchor="middle" font-size="20" font-weight="700" fill="#182033">Retriever</text>
+<text x="440" y="181" text-anchor="middle" font-size="13" fill="#5e6a7d">query → embedding</text>
+<text x="440" y="204" text-anchor="middle" font-size="13" fill="#5e6a7d">→ vector search</text>
+<text x="440" y="227" text-anchor="middle" font-size="13" fill="#5e6a7d">→ top-K chunks</text>
+<line x1="545" y1="182" x2="660" y2="182" stroke="#315db0" stroke-width="3" marker-end="url(#arr)"/>
+<rect x="660" y="115" width="180" height="135" rx="14" fill="#fff" stroke="#315db0" stroke-width="2"/>
+<text x="750" y="151" text-anchor="middle" font-size="20" font-weight="700" fill="#182033">Generator</text>
+<text x="750" y="181" text-anchor="middle" font-size="13" fill="#5e6a7d">query + context</text>
+<text x="750" y="204" text-anchor="middle" font-size="13" fill="#5e6a7d">→ answer</text>
+<rect x="860" y="140" width="150" height="85" rx="14" fill="#eaf8f1" stroke="#197a52"/>
+<text x="935" y="174" text-anchor="middle" font-size="18" font-weight="700" fill="#182033">Answer</text>
+<text x="935" y="201" text-anchor="middle" font-size="13" fill="#5e6a7d">user-facing</text>
+<line x1="840" y1="182" x2="860" y2="182" stroke="#315db0" stroke-width="3" marker-end="url(#arr)"/>
+<rect x="340" y="295" width="200" height="58" rx="12" fill="#fff7df" stroke="#9a6510"/>
+<text x="440" y="330" text-anchor="middle" font-size="15" font-weight="700" fill="#5e6a7d">Retriever evaluation</text>
+<line x1="440" y1="250" x2="440" y2="295" stroke="#9a6510" stroke-width="2" marker-end="url(#arr)"/>
+<rect x="660" y="295" width="180" height="58" rx="12" fill="#fff7df" stroke="#9a6510"/>
+<text x="750" y="330" text-anchor="middle" font-size="15" font-weight="700" fill="#5e6a7d">Generator evaluation</text>
+<line x1="750" y1="250" x2="750" y2="295" stroke="#9a6510" stroke-width="2" marker-end="url(#arr)"/>
+</svg>
+<div class="caption">The lesson evaluates the retriever first, then moves toward generator and higher-level evaluation.</div>
+</div>
+</section>
+
+<section id="setup">
+<h2>3. Project Setup</h2>
+<p>The project is intentionally structured so application code, evaluation code, source data, and golden datasets are kept separate.</p>
+<pre><code>rag-eval-project/
+├── data/
+│   ├── session_1.txt
+│   ├── session_2.txt
+│   └── ...
+├── src/
+│   ├── retriever.py
+│   └── ...
+├── evals/
+│   └── eval_retriever.py
+├── goldens/
+│   └── retriever_goldens.json
+├── .env
+├── pyproject.toml
+└── .gitignore</code></pre>
+
+<h3>Environment</h3>
+<p>The lecture uses UV with Python 3.11 and installs the main dependencies for the exercise, including LangChain, the OpenAI library, DeepEval, pytest, and <code>python-dotenv</code>.</p>
+<pre><code>uv init
+uv python pin 3.11
+
+uv add langchain openai deepeval pytest python-dotenv</code></pre>
+<div class="callout warning"><b>API keys:</b> the lecture places the OpenAI API key in a <code>.env</code> file. Keep secrets out of source control and add <code>.env</code> to <code>.gitignore</code>.</div>
+</section>
+
+<section id="retriever">
+<h2>4. Build the Retriever</h2>
+<p>The retriever implementation in the lesson follows this sequence:</p>
+<div class="steps">
+<div class="step"><b>Load transcripts.</b> Read the lecture transcript files from <code>data/</code>.</div>
+<div class="step"><b>Clean the transcripts.</b> Remove timestamp lines so timestamps do not pollute semantic retrieval.</div>
+<div class="step"><b>Create Documents.</b> Store the cleaned text as LangChain document objects and preserve the session number as metadata.</div>
+<div class="step"><b>Chunk.</b> Split documents with an initial chunk size of <b>750</b> and overlap of <b>100</b>.</div>
+<div class="step"><b>Embed.</b> Use an OpenAI embedding model and persist vectors in ChromaDB.</div>
+<div class="step"><b>Create retriever.</b> Configure top-K retrieval, initially K = <b>5</b>.</div>
+</div>
+
+<h3>Conceptual implementation</h3>
+<pre><code>from pathlib import Path
+from dotenv import load_dotenv
+from langchain_openai import OpenAIEmbeddings
+from langchain_chroma import Chroma
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+load_dotenv()
+
+DATA_DIR = Path("data")
+CHROMA_DIR = "chroma_store"
+
+def load_transcripts():
+    # Read transcript files, remove timestamp-only lines,
+    # and attach session metadata.
+    ...
+
+def build_retriever():
+    embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+
+    if not Path(CHROMA_DIR).exists():
+        documents = load_transcripts()
+
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=750,
+            chunk_overlap=100
+        )
+        chunks = splitter.split_documents(documents)
+
+        Chroma.from_documents(
+            documents=chunks,
+            embedding=embeddings,
+            persist_directory=CHROMA_DIR
+        )
+
+    store = Chroma(
+        persist_directory=CHROMA_DIR,
+        embedding_function=embeddings
+    )
+
+    return store.as_retriever(search_kwargs={"k": 5})
+
+if __name__ == "__main__":
+    retriever = build_retriever()
+    results = retriever.invoke("What is regression testing?")
+
+    for doc in results:
+        print(doc.metadata)
+        print(doc.page_content[:500])
+        print("-" * 60)</code></pre>
+
+<div class="callout">The transcript deliberately keeps this implementation simple because the lesson's focus is evaluation rather than production-grade ingestion architecture.</div>
+
+<h3>Important data-ingestion observation</h3>
+<p>The lecture points out that, in this simplified implementation, adding a new transcript requires rebuilding the vector store. In a production design, data ingestion and retrieval should ideally be decoupled so that document updates do not require unnecessary reconstruction of the entire retrieval layer.</p>
+</section>
+
+<section id="failures">
+<h2>5. The Two Core Retriever Failure Modes</h2>
+<p>A retriever can fail in two fundamental ways.</p>
+<div class="grid">
+<div class="card"><h3>Failure 1 — Miss</h3><p>The retriever fails to bring back context that is actually needed to answer the query.</p><p><span class="tag">low recall</span></p></div>
+<div class="card"><h3>Failure 2 — Noise</h3><p>The retriever brings some useful context but also returns irrelevant chunks. That noise is passed to the generator and can hurt answer quality.</p><p><span class="tag">low precision</span></p></div>
+</div>
+
+<div class="diagram">
+<svg viewBox="0 0 1000 430" role="img" aria-label="Retriever failure modes">
+<defs><marker id="arr2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#315db0"/></marker></defs>
+<rect x="35" y="160" width="180" height="90" rx="14" fill="#eef3ff" stroke="#315db0"/>
+<text x="125" y="197" text-anchor="middle" font-weight="700" font-size="18">Query</text>
+<text x="125" y="222" text-anchor="middle" font-size="13">“What is RAG?”</text>
+<line x1="215" y1="205" x2="315" y2="205" stroke="#315db0" stroke-width="3" marker-end="url(#arr2)"/>
+<rect x="315" y="120" width="200" height="170" rx="14" fill="#fff" stroke="#315db0" stroke-width="2"/>
+<text x="415" y="160" text-anchor="middle" font-weight="700" font-size="19">Retriever</text>
+<text x="415" y="190" text-anchor="middle" font-size="13">top-K chunks</text>
+<text x="415" y="220" text-anchor="middle" font-size="13">similarity search</text>
+<text x="415" y="250" text-anchor="middle" font-size="13">ranking</text>
+<line x1="515" y1="180" x2="625" y2="110" stroke="#315db0" stroke-width="3" marker-end="url(#arr2)"/>
+<line x1="515" y1="230" x2="625" y2="300" stroke="#315db0" stroke-width="3" marker-end="url(#arr2)"/>
+<rect x="625" y="55" width="310" height="110" rx="14" fill="#fff0f0" stroke="#a33b3b"/>
+<text x="780" y="90" text-anchor="middle" font-weight="700" font-size="18">MISS → Recall problem</text>
+<text x="780" y="119" text-anchor="middle" font-size="13">Needed chunks never appear</text>
+<text x="780" y="141" text-anchor="middle" font-size="13">in the retrieved set.</text>
+<rect x="625" y="250" width="310" height="110" rx="14" fill="#fff7df" stroke="#9a6510"/>
+<text x="780" y="285" text-anchor="middle" font-weight="700" font-size="18">NOISE → Precision problem</text>
+<text x="780" y="314" text-anchor="middle" font-size="13">Useful chunks are mixed</text>
+<text x="780" y="336" text-anchor="middle" font-size="13">with irrelevant chunks.</text>
+</svg>
+</div>
+</section>
+
+<section id="metrics">
+<h2>6. Recall vs Precision</h2>
+<table>
+<thead><tr><th>Metric</th><th>Question it answers</th><th>Simple interpretation</th></tr></thead>
+<tbody>
+<tr><td><b>Recall</b></td><td>Of all correct/relevant context available, how much did the retriever bring back?</td><td>“Did I miss information I needed?”</td></tr>
+<tr><td><b>Precision</b></td><td>Of everything the retriever brought back, how much is actually useful?</td><td>“How much noise did I retrieve?”</td></tr>
+</tbody>
+</table>
+
+<div class="formula">Recall = relevant retrieved context ÷ all relevant context</div>
+<div class="formula">Precision = relevant retrieved context ÷ all retrieved context</div>
+
+<p>Example from the lesson: if five correct contexts exist and the retriever finds three, recall is <b>3/5</b>. If the retriever returns five contexts and only two are useful, precision is <b>2/5</b>.</p>
+
+<h3>The K trade-off</h3>
+<p>Increasing K can help recall because more candidates are retrieved. But increasing K can simultaneously introduce more irrelevant chunks, reducing precision. Therefore K creates a practical recall–precision trade-off.</p>
+<div class="callout warning"><b>Engineering implication:</b> “increase K” is not a universal fix. It can recover missed context while also increasing noise.</div>
+</section>
+
+<section id="golden-problem">
+<h2>7. Why Chunk-ID Golden Datasets Fail</h2>
+<p>The first intuitive strategy is to create a golden dataset like:</p>
+<pre><code>[
+  {"question": "What is regression testing?", "relevant_chunk_ids": [72, 89, 100]},
+  {"question": "What is RAG triad?", "relevant_chunk_ids": [111, 120]}
+]</code></pre>
+<p>Then run the retriever and compare the retrieved IDs against the golden IDs.</p>
+
+<p>This can work in some tightly controlled situations, but the lesson identifies a major weakness for the current application: <strong>chunk IDs are coupled to the chunking configuration</strong>.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1000 360" role="img" aria-label="Chunk ID golden dataset problem">
+<defs><marker id="arr3" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#315db0"/></marker></defs>
+<rect x="40" y="80" width="230" height="90" rx="14" fill="#eef3ff" stroke="#315db0"/>
+<text x="155" y="117" text-anchor="middle" font-weight="700">Golden IDs</text>
+<text x="155" y="145" text-anchor="middle" font-size="14">[72, 89, 100]</text>
+<line x1="270" y1="125" x2="390" y2="125" stroke="#315db0" stroke-width="3" marker-end="url(#arr3)"/>
+<rect x="390" y="60" width="220" height="130" rx="14" fill="#fff" stroke="#315db0"/>
+<text x="500" y="100" text-anchor="middle" font-weight="700">Chunking</text>
+<text x="500" y="128" text-anchor="middle" font-size="14">750 / 100</text>
+<text x="500" y="153" text-anchor="middle" font-size="13">IDs depend on layout</text>
+<line x1="610" y1="125" x2="730" y2="125" stroke="#315db0" stroke-width="3" marker-end="url(#arr3)"/>
+<rect x="730" y="80" width="230" height="90" rx="14" fill="#fff0f0" stroke="#a33b3b"/>
+<text x="845" y="117" text-anchor="middle" font-weight="700">Change chunking</text>
+<text x="845" y="145" text-anchor="middle" font-size="14">IDs/content shift</text>
+<path d="M500 190 C500 270 760 275 845 175" fill="none" stroke="#a33b3b" stroke-width="3" marker-end="url(#arr3)"/>
+<text x="650" y="286" text-anchor="middle" font-size="14" fill="#a33b3b">Golden labels become stale</text>
+</svg>
+</div>
+
+<p>For the lecture dataset, the transcript information can be spread across different chunks. Changing chunk size or overlap changes chunk boundaries and therefore changes which IDs contain the information. Rebuilding the golden dataset after every chunking experiment would make iterative retrieval optimization unnecessarily expensive.</p>
+
+<div class="callout danger"><b>Core lesson:</b> evaluate against the <em>meaning/content</em> you want retrieved, not a brittle identifier tied to a particular chunking implementation.</div>
+</section>
+
+<section id="golden-solution">
+<h2>8. The Robust Golden Dataset: Question + Ideal Answer</h2>
+<p>The lesson replaces the chunk-ID dataset with a semantic reference:</p>
+<pre><code>[
+  {
+    "question": "What is regression testing?",
+    "ideal_answer": "The explanation of regression testing taught in the course..."
+  },
+  {
+    "question": "What is the RAG triad?",
+    "ideal_answer": "The course explanation of the RAG triad..."
+  }
+]</code></pre>
+
+<p>The important detail is that the <b>ideal answer is grounded in the application's own knowledge base</b>. It is not simply an answer copied from a web search. The transcript explains that the answer is constructed from the relevant material taught in the course.</p>
+
+<div class="callout success"><b>Why this survives chunking changes:</b> chunk boundaries may change, but the semantic ideal answer does not. Therefore the same golden dataset can be reused while experimenting with chunk size, overlap, embeddings, retrieval K, and reranking.</div>
+</section>
+
+<section id="contextual-recall">
+<h2>9. Contextual Recall: LLM-as-a-Judge</h2>
+<p>The lesson calls the DeepEval-style metric <b>contextual recall</b>. The core idea is to turn the ideal answer into a set of claims and check whether the retrieved context contains evidence for those claims.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1050 470" role="img" aria-label="Contextual recall workflow">
+<defs><marker id="arr4" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#315db0"/></marker></defs>
+<rect x="40" y="170" width="185" height="90" rx="14" fill="#eef3ff" stroke="#315db0"/>
+<text x="132" y="208" text-anchor="middle" font-weight="700" font-size="17">Golden testcase</text>
+<text x="132" y="235" text-anchor="middle" font-size="13">Question + ideal answer</text>
+<line x1="225" y1="215" x2="335" y2="215" stroke="#315db0" stroke-width="3" marker-end="url(#arr4)"/>
+<rect x="335" y="130" width="210" height="170" rx="14" fill="#fff" stroke="#315db0"/>
+<text x="440" y="168" text-anchor="middle" font-weight="700" font-size="18">Retriever</text>
+<text x="440" y="198" text-anchor="middle" font-size="13">query → top-K</text>
+<text x="440" y="225" text-anchor="middle" font-size="13">72, 81, 89, 99, 100</text>
+<line x1="545" y1="215" x2="650" y2="215" stroke="#315db0" stroke-width="3" marker-end="url(#arr4)"/>
+<rect x="650" y="95" width="260" height="240" rx="14" fill="#fff" stroke="#315db0"/>
+<text x="780" y="132" text-anchor="middle" font-weight="700" font-size="18">LLM Judge</text>
+<text x="780" y="166" text-anchor="middle" font-size="13">Break ideal answer</text>
+<text x="780" y="189" text-anchor="middle" font-size="13">into claims</text>
+<text x="780" y="225" text-anchor="middle" font-size="13">Check each retrieved</text>
+<text x="780" y="248" text-anchor="middle" font-size="13">chunk for claim evidence</text>
+<text x="780" y="284" text-anchor="middle" font-size="13">covered / not covered</text>
+<line x1="910" y1="215" x2="1010" y2="215" stroke="#315db0" stroke-width="3" marker-end="url(#arr4)"/>
+<rect x="1010" y="170" width="10" height="90" rx="5" fill="#315db0"/>
+<text x="780" y="395" text-anchor="middle" font-size="14" fill="#5e6a7d">Recall = covered ideal-answer claims ÷ total ideal-answer claims</text>
+</svg>
+</div>
+
+<p>Example from the transcript:</p>
+<ul>
+<li>The ideal answer contains three claims.</li>
+<li>The five retrieved chunks collectively contain evidence for all three.</li>
+<li>Therefore contextual recall for that testcase is <b>3/3 = 1.0</b>.</li>
+</ul>
+
+<p>For another question, if the ideal answer contains two claims and the retrieved context supports only one, contextual recall is <b>1/2 = 0.5</b>.</p>
+
+<div class="formula">Contextual Recall = supported claims from the ideal answer ÷ total claims in the ideal answer</div>
+</section>
+
+<section id="contextual-precision">
+<h2>10. Contextual Precision: Useful Context + Ranking</h2>
+<p>Contextual precision asks whether each retrieved chunk is useful for producing the expected answer. The LLM judge receives the question, ideal answer, and one retrieved chunk, and returns a usefulness judgment with a reason.</p>
+
+<pre><code>Question: What is regression testing?
+
+Ideal answer:
+The expected explanation of regression testing.
+
+Retrieved chunk:
+&lt;chunk text&gt;
+
+Judge:
+Is this chunk relevant?
+Does it contain information that helps produce the expected answer?
+
+Return:
+YES / NO
+Reason: ...</code></pre>
+
+<p>If three of five retrieved chunks are useful, ordinary precision is 3/5. But the lesson emphasizes that DeepEval's contextual precision also considers <strong>rank</strong>: useful chunks appearing earlier are better than useful chunks appearing near the bottom.</p>
+
+<h3>Rank-aware intuition</h3>
+<div class="grid">
+<div class="card"><h4>Case A</h4><p>Useful, useful, noise, noise, noise</p><p><b>Better</b> — useful evidence appears early.</p></div>
+<div class="card"><h4>Case B</h4><p>Noise, noise, noise, useful, useful</p><p><b>Worse</b> — useful evidence appears late.</p></div>
+</div>
+
+<p>Both cases contain two useful chunks out of five, so simple precision is identical. A rank-aware contextual precision metric differentiates them by rewarding useful context near the top of the retrieval ranking.</p>
+
+<div class="formula">At each rank k: precision@k = useful chunks in top-k ÷ k<br>Contextual precision = average of these rank-aware precision values</div>
+
+<div class="callout">This makes contextual precision particularly relevant to RAG because the generator sees a ranked list of retrieved context, and higher-ranked context generally receives greater practical importance.</div>
+</section>
+
+<section id="golden-creation">
+<h2>11. Creating the Golden Dataset</h2>
+<p>The transcript discusses several ways to create goldens:</p>
+<table>
+<thead><tr><th>Method</th><th>Idea</th><th>Role in the lesson</th></tr></thead>
+<tbody>
+<tr><td>Manual creation</td><td>A knowledgeable person reads the source material and writes questions + ideal answers.</td><td>High control, but labor-intensive.</td></tr>
+<tr><td>LLM-assisted creation</td><td>Provide transcripts and detailed instructions to an LLM to generate candidate questions and answers.</td><td>Used for the current dataset, followed by manual checking.</td></tr>
+<tr><td>DeepEval synthesis</td><td>Use a dataset-generation/synthesis capability to generate evaluation questions.</td><td>Discussed, but the lecture reports that the initial results were not sufficiently impressive for this application.</td></tr>
+<tr><td>Production feedback</td><td>Use successful production interactions, such as positive user signals, as candidates for golden examples.</td><td>Useful after deployment, but not enough to bootstrap the initial set.</td></tr>
+</tbody>
+</table>
+
+<p>The lesson's practical dataset contains 15 questions, with questions designed to resemble realistic student questions and answers grounded in the supplied transcripts.</p>
+
+<div class="callout warning"><b>Quality matters more than quantity alone.</b> A golden dataset is an evaluation instrument. Poorly designed questions or weak reference answers can produce misleading evaluation scores.</div>
+</section>
+
+<section id="deepeval">
+<h2>12. DeepEval Fundamentals</h2>
+<p>The lecture introduces a simple mental model for DeepEval: three core building blocks.</p>
+
+<div class="grid">
+<div class="card"><h3>1. LLMTestCase</h3><p>Represents one row/example from the golden dataset, containing fields such as the input question and expected/actual context or output depending on the metric.</p></div>
+<div class="card"><h3>2. Metric</h3><p>Defines what quality dimension is being evaluated, such as contextual recall or contextual precision.</p></div>
+<div class="card"><h3>3. evaluate()</h3><p>Runs the selected metrics against the test cases and produces scores and pass/fail results.</p></div>
+</div>
+
+<p>Metrics can be configured with a judge model and a threshold. The lecture also enables reasons so that failed or borderline cases can be inspected rather than treated as unexplained numbers.</p>
+</section>
+
+<section id="eval-code">
+<h2>13. Evaluation Script</h2>
+<p>The lesson's evaluation script imports the retriever, loads the golden dataset, configures an LLM judge, selects contextual recall and contextual precision, and evaluates the test cases.</p>
+
+<pre><code>import json
+
+from deepeval import evaluate
+from deepeval.test_case import LLMTestCase
+from deepeval.metrics import (
+    ContextualRecallMetric,
+    ContextualPrecisionMetric,
+)
+
+from src.retriever import build_retriever
+
+GOLDEN_PATH = "goldens/retriever_goldens.json"
+
+def load_goldens():
+    with open(GOLDEN_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def build_test_cases(retriever):
+    test_cases = []
+
+    for row in load_goldens():
+        question = row["question"]
+        ideal_answer = row["ideal_answer"]
+
+        docs = retriever.invoke(question)
+        retrieved_context = [doc.page_content for doc in docs]
+
+        test_cases.append(
+            LLMTestCase(
+                input=question,
+                actual_output="",
+                expected_output=ideal_answer,
+                retrieval_context=retrieved_context,
+            )
+        )
+
+    return test_cases
+
+retriever = build_retriever()
+test_cases = build_test_cases(retriever)
+
+recall = ContextualRecallMetric(
+    threshold=0.7,
+    include_reason=True,
+)
+
+precision = ContextualPrecisionMetric(
+    threshold=0.7,
+    include_reason=True,
+)
+
+evaluate(
+    test_cases=test_cases,
+    metrics=[recall, precision],
+)</code></pre>
+
+<div class="callout">The exact package APIs can vary by installed DeepEval version. Treat the code above as a learning-oriented implementation of the structure taught in the transcript rather than a claim about a version-specific API.</div>
+
+<h3>Why the evaluation loop is valuable</h3>
+<pre><code>golden question
+      ↓
+retriever
+      ↓
+retrieved context
+      ↓
+LLM-as-a-judge
+      ↓
+contextual recall + contextual precision
+      ↓
+per-test-case pass/fail + reasons
+      ↓
+aggregate benchmark</code></pre>
+</section>
+
+<section id="benchmark">
+<h2>14. Benchmark, Diagnose, Improve, Repeat</h2>
+<p>The lesson does not stop after computing a score. It uses evaluation as an engineering feedback loop.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1050 420" role="img" aria-label="Retriever optimization loop">
+<defs><marker id="arr5" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#315db0"/></marker></defs>
+<rect x="55" y="150" width="180" height="85" rx="14" fill="#eef3ff" stroke="#315db0"/>
+<text x="145" y="185" text-anchor="middle" font-weight="700">Retriever config</text>
+<text x="145" y="211" text-anchor="middle" font-size="13">chunks / embeddings / K</text>
+<line x1="235" y1="192" x2="330" y2="192" stroke="#315db0" stroke-width="3" marker-end="url(#arr5)"/>
+<rect x="330" y="150" width="190" height="85" rx="14" fill="#fff" stroke="#315db0"/>
+<text x="425" y="185" text-anchor="middle" font-weight="700">Run eval suite</text>
+<text x="425" y="211" text-anchor="middle" font-size="13">all golden test cases</text>
+<line x1="520" y1="192" x2="615" y2="192" stroke="#315db0" stroke-width="3" marker-end="url(#arr5)"/>
+<rect x="615" y="130" width="200" height="125" rx="14" fill="#eaf8f1" stroke="#197a52"/>
+<text x="715" y="165" text-anchor="middle" font-weight="700">Benchmark</text>
+<text x="715" y="192" text-anchor="middle" font-size="13">recall</text>
+<text x="715" y="213" text-anchor="middle" font-size="13">precision</text>
+<text x="715" y="234" text-anchor="middle" font-size="13">failed cases + reasons</text>
+<line x1="815" y1="192" x2="910" y2="192" stroke="#315db0" stroke-width="3" marker-end="url(#arr5)"/>
+<rect x="910" y="150" width="100" height="85" rx="14" fill="#fff7df" stroke="#9a6510"/>
+<text x="960" y="185" text-anchor="middle" font-weight="700" font-size="15">Improve</text>
+<text x="960" y="210" text-anchor="middle" font-size="12">config</text>
+<path d="M960 235 C960 350 145 350 145 235" fill="none" stroke="#315db0" stroke-width="3" marker-end="url(#arr5)"/>
+</svg>
+</div>
+
+<h3>Experiment 1 — Baseline</h3>
+<p>The first baseline run uses the initial configuration of approximately <b>750 chunk size, 100 overlap, K=5</b>. The transcript reports a baseline of roughly <b>80 contextual recall and 80 contextual precision</b>, with 10 of 15 test cases passing and five failing.</p>
+
+<h3>Experiment 2 — Larger chunks</h3>
+<p>The chunk configuration is increased to <b>1000 chunk size and 150 overlap</b>. The transcript reports a major improvement: contextual recall rises to roughly <b>97</b> and contextual precision to roughly <b>83</b>, with three failed cases.</p>
+
+<table>
+<thead><tr><th>Configuration</th><th>Contextual Recall</th><th>Contextual Precision</th><th>Failed cases</th></tr></thead>
+<tbody>
+<tr><td>Baseline: 750 / 100</td><td>~80</td><td>~80</td><td>5 / 15</td></tr>
+<tr><td>Chunking: 1000 / 150</td><td>~97</td><td>~83</td><td>3 / 15</td></tr>
+<tr><td>With reranker</td><td>~92</td><td>~85</td><td>2 / 15</td></tr>
+<tr><td>Large embedding + reranker</td><td>~99</td><td>~85</td><td>3 / 15</td></tr>
+</tbody>
+</table>
+
+<p class="caption">Scores are reproduced as reported in the supplied transcript; they are lesson-run results, not universal benchmarks.</p>
+
+<h3>Experiment 3 — Add a reranker</h3>
+<p>A sentence-transformer reranker is added after initial retrieval. Its job is to reorder retrieved chunks so more meaningful context moves toward the top. The transcript reports precision improving from about 83 to 85 and failed cases dropping from three to two, while recall decreases somewhat.</p>
+
+<h3>Experiment 4 — Upgrade the embedding model</h3>
+<p>The embedding model is upgraded from <code>text-embedding-3-small</code> to <code>text-embedding-3-large</code>. The transcript reports recall rising to approximately <b>99</b> while precision remains around <b>85</b>. The speaker notes the cost trade-off of using a larger embedding model.</p>
+
+<h3>Experiment 5 — Lower K</h3>
+<p>Reducing K from 5 to 3 is tried as another way to reduce noise. The transcript reports little useful improvement and notes that some variation is expected because only 15 golden test cases are being used.</p>
+
+<div class="callout success"><b>Final lesson conclusion:</b> the retriever reaches roughly <b>95%+ recall</b> and <b>~85% precision</b> in the reported experiments, giving enough confidence to move forward to generator construction and evaluation.</div>
+</section>
+
+<section id="lessons">
+<h2>15. Key Lessons to Remember</h2>
+<div class="card">
+<h3>1. Evaluate incrementally</h3>
+<p>Do not wait until the whole RAG application is complete. Build a component, evaluate it, improve it, then continue.</p>
+</div>
+<div class="card">
+<h3>2. Retriever quality has two sides</h3>
+<p>Recall protects against missing useful information. Precision protects against flooding the generator with irrelevant information.</p>
+</div>
+<div class="card">
+<h3>3. Golden data should be stable under implementation changes</h3>
+<p>Chunk IDs are implementation-dependent. A question + ideal answer is more robust because the semantic target survives changes in chunk boundaries.</p>
+</div>
+<div class="card">
+<h3>4. Contextual recall is claim-oriented</h3>
+<p>Break the ideal answer into claims and check whether retrieved context collectively supports those claims.</p>
+</div>
+<div class="card">
+<h3>5. Contextual precision is rank-aware</h3>
+<p>It is not enough to retrieve useful context. Useful chunks should appear early enough to be valuable to downstream generation.</p>
+</div>
+<div class="card">
+<h3>6. Scores are only the starting point</h3>
+<p>Inspect failed test cases and judge reasons. The purpose of an eval suite is to tell you what to change in the system.</p>
+</div>
+<div class="card">
+<h3>7. Retrieval optimization is empirical</h3>
+<p>Chunk size, overlap, embedding model, K, and reranking can all affect retrieval quality. Benchmark changes rather than assuming one configuration is universally best.</p>
+</div>
+
+<h3>Final mental model</h3>
+<pre><code>Build
+  ↓
+Retrieve
+  ↓
+Evaluate
+  ├── Contextual Recall
+  └── Contextual Precision
+  ↓
+Inspect failures
+  ↓
+Change retrieval strategy
+  ├── chunking
+  ├── embeddings
+  ├── K
+  └── reranking
+  ↓
+Re-run the same golden suite
+  ↓
+Accept a better baseline
+  ↓
+Move to the next RAG component</code></pre>
+
+<div class="callout success"><b>Course milestone:</b> after this lesson, the retriever is not merely “working”; its retrieval quality has been measured and benchmarked, which is the foundation for safely building the next RAG component.</div>
+</section>
+
+</div>
+
+<footer>
+<p><b>Source basis:</b> This learning page was created from the supplied lecture transcript on building and evaluating a RAG retriever. It preserves the lecture's terminology, examples, sequence, and reported benchmark results while adding explanatory structure, diagrams, formulas, and learning-oriented code.</p>
+</footer>
+</main>
+</div>
+</body>
+</html>
