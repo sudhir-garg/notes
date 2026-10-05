@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Custom Model Evals — Text-to-SQL Case Study</title>
+<style>
+:root{
+  --bg:#f5f7fb;--surface:#fff;--text:#172033;--muted:#5d687c;
+  --primary:#244b8f;--primary2:#3b6fc4;--border:#dfe5ef;
+  --code:#101827;--note:#eef5ff;--tip:#edf9f1;--warn:#fff7e8;
+  --shadow:0 8px 28px rgba(24,40,72,.08)
+}
+*{box-sizing:border-box} html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.72 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.page{display:grid;grid-template-columns:260px minmax(0,920px);gap:34px;max-width:1280px;margin:auto;padding:28px 24px}
+nav{position:sticky;top:20px;height:max-content;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+nav h3{margin:0 0 12px;font-size:15px} nav a{display:block;color:var(--muted);text-decoration:none;font-size:13px;padding:6px 0}
+nav a:hover{color:var(--primary)}
+main{min-width:0}
+.hero{background:linear-gradient(135deg,#16366e,#315fa8);color:white;border-radius:22px;padding:46px 46px 40px;box-shadow:var(--shadow)}
+.hero .eyebrow{letter-spacing:.12em;text-transform:uppercase;font-size:12px;opacity:.82}
+.hero h1{font-size:42px;line-height:1.12;margin:10px 0 14px}
+.hero p{max-width:760px;color:#e7eefb;margin:0}
+section{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:30px;margin-top:22px;box-shadow:0 4px 18px rgba(24,40,72,.045)}
+h2{font-size:27px;line-height:1.25;margin:0 0 14px;color:#183a70}
+h3{font-size:20px;margin:24px 0 8px;color:#233b62}
+p{margin:10px 0}.muted{color:var(--muted)}
+.callout{border-left:4px solid var(--primary2);background:var(--note);padding:15px 17px;border-radius:10px;margin:18px 0}
+.tip{border-left-color:#2f8f55;background:var(--tip)} .warning{border-left-color:#c78619;background:var(--warn)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:18px 0}
+.card{border:1px solid var(--border);border-radius:14px;padding:18px;background:#fbfcfe}
+.card strong{display:block;margin-bottom:5px;color:#244b8f}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14px}
+th,td{border:1px solid var(--border);padding:11px 12px;text-align:left;vertical-align:top}
+th{background:#f0f4fa;color:#20385e}
+pre{background:var(--code);color:#e8eef9;border-radius:13px;padding:18px;overflow:auto;font-size:13px;line-height:1.55}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
+.inline{background:#eef1f6;border-radius:5px;padding:2px 5px}
+svg{width:100%;height:auto;display:block;margin:18px auto}
+.badge{display:inline-block;background:#eaf0fb;color:#244b8f;padding:4px 9px;border-radius:999px;font-size:12px;font-weight:700}
+.footer{color:var(--muted);font-size:13px;text-align:center;padding:30px}
+@media(max-width:900px){.page{grid-template-columns:1fr}.page>nav{position:relative;top:auto}.hero h1{font-size:34px}}
+</style>
+</head>
+<body>
+<div class="page">
+<nav>
+  <h3>Contents</h3>
+  <a href="#recap">Course Recap</a>
+  <a href="#agenda">Session Agenda</a>
+  <a href="#case">Text-to-SQL Case Study</a>
+  <a href="#framework">3-Step Framework</a>
+  <a href="#step1">Step 1 — Requirements</a>
+  <a href="#cost">Token Cost & Budget</a>
+  <a href="#cache">Prompt Caching & KV Cache</a>
+  <a href="#constraints">Latency / Context / Correctness</a>
+  <a href="#step2">Step 2 — Shortlisting</a>
+  <a href="#scores">Score Normalization</a>
+  <a href="#finalists">Five Finalists</a>
+  <a href="#step3">Step 3 — Custom Eval</a>
+  <a href="#golden">Golden Dataset</a>
+  <a href="#router">OpenRouter Test</a>
+  <a href="#evaluator">SQL Evaluator</a>
+  <a href="#table">Table Comparison</a>
+  <a href="#loop">Eval Loop</a>
+  <a href="#trials">Model Trials</a>
+  <a href="#winner">Final Selection</a>
+  <a href="#wrap">Wrap-Up</a>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">Learning Notes · Custom Model Evaluation</div>
+  <h1>From Model Shortlisting to Custom Text-to-SQL Evals</h1>
+  <p>A structured technical guide following the supplied course outline: requirements → cost and constraints → leaderboard filtering → custom golden-set evaluation → SQL-aware comparison → model selection.</p>
+</header>
+
+<section id="recap">
+<h2>1. Course Recap & Hands-On Transition</h2>
+<p>The outline marks a transition from evaluation concepts into a hands-on model-selection exercise. The practical focus is not simply “which model is best?” but <strong>which candidate model best satisfies a defined application requirement under operational constraints</strong>.</p>
+<div class="callout"><strong>Core idea:</strong> A leaderboard can help create a shortlist, but a production decision should be validated against the application's own task, data, correctness definition, latency target, context requirements, and cost ceiling.</div>
+</section>
+
+<section id="agenda">
+<h2>2. Session Agenda: How to Run Custom Model Evals</h2>
+<div class="grid">
+<div class="card"><strong>1 · Define</strong>Turn the application problem into measurable requirements.</div>
+<div class="card"><strong>2 · Shortlist</strong>Use external/leaderboard evidence to reduce the candidate set.</div>
+<div class="card"><strong>3 · Custom evaluate</strong>Run the finalists on a task-specific golden dataset.</div>
+</div>
+<p>The supplied outline follows this sequence and then examines individual model trials before making a final selection.</p>
+</section>
+
+<section id="case">
+<h2>3. Case Study: Text-to-SQL for ESPN Cricinfo</h2>
+<p>The case study is framed as a <strong>Text-to-SQL</strong> application for ESPN Cricinfo-style cricket data. A user expresses a question in natural language; the model generates SQL intended to retrieve the required result from a relational database.</p>
+<svg viewBox="0 0 900 250" role="img" aria-label="Text to SQL evaluation pipeline">
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#315fa8"/></marker></defs>
+<rect x="30" y="80" width="180" height="90" rx="16" fill="#eef4ff" stroke="#8aa8d8"/>
+<text x="120" y="118" text-anchor="middle" font-size="18" fill="#20385e">Natural-language</text><text x="120" y="145" text-anchor="middle" font-size="18" fill="#20385e">question</text>
+<line x1="215" y1="125" x2="310" y2="125" stroke="#315fa8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="315" y="80" width="180" height="90" rx="16" fill="#eef4ff" stroke="#8aa8d8"/>
+<text x="405" y="118" text-anchor="middle" font-size="18" fill="#20385e">LLM</text><text x="405" y="145" text-anchor="middle" font-size="18" fill="#20385e">SQL generation</text>
+<line x1="500" y1="125" x2="595" y2="125" stroke="#315fa8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="600" y="80" width="180" height="90" rx="16" fill="#eef4ff" stroke="#8aa8d8"/>
+<text x="690" y="118" text-anchor="middle" font-size="18" fill="#20385e">Database</text><text x="690" y="145" text-anchor="middle" font-size="18" fill="#20385e">execution</text>
+<line x1="690" y1="175" x2="690" y2="220" stroke="#315fa8" stroke-width="3" marker-end="url(#arrow)"/>
+<text x="690" y="245" text-anchor="middle" font-size="16" fill="#5d687c">Result table</text>
+</svg>
+<div class="callout warning"><strong>Important scope note:</strong> The uploaded source contains section headings rather than the lecture's detailed transcript. Therefore, the model names and trial headings below are preserved from the source, while explanatory material is presented as conceptual guidance rather than as claims about results that were not supplied.</div>
+</section>
+
+<section id="framework">
+<h2>4. The 3-Step Selection Framework</h2>
+<table>
+<tr><th>Step</th><th>Purpose</th><th>Primary output</th></tr>
+<tr><td>1. Requirements</td><td>Define what “good” means for the application.</td><td>Constraints, metrics, budget, target behavior</td></tr>
+<tr><td>2. Filtering</td><td>Reduce the model universe using available evidence.</td><td>Shortlist of candidate models</td></tr>
+<tr><td>3. Custom evals</td><td>Measure candidates on the real task.</td><td>Comparable task-specific results</td></tr>
+</table>
+</section>
+
+<section id="step1">
+<h2>5. Step 1 — Gathering Requirements & Defining the Task</h2>
+<p>Before comparing models, specify the task and its acceptance criteria. For Text-to-SQL, correctness is more meaningful when defined in terms of the <strong>executed result</strong>, not merely whether generated SQL text resembles a reference query.</p>
+<div class="grid">
+<div class="card"><strong>Task</strong>Generate executable SQL from a natural-language question.</div>
+<div class="card"><strong>Correctness</strong>Does the query produce the expected table/result?</div>
+<div class="card"><strong>Latency</strong>How quickly can the system return a usable answer?</div>
+<div class="card"><strong>Cost</strong>Can expected token usage fit the application's budget?</div>
+<div class="card"><strong>Context</strong>Can the model handle schema, instructions, examples, and question?</div>
+</div>
+</section>
+
+<section id="cost">
+<h2>6. Calculating Operational Costs: Token Math & Budget Ceilings</h2>
+<p>Model selection should account for both <strong>input tokens</strong> and <strong>output tokens</strong>. A simple planning model is:</p>
+<pre><code>cost_per_request =
+    (input_tokens  / 1_000_000) * input_price_per_million
+  + (output_tokens / 1_000_000) * output_price_per_million
+
+monthly_cost =
+    requests_per_month * cost_per_request</code></pre>
+<p>A budget ceiling turns pricing into a hard engineering constraint. For example, if a model is highly accurate but consistently exceeds the permitted per-request or monthly cost, it may not be a viable production candidate.</p>
+</section>
+
+<section id="cache">
+<h2>7. Deep Dive: Prompt Caching & KV Cache Optimization</h2>
+<p>The outline specifically calls out <strong>prompt caching</strong> and <strong>KV cache optimization</strong>. Conceptually, these techniques target repeated computation in workloads where a large prefix of the prompt is reused across requests.</p>
+<table>
+<tr><th>Concept</th><th>What is reused?</th><th>Why it matters</th></tr>
+<tr><td>Prompt caching</td><td>A reusable prompt/prefix portion, when supported by the serving provider.</td><td>Can reduce repeated processing and/or effective input cost/latency.</td></tr>
+<tr><td>KV cache</td><td>Transformer attention key/value states for tokens already processed.</td><td>Reduces recomputation during generation and can improve serving efficiency.</td></tr>
+</table>
+<div class="callout"><strong>Practical interpretation:</strong> Cache behavior is provider/model dependent. Treat it as an optimization to measure, not an assumption to bake into an evaluation result.</div>
+</section>
+
+<section id="constraints">
+<h2>8. Latency, Context, and Correctness Constraints</h2>
+<p>These three dimensions can conflict. A model can be accurate but slow, fast but error-prone, or capable of long context but unnecessarily expensive.</p>
+<table>
+<tr><th>Constraint</th><th>Evaluation question</th></tr>
+<tr><td>Latency</td><td>Does response time meet the application's target?</td></tr>
+<tr><td>Context</td><td>Can the model reliably process the required schema and instructions?</td></tr>
+<tr><td>Correctness</td><td>Does generated SQL execute to the intended result?</td></tr>
+</table>
+</section>
+
+<section id="step2">
+<h2>9. Step 2 — Leaderboard Shortlisting & OpenRouter Setup</h2>
+<p>The next stage uses leaderboard information as a <strong>filter</strong>, not as the final verdict. The outline then moves to an OpenRouter connection so multiple candidate models can be accessed through a common interface.</p>
+<pre><code># Illustrative configuration pattern
+import os
+
+API_KEY = os.environ["OPENROUTER_API_KEY"]
+
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json",
+}</code></pre>
+<div class="callout warning"><strong>Security:</strong> Never hard-code an API key in source code or commit it to version control. Store it in an environment variable or a secret manager.</div>
+</section>
+
+<section id="scores">
+<h2>10. Normalizing Leaderboard Scores: Accuracy vs. Speed</h2>
+<p>When multiple leaderboard dimensions use different scales, normalize them before combining them. A generic min-max normalization is:</p>
+<pre><code>normalized(x) = (x - min_value) / (max_value - min_value)</code></pre>
+<p>A weighted score can then be constructed:</p>
+<pre><code>final_score =
+    accuracy_weight * normalized_accuracy
+  + speed_weight    * normalized_speed</code></pre>
+<p>The weights should reflect the actual product requirement. If correctness is safety-critical, accuracy should dominate. If the workload is highly interactive, latency may receive greater weight.</p>
+</section>
+
+<section id="finalists">
+<h2>11. Selecting the Five Finalist Candidate Models</h2>
+<p>The source explicitly identifies five model-trial sections. The model names supplied by the outline are:</p>
+<table>
+<tr><th>Finalist</th><th>Source heading</th></tr>
+<tr><td>GPT-5.6 Tera</td><td>Live Trial 1</td></tr>
+<tr><td>Kimi K3</td><td>Live Trial 2</td></tr>
+<tr><td>Grok 4.5</td><td>Live Trial 3</td></tr>
+<tr><td>Claude Sonnet 5</td><td>Live Trial 4</td></tr>
+<tr><td>Minimax M3</td><td>Live Trial 5</td></tr>
+</table>
+</section>
+
+<section id="step3">
+<h2>12. Step 3 — Custom Eval Workflow Architecture</h2>
+<svg viewBox="0 0 900 390" role="img" aria-label="Custom evaluation architecture">
+<defs><marker id="a2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#315fa8"/></marker></defs>
+<rect x="40" y="35" width="180" height="70" rx="14" fill="#eef4ff" stroke="#8aa8d8"/>
+<text x="130" y="77" text-anchor="middle" font-size="18" fill="#20385e">Golden dataset</text>
+<line x1="220" y1="70" x2="345" y2="70" stroke="#315fa8" stroke-width="3" marker-end="url(#a2)"/>
+<rect x="350" y="35" width="180" height="70" rx="14" fill="#eef4ff" stroke="#8aa8d8"/>
+<text x="440" y="77" text-anchor="middle" font-size="18" fill="#20385e">Candidate model</text>
+<line x1="530" y1="70" x2="655" y2="70" stroke="#315fa8" stroke-width="3" marker-end="url(#a2)"/>
+<rect x="660" y="35" width="190" height="70" rx="14" fill="#eef4ff" stroke="#8aa8d8"/>
+<text x="755" y="77" text-anchor="middle" font-size="18" fill="#20385e">Generated SQL</text>
+<line x1="755" y1="105" x2="755" y2="165" stroke="#315fa8" stroke-width="3" marker-end="url(#a2)"/>
+<rect x="660" y="170" width="190" height="70" rx="14" fill="#edf9f1" stroke="#79b38f"/>
+<text x="755" y="212" text-anchor="middle" font-size="18" fill="#234d34">SQL execution</text>
+<line x1="660" y1="205" x2="535" y2="205" stroke="#315fa8" stroke-width="3" marker-end="url(#a2)"/>
+<rect x="350" y="170" width="180" height="70" rx="14" fill="#edf9f1" stroke="#79b38f"/>
+<text x="440" y="212" text-anchor="middle" font-size="18" fill="#234d34">Result table</text>
+<line x1="350" y1="205" x2="225" y2="205" stroke="#315fa8" stroke-width="3" marker-end="url(#a2)"/>
+<rect x="40" y="170" width="180" height="70" rx="14" fill="#fff7e8" stroke="#d5ae61"/>
+<text x="130" y="212" text-anchor="middle" font-size="18" fill="#6d531e">Expected result</text>
+<line x1="130" y1="240" x2="130" y2="300" stroke="#315fa8" stroke-width="3" marker-end="url(#a2)"/>
+<line x1="440" y1="240" x2="440" y2="300" stroke="#315fa8" stroke-width="3" marker-end="url(#a2)"/>
+<rect x="220" y="305" width="440" height="58" rx="14" fill="#244b8f"/>
+<text x="440" y="341" text-anchor="middle" font-size="18" fill="white">Evaluator → correctness + latency + diagnostics</text>
+</svg>
+<p>The key design choice is to evaluate the <strong>observable application outcome</strong>. For Text-to-SQL, that often means executing the candidate SQL and comparing its result with the expected result.</p>
+</section>
+
+<section id="golden">
+<h2>13. Creating & Validating the Golden Dataset</h2>
+<p>The source names the dataset <span class="inline"><code>golden_hard.csv</code></span>. A golden dataset should contain representative questions and an authoritative expected answer or expected result representation.</p>
+<p>An illustrative structure is:</p>
+<pre><code>question,expected_result
+"Which player scored the most runs in 2024?","player=..."
+"List matches won by India in 2023","..."
+</code></pre>
+<div class="callout tip"><strong>Validation checklist:</strong> remove ambiguous questions, verify expected results independently, include difficult edge cases, keep schema assumptions explicit, and avoid accidental leakage of the answer into the prompt.</div>
+</section>
+
+<section id="router">
+<h2>14. Testing the OpenRouter Connection with a Single Prompt</h2>
+<p>The outline introduces <span class="inline"><code>first_test.py</code></span> before the full evaluator. This is a useful engineering pattern: validate connectivity and request/response handling before debugging the evaluation logic.</p>
+<pre><code># first_test.py — illustrative skeleton
+import os
+import requests
+
+url = "https://openrouter.ai/api/v1/chat/completions"
+
+payload = {
+    "model": "MODEL_ID",
+    "messages": [
+        {"role": "user", "content": "Generate SQL for: ..."}
+    ]
+}
+
+r = requests.post(
+    url,
+    headers={
+        "Authorization": f"Bearer {os.environ['OPENROUTER_API_KEY']}",
+        "Content-Type": "application/json",
+    },
+    json=payload,
+    timeout=60,
+)
+
+r.raise_for_status()
+print(r.json())</code></pre>
+</section>
+
+<section id="evaluator">
+<h2>15. Writing the Evaluator: Why String Comparison Fails for SQL</h2>
+<p>The outline explicitly highlights a central evaluation problem: <strong>SQL string equality is not equivalent to semantic correctness</strong>.</p>
+<p>Two different SQL queries can produce the same result. They may differ in whitespace, capitalization, aliases, join order, equivalent predicates, or other syntactic details while remaining semantically equivalent.</p>
+<pre><code>-- Query A
+SELECT name FROM players ORDER BY name;
+
+-- Query B
+select p.name
+from players AS p
+order by p.name;</code></pre>
+<p>A literal string comparison can mark these as different even when their result tables are identical.</p>
+</section>
+
+<section id="table">
+<h2>16. Table Comparison Logic: Rows, Normalization & Sorting</h2>
+<p>A stronger evaluator compares structured results. A practical pipeline is:</p>
+<ol>
+<li>Execute candidate SQL.</li>
+<li>Capture the result table.</li>
+<li>Normalize values and representations.</li>
+<li>Apply deterministic ordering where row order is not semantically meaningful.</li>
+<li>Compare expected and actual columns/rows.</li>
+<li>Record pass/fail plus diagnostics.</li>
+</ol>
+<pre><code>def normalize_table(rows):
+    normalized = []
+    for row in rows:
+        normalized.append(tuple(
+            None if value is None else str(value).strip()
+            for value in row
+        ))
+    return sorted(normalized)
+
+def tables_equal(expected, actual):
+    return normalize_table(expected) == normalize_table(actual)</code></pre>
+<div class="callout warning"><strong>Do not sort blindly.</strong> If ordering is part of the question's semantics (for example, “top 5 in descending order”), the evaluator must preserve and test that ordering rather than treating all permutations as equivalent.</div>
+</section>
+
+<section id="loop">
+<h2>17. Orchestrating the Eval Loop with <code>main.py</code></h2>
+<p>The orchestration layer should make each model go through the same dataset and evaluation procedure so the comparison is controlled.</p>
+<pre><code># main.py — simplified architecture
+for model in candidate_models:
+    for case in golden_dataset:
+        sql = generate_sql(model, case["question"])
+
+        try:
+            actual = execute_sql(sql)
+            passed = tables_equal(
+                case["expected_result"],
+                actual
+            )
+        except Exception as exc:
+            passed = False
+            error = str(exc)
+
+        record_result(
+            model=model,
+            passed=passed,
+            latency=...,
+            error=error if not passed else None,
+        )</code></pre>
+<p>Useful aggregate metrics include pass rate, execution-error rate, generation latency, total evaluation cost, and failure categories.</p>
+</section>
+
+<section id="trials">
+<h2>18. Live Model Trials</h2>
+<p>The supplied outline contains five separate live-trial sections. Because the uploaded material provides headings but no trial outputs, the table below intentionally does <strong>not</strong> invent accuracy, latency, or cost numbers.</p>
+<table>
+<tr><th>Trial</th><th>Model</th><th>Source-specified focus</th></tr>
+<tr><td>1</td><td>GPT-5.6 Tera</td><td>Model evaluation trial; no numerical result supplied in source.</td></tr>
+<tr><td>2</td><td>Kimi K3</td><td>Syntax errors & latency bottlenecks are named in the heading.</td></tr>
+<tr><td>3</td><td>Grok 4.5</td><td>Model evaluation trial; no numerical result supplied in source.</td></tr>
+<tr><td>4</td><td>Claude Sonnet 5</td><td>Model evaluation trial; no numerical result supplied in source.</td></tr>
+<tr><td>5</td><td>Minimax M3</td><td>Model evaluation trial; no numerical result supplied in source.</td></tr>
+</table>
+<div class="callout"><strong>Source-grounded observation:</strong> Kimi K3's section title explicitly calls out syntax errors and latency bottlenecks. The supplied outline does not provide counts, percentages, timings, or root-cause details, so those should be filled from the full lecture transcript if available.</div>
+</section>
+
+<section id="winner">
+<h2>19. Final Results Comparison & Selecting the Winner</h2>
+<p>The final decision should be based on a consistent evaluation matrix rather than a single metric.</p>
+<table>
+<tr><th>Dimension</th><th>Example decision question</th></tr>
+<tr><td>Task correctness</td><td>Which model produces the highest valid-result rate?</td></tr>
+<tr><td>Syntax reliability</td><td>How often does generated SQL fail before execution?</td></tr>
+<tr><td>Latency</td><td>Does the model meet the application SLA?</td></tr>
+<tr><td>Cost</td><td>Does expected usage stay below the budget ceiling?</td></tr>
+<tr><td>Context capability</td><td>Can it handle the full schema + instructions + question?</td></tr>
+</table>
+<p>A useful final score can be a weighted composite, but the winner should also satisfy any <strong>hard constraints</strong>. A model that fails a mandatory correctness or latency threshold should not be rescued by a high score on another dimension.</p>
+</section>
+
+<section id="wrap">
+<h2>20. Q&amp;A &amp; Wrap-Up</h2>
+<p>The overall learning path in the supplied outline is:</p>
+<div class="grid">
+<div class="card"><span class="badge">1</span><strong>Requirements</strong>Define the real task and constraints.</div>
+<div class="card"><span class="badge">2</span><strong>Shortlist</strong>Use leaderboard evidence to reduce candidates.</div>
+<div class="card"><span class="badge">3</span><strong>Golden dataset</strong>Create application-specific test cases.</div>
+<div class="card"><span class="badge">4</span><strong>Evaluator</strong>Measure semantic task correctness.</div>
+<div class="card"><span class="badge">5</span><strong>Compare</strong>Combine quality, latency, cost, and reliability.</div>
+<div class="card"><span class="badge">6</span><strong>Select</strong>Choose the model that satisfies the real requirements.</div>
+</div>
+<div class="callout tip"><strong>Key takeaway:</strong> Model evaluation becomes useful for engineering decisions when the evaluation target, dataset, correctness criterion, operational constraints, and comparison procedure are all explicitly defined and consistently applied.</div>
+</section>
+
+<footer class="footer">
+Source basis: supplied course-outline file. Detailed numerical trial results were not present in the uploaded material, so no unsupported benchmark values have been added.
+</footer>
+</main>
+</div>
+</body>
+</html>
