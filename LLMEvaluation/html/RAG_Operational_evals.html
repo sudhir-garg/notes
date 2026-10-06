@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operational Evaluations for RAG Applications — Study Notes</title>
+<style>
+:root{--bg:#f6f8fb;--card:#fff;--ink:#172033;--muted:#5d687a;--accent:#2563eb;--accent2:#0f766e;--warn:#b45309;--danger:#b91c1c;--line:#dce2ea;--code:#101827}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.7}
+.wrapper{max-width:1120px;margin:auto;padding:32px 20px 80px}
+.hero{background:linear-gradient(135deg,#111827,#1e3a8a);color:white;padding:48px;border-radius:24px;box-shadow:0 15px 45px #17203322}
+.hero h1{font-size:clamp(2rem,5vw,3.5rem);line-height:1.1;margin:0 0 18px}.hero p{font-size:1.12rem;max-width:850px;color:#dbeafe}
+.badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.badge{padding:6px 12px;border:1px solid #ffffff44;border-radius:999px;background:#ffffff12;font-size:.88rem}
+nav,.card,.callout,.metric{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px;margin:24px 0;box-shadow:0 8px 25px #17203308}
+nav ul{columns:2;margin:0;padding-left:20px}nav a{color:var(--accent);text-decoration:none}
+h2{font-size:2rem;margin-top:56px}h3{font-size:1.35rem;margin-top:32px}h4{margin-bottom:8px}
+.lead{font-size:1.08rem;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}.metric{margin:0}.metric .num{font-size:2rem;font-weight:800;color:var(--accent)}
+table{width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden}th,td{text-align:left;padding:13px;border-bottom:1px solid var(--line);vertical-align:top}th{background:#eef2ff}
+.callout{border-left:5px solid var(--accent)}.warn{border-left-color:var(--warn)}.danger{border-left-color:var(--danger)}.success{border-left-color:var(--accent2)}
+pre{background:var(--code);color:#e5e7eb;padding:20px;border-radius:14px;overflow:auto;font-size:.9rem;line-height:1.55}code{font-family:"SFMono-Regular",Consolas,monospace}
+.diagram{background:white;border:1px solid var(--line);border-radius:18px;padding:20px;overflow:auto;margin:20px 0}
+.flow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center}.box{padding:15px 20px;border:2px solid #93c5fd;border-radius:12px;background:#eff6ff;font-weight:700}.arrow{font-size:1.5rem;color:var(--accent)}
+.pyramid{display:grid;gap:8px;max-width:720px;margin:auto;text-align:center}.pyramid div{padding:13px;border-radius:10px;font-weight:700}.p1{background:#dbeafe}.p2{background:#bfdbfe}.p3{background:#93c5fd}.p4{background:#60a5fa;color:white}
+.chart{height:210px;display:flex;align-items:end;gap:7px;padding:20px;border-bottom:2px solid #94a3b8}.bar{flex:1;background:#60a5fa;border-radius:7px 7px 0 0;min-width:12px}.bar:nth-child(4),.bar:nth-child(5){background:#2563eb}.bar:nth-child(8){background:#b91c1c}
+.small{font-size:.9rem;color:var(--muted)}.formula{font-size:1.15rem;background:#eff6ff;padding:14px;border-radius:10px;font-family:monospace}
+.checklist li{margin:8px 0}.tag{display:inline-block;padding:3px 8px;border-radius:6px;background:#e0e7ff;color:#3730a3;font-size:.8rem;font-weight:700}
+footer{margin-top:60px;color:var(--muted);border-top:1px solid var(--line);padding-top:20px}
+@media(max-width:700px){nav ul{columns:1}.hero{padding:30px 24px}h2{font-size:1.65rem}}
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+<header class="hero">
+  <div class="tag">RAG EVALUATION • OPERATIONAL EVALS</div>
+  <h1>Operational Evaluations for RAG Applications</h1>
+  <p>A practical, blog-style set of study notes covering latency, cost, reliability, offline differential benchmarking, P50/P95/P99, TTFT, cold starts, throughput, budgets, retries, failure categories, and evaluation scripts.</p>
+  <div class="badges">
+    <span class="badge">Latency</span><span class="badge">Cost</span><span class="badge">Reliability</span>
+    <span class="badge">TTFT</span><span class="badge">P95 / P99</span><span class="badge">SLOs</span>
+  </div>
+</header>
+
+<nav>
+<h3>On this page</h3>
+<ul>
+<li><a href="#big-picture">1. Big Picture</a></li>
+<li><a href="#offline">2. Why Offline Operational Evals?</a></li>
+<li><a href="#latency">3. Latency</a></li>
+<li><a href="#percentiles">4. P50, P95, P99</a></li>
+<li><a href="#ttft">5. TTFT & Streaming</a></li>
+<li><a href="#latency-method">6. How to Build a Latency Eval</a></li>
+<li><a href="#cost">7. Cost & Token Economics</a></li>
+<li><a href="#reliability">8. Reliability</a></li>
+<li><a href="#scripts">9. Practical Python Scripts</a></li>
+<li><a href="#cheatsheet">10. Interview Cheat Sheet</a></li>
+</ul>
+</nav>
+
+<section id="big-picture">
+<h2>1. The Big Picture: What Are Operational Evals?</h2>
+<p class="lead">Quality evaluations answer <b>“Is my RAG application producing good answers?”</b> Operational evaluations answer a different question: <b>“Can this application run reliably, quickly, and economically?”</b></p>
+
+<div class="diagram">
+  <div class="pyramid">
+    <div class="p1">Application Quality — correctness, faithfulness, relevance, completeness</div>
+    <div class="p2">Pipeline / Component Quality — retriever, generator, etc.</div>
+    <div class="p3">Operational Health — latency, cost, reliability</div>
+    <div class="p4">Production Reality — users, load, failures, telemetry</div>
+  </div>
+</div>
+
+<p>The lecture frames operational evals as primarily <b>software- and telemetry-driven</b>. Unlike many quality evaluations, they generally do not require a golden dataset or an LLM acting as a judge. fileciteturn1file0L1-L20</p>
+
+<div class="grid">
+<div class="metric"><div class="num">Latency</div><b>How long?</b><br><span class="small">How quickly does a request receive an answer?</span></div>
+<div class="metric"><div class="num">Cost</div><b>How much?</b><br><span class="small">How much money is spent per query / over a period?</span></div>
+<div class="metric"><div class="num">Reliability</div><b>How often?</b><br><span class="small">How often does the pipeline successfully serve requests?</span></div>
+</div>
+
+<div class="callout warn">
+<b>Scope note from the lecture:</b> throughput is also an operational metric, but it was left out of the detailed implementation because proper throughput evaluation generally needs load/stress testing.
+</div>
+</section>
+
+<section id="offline">
+<h2>2. Why Run Operational Evals Before Deployment?</h2>
+<p>Operational metrics sound like production metrics, but the lecture makes an important point: they are also valuable in the <b>offline evaluation suite</b>.</p>
+
+<div class="diagram">
+<div class="flow">
+<div class="box">Version A<br><small>Quality + Ops</small></div><div class="arrow">→</div>
+<div class="box">Change<br><small>reranker / top-K / model</small></div><div class="arrow">→</div>
+<div class="box">Version B<br><small>Quality + Ops</small></div>
+</div>
+</div>
+
+<h3>Differential benchmarking</h3>
+<p>Absolute offline latency on a laptop is not necessarily the same as production latency. However, the <b>change between two controlled experiments</b> is still informative.</p>
+
+<table>
+<tr><th>Metric</th><th>Before change</th><th>After change</th><th>Direction</th></tr>
+<tr><td>Average latency</td><td>2.3 s</td><td>4.1 s</td><td>⚠️ Worse</td></tr>
+<tr><td>P95 latency</td><td>4.8 s</td><td>6.2 s</td><td>⚠️ Worse</td></tr>
+<tr><td>Cost/query</td><td>₹0.72</td><td>₹1.08</td><td>⚠️ Worse</td></tr>
+<tr><td>Timeout rate</td><td>2%</td><td>1%</td><td>✅ Better</td></tr>
+<tr><td>Success rate</td><td>99.8%</td><td>99.9%</td><td>✅ Better</td></tr>
+<tr><td>Correctness</td><td>91%</td><td>95%</td><td>✅ Better</td></tr>
+<tr><td>Faithfulness</td><td>94%</td><td>96%</td><td>✅ Better</td></tr>
+</table>
+
+<p>The example shows why quality alone can hide a regression: answer quality improved, but latency and cost became worse. The lecture therefore recommends keeping operational measurements in the offline suite and using them to detect directional changes. fileciteturn1file0L145-L169</p>
+
+<div class="callout danger"><b>Rule:</b> Keep the experimental setup consistent. If you change multiple unrelated parts of the benchmark setup, the resulting delta becomes difficult to interpret.</div>
+</section>
+
+<section id="latency">
+<h2>3. Core Metric #1 — Latency</h2>
+<p><b>Latency</b> is the amount of time a system takes to respond to a request. For a RAG application, an end-to-end request may involve retrieval, reranking, generation, and response delivery.</p>
+
+<div class="diagram">
+<div class="flow">
+<div class="box">User Query</div><div class="arrow">→</div>
+<div class="box">Embedding</div><div class="arrow">→</div>
+<div class="box">Retriever</div><div class="arrow">→</div>
+<div class="box">Reranker</div><div class="arrow">→</div>
+<div class="box">LLM Generator</div><div class="arrow">→</div>
+<div class="box">Answer</div>
+</div>
+</div>
+
+<div class="formula">End-to-End Latency = response_end_time − request_start_time</div>
+
+<h3>Why the average is not enough</h3>
+<p>A single average can hide slow requests. A production-like latency view should preserve the distribution and expose tail behavior.</p>
+
+<div class="chart" aria-label="Illustrative latency distribution">
+<div class="bar" style="height:22%"></div><div class="bar" style="height:45%"></div><div class="bar" style="height:75%"></div><div class="bar" style="height:100%"></div><div class="bar" style="height:86%"></div><div class="bar" style="height:55%"></div><div class="bar" style="height:32%"></div><div class="bar" style="height:14%"></div>
+</div>
+<p class="small">Illustrative distribution: most requests cluster around a normal latency, while a smaller tail can be substantially slower.</p>
+</section>
+
+<section id="percentiles">
+<h2>4. P50, P95 and P99 — Tail Latency</h2>
+<table>
+<tr><th>Percentile</th><th>Meaning</th><th>What it tells you</th></tr>
+<tr><td><b>P50</b></td><td>50% of requests complete at or below this latency.</td><td>Typical / median experience.</td></tr>
+<tr><td><b>P95</b></td><td>95% of requests complete at or below this latency.</td><td>Important tail-user experience.</td></tr>
+<tr><td><b>P99</b></td><td>99% of requests complete at or below this latency.</td><td>Very slow tail / worst-user experience.</td></tr>
+</table>
+
+<div class="callout">
+<b>Example:</b> If P95 = 5 seconds, approximately 95% of measured requests finished within 5 seconds, while the slowest ~5% took longer.
+</div>
+
+<p>The lecture recommends looking at P50/P95/P99 rather than reporting only the mean, because the tail tells you how badly some users are experiencing the system. fileciteturn1file0L318-L399</p>
+
+<h3>Key mental model</h3>
+<div class="diagram">
+<div class="flow">
+<div class="box">Mean<br>“What happens on average?”</div>
+<div class="box">P50<br>“Typical request?”</div>
+<div class="box">P95<br>“How bad is the tail?”</div>
+<div class="box">P99<br>“How bad is the extreme tail?”</div>
+</div>
+</div>
+</section>
+
+<section id="ttft">
+<h2>5. TTFT — Time to First Token</h2>
+<p><b>TTFT</b> measures how long it takes before the user sees the first generated token.</p>
+
+<div class="diagram">
+<div class="flow">
+<div class="box">Query sent</div><div class="arrow">→</div>
+<div class="box">Retrieval + prompt processing</div><div class="arrow">→</div>
+<div class="box">LLM starts generation</div><div class="arrow">→</div>
+<div class="box">🎯 First token</div><div class="arrow">→</div>
+<div class="box">Remaining stream</div>
+</div>
+</div>
+
+<p>Streaming improves perceived responsiveness because users see progress before the complete answer has been generated. Therefore, an evaluation should measure both:</p>
+<ul>
+<li><b>End-to-end latency</b> — when the full answer is complete.</li>
+<li><b>TTFT</b> — when the first token becomes visible.</li>
+</ul>
+
+<p>The lecture added streaming specifically so TTFT could be measured. fileciteturn1file0L426-L461</p>
+</section>
+
+<section id="latency-method">
+<h2>6. How to Build a Good Latency Evaluation</h2>
+
+<h3>6.1 Warm up first</h3>
+<p>Cold starts can occur when models, containers, caches, vector-database connections, or network connections are initialized. The lecture recommends discarding the initial warm-up runs and measuring subsequent runs. fileciteturn1file0L464-L504</p>
+
+<h3>6.2 Record output and context size</h3>
+<p>Latency depends partly on how much work the model must process. Longer answers generally require more generation time; larger contexts require more input processing. Therefore, record token counts/context size alongside latency.</p>
+
+<h3>6.3 Separate component latency</h3>
+<div class="diagram">
+<div class="flow">
+<div class="box">E2E = 4.5 s</div><div class="arrow">≈</div>
+<div class="box">Retriever = 1.5 s</div><div class="arrow">+</div>
+<div class="box">Generator = 3.0 s</div>
+</div>
+</div>
+<p>Break down the total into embedding, retrieval, reranking, generation, and other stages where possible. This identifies the optimization target rather than merely telling you that the whole system is slow. fileciteturn1file0L404-L424</p>
+
+<h3>6.4 Distinguish latency from throughput</h3>
+<table>
+<tr><th>Latency</th><th>Throughput</th></tr>
+<tr><td>Time required to process one request.</td><td>How many requests the system can handle in a given time.</td></tr>
+<tr><td>Example: “This query took 3 seconds.”</td><td>Example: “The service can handle 10,000 concurrent requests.”</td></tr>
+</table>
+
+<p>The lecture uses a restaurant analogy: latency is how long one customer waits for food; throughput is how many customers the kitchen can serve in a given time. Under load, queues can form and latency can increase. fileciteturn1file0L518-L567</p>
+
+<h3>6.5 Repeat experiments</h3>
+<p>External APIs are noisy. A single request is not a strong estimate. The lecture demonstrates repeating each question multiple times and averaging the resulting measurements; for production-quality benchmarking, substantially more samples may be appropriate. fileciteturn1file0L567-L591</p>
+
+<h3>6.6 Track failures separately</h3>
+<p>A lower latency can be misleading if many requests failed or timed out. For example, an experiment can show a better P95 simply because failed requests were excluded. Always inspect latency together with timeout/error rates.</p>
+
+<h3>6.7 Define latency budgets / SLOs</h3>
+<p>Example from the lecture:</p>
+<ul>
+<li>RAG P95 end-to-end latency ≤ <b>3 seconds</b>.</li>
+<li>Retriever latency ≤ <b>1 second</b>.</li>
+<li>TTFT P95 ≤ <b>1.2 seconds</b>.</li>
+</ul>
+<p>These values are examples from the lecture’s evaluation setup, not universal industry limits. Budgets should be chosen for the application, users, and business requirements. fileciteturn1file0L633-L654</p>
+
+<h3>6.8 Use representative workloads</h3>
+<p>A benchmark made only from easy questions can produce unrealistically good results. The lecture suggests mixing simple, medium, complex, long-context, long-answer, and edge-case queries. fileciteturn1file0L655-L680</p>
+
+<h3>Latency optimization levers discussed</h3>
+<ul>
+<li>Reduce unnecessary retrieval/context.</li>
+<li>Review reranking overhead.</li>
+<li>Choose an appropriate model rather than automatically using a larger model.</li>
+<li>Keep geographically interacting services closer when possible.</li>
+<li>Use streaming to improve perceived responsiveness.</li>
+<li>Analyze which component dominates latency before optimizing.</li>
+</ul>
+</section>
+
+<section id="cost">
+<h2>7. Core Metric #2 — Cost & Token Economics</h2>
+<p>Cost evaluation asks: <b>How much money does it take to answer a user query?</b></p>
+
+<div class="diagram">
+<div class="flow">
+<div class="box">Input tokens</div><div class="arrow">×</div><div class="box">Input rate</div><div class="arrow">→</div><div class="box">Input cost</div>
+</div>
+<br>
+<div class="flow">
+<div class="box">Output tokens</div><div class="arrow">×</div><div class="box">Output rate</div><div class="arrow">→</div><div class="box">Output cost</div>
+</div>
+<br>
+<div class="flow"><div class="box">Input cost</div><div class="arrow">+</div><div class="box">Output cost</div><div class="arrow">→</div><div class="box">LLM cost / query</div></div>
+</div>
+
+<div class="formula">Cost/query = (input_tokens × input_price) + (output_tokens × output_price)</div>
+
+<p>The lecture identifies several possible cost sources: the LLM, paid vector databases, paid rerankers, embedding models, and hosting/infrastructure. For the lecture’s simplified experiment, the main focus was LLM token cost. fileciteturn1file0L963-L1010</p>
+
+<h3>What should a cost evaluation measure?</h3>
+<table>
+<tr><th>Metric</th><th>Purpose</th></tr>
+<tr><td>Cost/query</td><td>Primary unit economics.</td></tr>
+<tr><td>Input cost</td><td>Shows how expensive the prompt/context is.</td></tr>
+<tr><td>Output cost</td><td>Shows the generation cost.</td></tr>
+<tr><td>Total period cost</td><td>Useful for overall spend, but less diagnostic.</td></tr>
+<tr><td>P95 cost</td><td>Shows expensive tail queries.</td></tr>
+<tr><td>Cost by query type</td><td>Compares simple, medium, complex queries.</td></tr>
+</table>
+
+<p>The lecture emphasizes that cost should be examined as a distribution as well. Some queries may be dramatically more expensive than the normal case, so those tail queries deserve investigation. fileciteturn1file0L1074-L1099</p>
+
+<h3>Cost budget</h3>
+<p>A business-level monthly budget can be translated into a rough per-query budget. This gives the evaluation a concrete pass/fail threshold.</p>
+
+<div class="callout success"><b>Example:</b> If the business says a certain workload cannot exceed ₹X/month, convert that requirement into a target cost/query using the expected request volume and query mix.</div>
+
+<h3>Prompt caching consideration</h3>
+<p>The lecture notes that repeated identical questions can cause provider-side caching effects. Therefore, a synthetic benchmark that repeatedly sends exactly the same input may not represent production traffic where questions vary. fileciteturn1file0L1240-L1267</p>
+</section>
+
+<section id="reliability">
+<h2>8. Core Metric #3 — System Reliability</h2>
+<p>Reliability is the ability of the RAG system to successfully serve requests without errors, timeouts, crashes, or broken pipeline stages.</p>
+
+<div class="diagram">
+<div class="flow">
+<div class="box">100 requests</div><div class="arrow">→</div>
+<div class="box">Successful = 80</div><div class="arrow">+</div>
+<div class="box">Failed = 20</div>
+</div>
+</div>
+
+<div class="formula">Success Rate = successful requests / total requests × 100</div>
+<div class="formula">Error Rate = failed requests / total requests × 100</div>
+
+<p>The lecture gives the simple example of 8 successful responses out of 10 requests, describing that as 80% reliability for that measurement. fileciteturn1file0L1268-L1290</p>
+
+<h3>Track more than one number</h3>
+<table>
+<tr><th>Metric</th><th>Definition / interpretation</th></tr>
+<tr><td>Success rate</td><td>Percentage of requests successfully served.</td></tr>
+<tr><td>Error rate</td><td>Percentage of requests that failed.</td></tr>
+<tr><td>Timeout rate</td><td>Percentage of requests exceeding the allowed time.</td></tr>
+<tr><td>Retry rate</td><td>Percentage of requests requiring at least one retry.</td></tr>
+</table>
+
+<h3>Do not use one generic error bucket</h3>
+<p>If the system has a 20% failure rate, investigate <b>why</b>. Useful categories include:</p>
+<ul>
+<li>LLM/API failure</li>
+<li>Retriever failure</li>
+<li>Reranker failure</li>
+<li>Vector database failure</li>
+<li>Timeout</li>
+<li>Rate-limit error</li>
+<li>Parser/formatting error</li>
+<li>Internal application exception</li>
+</ul>
+
+<p>Breaking failures down makes the metric actionable: instead of merely knowing that the system is failing, you can identify which component or failure mode needs attention. fileciteturn1file0L1370-L1396</p>
+
+<h3>Reliability under load</h3>
+<p>A system can appear highly reliable when tested from one laptop with a small number of sequential requests and still fail under real concurrency. The lecture therefore highlights load/concurrency as an important production consideration and recommends using enough samples to expose rare failures.</p>
+
+<h3>Representative reliability workloads</h3>
+<ul>
+<li>Simple queries</li>
+<li>Long-context queries</li>
+<li>Complex queries</li>
+<li>Queries producing long answers</li>
+<li>Known edge cases</li>
+</ul>
+<p>This segmentation helps reveal cases where, for example, simple queries succeed reliably but complex or long-context queries fail more often.</p>
+</section>
+
+<section id="scripts">
+<h2>9. Practical Python Evaluation Scripts</h2>
+<p class="lead">The lecture demonstrates <code>eval_latency.py</code>, <code>eval_cost.py</code>, and <code>eval_reliability.py</code>. The following are compact study implementations of the same measurement ideas—not copies of the lecture's full scripts.</p>
+
+<h3>9.1 Latency + P50/P95/P99 + TTFT</h3>
+<pre><code>from time import perf_counter
+from statistics import mean
+from typing import Callable
+import numpy as np
+
+def percentile(values, p):
+    return float(np.percentile(values, p))
+
+def benchmark(call_rag: Callable[[str], dict], questions, repeats=5, warmups=2):
+    rows = []
+
+    # Warm-up: avoid measuring cold-start effects.
+    for _ in range(warmups):
+        call_rag(questions[0])
+
+    for question in questions:
+        for run in range(repeats):
+            start = perf_counter()
+
+            # Example contract:
+            # {
+            #   "answer": "...",
+            #   "ttft": 1.2,
+            #   "retrieval_ms": 700,
+            #   "generation_ms": 2900,
+            #   "input_tokens": 800,
+            #   "output_tokens": 250
+            # }
+            result = call_rag(question)
+
+            end = perf_counter()
+
+            rows.append({
+                "question": question,
+                "latency_s": end - start,
+                "ttft_s": result["ttft"],
+                "retrieval_ms": result["retrieval_ms"],
+                "generation_ms": result["generation_ms"],
+                "input_tokens": result["input_tokens"],
+                "output_tokens": result["output_tokens"],
+            })
+
+    latencies = [r["latency_s"] for r in rows]
+    ttfts = [r["ttft_s"] for r in rows]
+
+    return {
+        "mean_latency_s": mean(latencies),
+        "p50_latency_s": percentile(latencies, 50),
+        "p95_latency_s": percentile(latencies, 95),
+        "p99_latency_s": percentile(latencies, 99),
+        "p95_ttft_s": percentile(ttfts, 95),
+        "samples": rows,
+    }</code></pre>
+
+<h3>9.2 Cost per query</h3>
+<pre><code>def llm_cost(input_tokens, output_tokens,
+             input_price_per_million,
+             output_price_per_million):
+
+    input_cost = (
+        input_tokens / 1_000_000
+    ) * input_price_per_million
+
+    output_cost = (
+        output_tokens / 1_000_000
+    ) * output_price_per_million
+
+    return {
+        "input_cost": input_cost,
+        "output_cost": output_cost,
+        "total_cost": input_cost + output_cost,
+    }
+
+# Example:
+cost = llm_cost(
+    input_tokens=1800,
+    output_tokens=500,
+    input_price_per_million=PRICE_IN,
+    output_price_per_million=PRICE_OUT,
+)
+
+print(cost)</code></pre>
+
+<h3>9.3 Reliability + failure categorization</h3>
+<pre><code>from collections import Counter
+
+def evaluate_reliability(call_rag, questions, repeats=5, max_retries=2):
+    total = 0
+    success = 0
+    retries_used = 0
+    failures = Counter()
+
+    for question in questions:
+        for _ in range(repeats):
+            total += 1
+
+            for attempt in range(max_retries + 1):
+                try:
+                    call_rag(question)
+                    success += 1
+
+                    if attempt > 0:
+                        retries_used += 1
+                    break
+
+                except TimeoutError:
+                    if attempt == max_retries:
+                        failures["timeout"] += 1
+
+                except RateLimitError:
+                    if attempt == max_retries:
+                        failures["rate_limit"] += 1
+
+                except RetrieverError:
+                    if attempt == max_retries:
+                        failures["retriever"] += 1
+
+                except Exception:
+                    if attempt == max_retries:
+                        failures["internal_error"] += 1
+
+    failed = total - success
+
+    return {
+        "success_rate": success / total,
+        "error_rate": failed / total,
+        "retry_rate": retries_used / total,
+        "failure_categories": dict(failures),
+    }</code></pre>
+
+<h3>9.4 A simple pass/fail gate</h3>
+<pre><code>def evaluate_slos(report):
+    checks = {
+        "latency_p95": report["p95_latency_s"] <= 3.0,
+        "ttft_p95": report["p95_ttft_s"] <= 1.2,
+        "success_rate": report["success_rate"] >= 0.99,
+        "cost_per_query": report["cost_per_query"] <= 0.50,
+    }
+
+    return {
+        "passed": all(checks.values()),
+        "checks": checks,
+    }</code></pre>
+
+<div class="callout warn">
+<b>Important:</b> The thresholds above mirror the lecture's example setup where applicable. They are not universal requirements. Replace them with application-specific SLOs and current provider pricing.
+</div>
+</section>
+
+<section id="results">
+<h2>10. Reading the Lecture's Example Latency Results</h2>
+<table>
+<tr><th>Metric</th><th>Example result from lecture</th><th>Interpretation</th></tr>
+<tr><td>Mean E2E latency</td><td>3.6 s</td><td>Average measured response time.</td></tr>
+<tr><td>Median / P50</td><td>3.8 s</td><td>Typical measured request.</td></tr>
+<tr><td>P95</td><td>5.3 s</td><td>Tail latency; only about 5% are slower.</td></tr>
+<tr><td>P99</td><td>5.3 s</td><td>Extreme tail in this small sample.</td></tr>
+<tr><td>Minimum</td><td>1.3 s</td><td>Fastest measured request.</td></tr>
+<tr><td>Retrieval</td><td>~700 ms</td><td>Much smaller component than generation.</td></tr>
+<tr><td>Generation</td><td>~2.9 s</td><td>Main latency contributor in the example.</td></tr>
+<tr><td>Mean TTFT</td><td>~1.6 s</td><td>Time until first visible token.</td></tr>
+<tr><td>P95 TTFT</td><td>~2.081 s</td><td>Above the example 1.2 s budget.</td></tr>
+</table>
+
+<p>The lecture's example therefore fails its stated P95 end-to-end and TTFT objectives and needs optimization before meeting those example SLOs. fileciteturn1file0L769-L852</p>
+
+<h3>How to interpret this correctly</h3>
+<p>Do not immediately optimize everything. Start with the component that dominates the budget. In the example, generation is substantially slower than retrieval, so generation-side optimization is a logical first investigation.</p>
+</section>
+
+<section id="cheatsheet">
+<h2>11. Interview & Revision Cheat Sheet</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>What are operational evals?</td><td>Measurements of whether an application runs reliably, quickly, and economically.</td></tr>
+<tr><td>Quality eval vs operational eval?</td><td>Quality asks whether the answer is good; operational eval asks whether the system can deliver it effectively in operation.</td></tr>
+<tr><td>Why run ops evals offline?</td><td>To detect regressions before deployment, especially changes in latency, cost, and reliability.</td></tr>
+<tr><td>Why P95/P99 instead of only mean?</td><td>They expose slow tail requests that an average can hide.</td></tr>
+<tr><td>What is TTFT?</td><td>Time from request initiation until the first generated token is available.</td></tr>
+<tr><td>Why warm up?</td><td>To avoid cold-start initialization contaminating benchmark measurements.</td></tr>
+<tr><td>Why repeat runs?</td><td>External APIs have noise; repeated runs make estimates more stable.</td></tr>
+<tr><td>Why track failures separately?</td><td>A lower latency can be fake improvement if more requests are timing out/failing.</td></tr>
+<tr><td>What is latency vs throughput?</td><td>Latency is time per request; throughput is requests handled per unit time.</td></tr>
+<tr><td>What is cost/query?</td><td>Input token cost + output token cost, plus other billable components when applicable.</td></tr>
+<tr><td>What is reliability?</td><td>Ability to successfully serve requests without errors, timeouts, crashes, or broken stages.</td></tr>
+<tr><td>Why categorize failures?</td><td>To turn an aggregate failure rate into actionable root-cause information.</td></tr>
+<tr><td>What is the role of representative workloads?</td><td>Prevent easy-only benchmarks from producing misleadingly optimistic results.</td></tr>
+</table>
+
+<h2>12. Final Mental Model</h2>
+<div class="diagram">
+<div class="flow">
+<div class="box">Quality<br><small>Is the answer good?</small></div>
+<div class="arrow">+</div>
+<div class="box">Latency<br><small>Is it fast enough?</small></div>
+<div class="arrow">+</div>
+<div class="box">Cost<br><small>Is it economical?</small></div>
+<div class="arrow">+</div>
+<div class="box">Reliability<br><small>Does it keep working?</small></div>
+<div class="arrow">→</div>
+<div class="box">Deployment Decision</div>
+</div>
+</div>
+
+<div class="callout success">
+<b>One-line takeaway:</b> A strong RAG evaluation suite should not only ask whether the application gives a good answer; it should also prove that the system can deliver those answers within acceptable latency, cost, and reliability budgets.
+</div>
+</section>
+
+<footer>
+<p><b>Source basis:</b> These notes are derived from the uploaded lecture transcript <code>tt.txt</code>. The Python examples are compact instructional implementations of the measurement concepts discussed in the lecture, not the original lecture source code.</p>
+<p>Operational-eval scope in the lecture: latency, cost, reliability. Throughput/load testing is identified as important but outside the detailed scope of this session.</p>
+</footer>
+
+</div>
+</body>
+</html>
