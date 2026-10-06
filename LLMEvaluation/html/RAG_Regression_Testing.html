@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG Regression Testing — Building a 3-Tier Evaluation Suite</title>
+<style>
+:root{--bg:#f6f8fc;--surface:#fff;--text:#172033;--muted:#5e6a7d;--border:#dfe5ef;--accent:#2457d6;--accent2:#0d8b72;--warn:#9a5b00;--danger:#b42318;--shadow:0 8px 30px rgba(31,45,75,.08)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.7 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+.page{max-width:1380px;margin:auto;padding:28px}
+.hero{background:linear-gradient(135deg,#10295f,#2457d6);color:#fff;border-radius:22px;padding:46px;box-shadow:var(--shadow)}
+.hero h1{font-size:42px;line-height:1.15;margin:0 0 14px}.hero p{max-width:950px;color:#e7edff;font-size:18px;margin:0}
+.layout{display:grid;grid-template-columns:250px 1fr;gap:28px;margin-top:28px}
+.toc{position:sticky;top:18px;height:max-content;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--shadow)}
+.toc h3{margin-top:0}.toc a{display:block;text-decoration:none;color:#40506b;padding:6px 0}.toc a:hover{color:var(--accent)}
+article{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:38px;box-shadow:var(--shadow)}
+h2{font-size:30px;margin-top:42px;border-bottom:1px solid var(--border);padding-bottom:8px}h3{font-size:22px;margin-top:30px}
+.lead{font-size:18px;color:#3e4a5e}.callout{border-left:5px solid var(--accent);background:#f1f5ff;padding:16px 20px;margin:22px 0;border-radius:10px}
+.tip{border-left-color:var(--accent2);background:#eefaf7}.warn{border-left-color:var(--warn);background:#fff7e8}.danger{border-left-color:var(--danger);background:#fff0ef}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.card{border:1px solid var(--border);border-radius:14px;padding:20px;background:#fbfcff}.card strong{display:block;font-size:19px;margin-bottom:6px}
+table{width:100%;border-collapse:collapse;margin:20px 0;font-size:15px}th,td{border:1px solid var(--border);padding:12px;vertical-align:top;text-align:left}th{background:#f0f4fa}
+pre{background:#111827;color:#e8edf7;padding:20px;border-radius:12px;overflow:auto;font-size:14px;line-height:1.55}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.badge{display:inline-block;background:#e9efff;color:#244aa8;border-radius:999px;padding:4px 10px;font-size:13px;margin:3px}
+.flow{display:flex;align-items:stretch;justify-content:center;gap:10px;flex-wrap:wrap;margin:24px 0}.node{flex:1 1 150px;min-width:145px;border:1px solid #cfd8e8;border-radius:14px;background:#f8faff;padding:16px;text-align:center}
+.arrow{align-self:center;font-size:25px;color:var(--accent)}.good{color:#087443}.bad{color:#b42318}.flat{color:#5e6a7d}
+footer{margin:30px 0;color:var(--muted);font-size:14px;text-align:center}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.toc{position:relative;top:0}.hero h1{font-size:32px}article{padding:24px}}
+</style>
+</head>
+<body>
+<div class="page">
+<header class="hero">
+<span class="badge">LLM / RAG Evaluation</span>
+<h1>RAG Regression Testing</h1>
+<p>Building a 3-Tier RAG Evaluation Suite, automating it into a single regression pipeline, and comparing baseline vs candidate performance across quality, safety, and operational metrics.</p>
+</header>
+
+<div class="layout">
+<nav class="toc">
+<h3>Contents</h3>
+<a href="#recap">1. Course Recap</a><a href="#regression">2. What Is Regression?</a>
+<a href="#danger">3. Single-Metric Tuning</a><a href="#architecture">4. Pipeline Architecture</a>
+<a href="#workflow">5. Baseline → Candidate → Delta</a><a href="#complexity">6. Two Core Challenges</a>
+<a href="#registry">7. Metric Registry & Noise</a><a href="#datasets">8. Golden Dataset Limitation</a>
+<a href="#refactor">9. Codebase Refactoring</a><a href="#automation">10. Suite Automation</a>
+<a href="#experiment">11. Chunk-Size Experiment</a><a href="#compare">12. Comparing Results</a>
+<a href="#ci">13. CI/CD Connection</a><a href="#cost">14. Cost & Composite Scores</a>
+<a href="#takeaways">15. Key Takeaways</a>
+</nav>
+
+<article>
+<section id="recap">
+<h2>1. Course Recap: Completing the 3-Tier RAG Eval Suite</h2>
+<p class="lead">The session connects the previous RAG evaluation work and turns it into a repeatable regression-testing mechanism rather than a collection of isolated evaluations.</p>
+<div class="grid">
+<div class="card"><strong>Component-level</strong>Evaluate individual RAG components such as the retriever or generator.</div>
+<div class="card"><strong>Pipeline-level</strong>Evaluate retrieval + generation as a connected pipeline.</div>
+<div class="card"><strong>Application-level</strong>Evaluate the complete RAG application from the user-facing perspective.</div>
+</div>
+<p>The transcript describes a suite with <strong>14 metrics</strong> covering quality, safety, and operational behavior, including faithfulness, answer relevance, contextual relevance, safety measures, latency, cost and reliability. The immediate objective is to execute the complete suite from one script and compare a changed system against its previous state. </p>
+<div class="callout tip"><strong>Session objective:</strong> run the complete suite automatically, save its results, compare a candidate against a baseline, and determine whether a change introduced a regression. The following session moves the same evaluation philosophy to online/production evaluation. </div>
+</section>
+
+<section id="regression">
+<h2>2. What Is Regression Testing?</h2>
+<p>Regression means that a system returns to a previous, less-advanced or worse state. Regression testing checks whether a change intended to improve one part of a system accidentally makes another part worse. </p>
+<div class="flow">
+<div class="node"><b>Existing RAG</b><br>Baseline</div><div class="arrow">→</div>
+<div class="node"><b>Change</b><br>k / reranker / chunking / model / prompt</div><div class="arrow">→</div>
+<div class="node"><b>Full eval suite</b><br>All important metrics</div><div class="arrow">→</div>
+<div class="node"><b>Compare</b><br>Candidate vs baseline</div><div class="arrow">→</div>
+<div class="node"><b>Decision</b><br>Deploy or investigate</div>
+</div>
+<h3>RAG example</h3>
+<p>Suppose retrieval recall is 85%. Increasing <code>k</code> and adding a reranker may raise recall to 90%, but precision, contextual relevance, latency or cost may worsen. If only recall is measured, the team can deploy a system that is worse overall. </p>
+<div class="callout danger"><strong>Core principle:</strong> never evaluate a RAG change using only the metric you intended to improve. Re-run the complete evaluation suite.</div>
+</section>
+
+<section id="danger">
+<h2>3. The Danger of Single-Metric Tuning</h2>
+<table>
+<tr><th>Change</th><th>Intended benefit</th><th>Possible regression</th></tr>
+<tr><td>Increase retrieval <code>k</code></td><td>Improve recall</td><td>Lower precision, more irrelevant context, higher latency/cost</td></tr>
+<tr><td>Add reranker</td><td>Improve retrieval quality</td><td>Additional latency and compute cost</td></tr>
+<tr><td>Reduce chunk size</td><td>Potentially improve contextual relevance</td><td>Different retrieval behavior and indexing cost</td></tr>
+<tr><td>Change model</td><td>Improve answer quality</td><td>Cost, latency, safety or behavior changes</td></tr>
+<tr><td>Change system prompt</td><td>Improve generation behavior</td><td>Unexpected quality/safety changes</td></tr>
+</table>
+<p>The lesson's central warning is that RAG quality is multidimensional. A positive change in one metric can coexist with negative changes elsewhere. Regression testing makes those trade-offs visible before deployment. </p>
+</section>
+
+<section id="architecture">
+<h2>4. Architecture of the RAG Regression Testing Pipeline</h2>
+<p>The existing suite is organized into three broad evaluation classes.</p>
+<div class="grid">
+<div class="card"><strong>Quality</strong>Faithfulness, answer relevance, contextual relevance and other quality dimensions.</div>
+<div class="card"><strong>Safety</strong>Toxicity, PII leakage, scope adherence and related checks.</div>
+<div class="card"><strong>Operational</strong>Latency, cost and reliability/operational behavior.</div>
+</div>
+<p>The engineering goal is to create one orchestration script that runs the three groups sequentially and returns a consolidated result set. </p>
+<div class="flow">
+<div class="node"><b>Quality</b><br>Retriever<br>Generator<br>Pipeline<br>Application</div>
+<div class="arrow">+</div>
+<div class="node"><b>Safety</b><br>Leakage<br>Toxicity<br>Scope</div>
+<div class="arrow">+</div>
+<div class="node"><b>Operations</b><br>Latency<br>Cost<br>Reliability</div>
+<div class="arrow">→</div>
+<div class="node"><b>Unified suite</b><br>One execution<br>One report</div>
+</div>
+</section>
+
+<section id="workflow">
+<h2>5. Baseline → Candidate → Delta</h2>
+<ol>
+<li><strong>Build the runner:</strong> one Python entry point calls the evaluation modules.</li>
+<li><strong>Create the baseline:</strong> run the suite and save all metric results, preferably as JSON.</li>
+<li><strong>Change the RAG system:</strong> modify retrieval, chunking, model, prompt or another component.</li>
+<li><strong>Create the candidate:</strong> run the same suite against the changed system.</li>
+<li><strong>Compare:</strong> calculate per-metric deltas and determine whether meaningful regression occurred.</li>
+</ol>
+<p>This baseline/candidate comparison is the core regression workflow described in the transcript. </p>
+<pre><code>def run_suite():
+    quality = run_quality_evals()
+    safety = run_safety_evals()
+    operations = run_operational_evals()
+    return {**quality, **safety, **operations}
+
+baseline = run_suite()
+save_json("baseline.json", baseline)
+
+# ...make a RAG change...
+
+candidate = run_suite()
+save_json("candidate.json", candidate)
+
+compare("baseline.json", "candidate.json", "metric_registry.py")</code></pre>
+<div class="callout"><strong>Implementation note:</strong> the lesson intentionally uses a bare-shell conceptual implementation. Production teams may use dedicated evaluation/regression tools, but the underlying concepts remain the same. </div>
+</section>
+
+<section id="complexity">
+<h2>6. Two Core Challenges</h2>
+<h3>Challenge 1 — Metrics have different directions</h3>
+<table>
+<tr><th>Direction</th><th>Examples</th><th>Meaning</th></tr>
+<tr><td><strong>Higher is better</strong></td><td>Faithfulness, recall, precision</td><td>An increase is generally an improvement.</td></tr>
+<tr><td><strong>Lower is better</strong></td><td>Latency, cost, toxicity</td><td>A decrease is generally an improvement.</td></tr>
+</table>
+<p>The comparison engine therefore needs metadata describing the direction of each metric. </p>
+<h3>Challenge 2 — LLM-as-a-Judge introduces noise</h3>
+<p>Most quality and safety evaluations in this setup use an LLM as a judge. Because LLMs are probabilistic, the same application and evaluation configuration can produce slightly different scores across runs. </p>
+<div class="callout warn"><strong>Example:</strong> precision can be 85.6 in one run and 84.8 in another without any application change. A naive comparison would incorrectly call that a regression.</div>
+</section>
+
+<section id="registry">
+<h2>7. Noise Thresholds with Standard Deviation</h2>
+<p>The lesson's solution is to measure natural evaluation variability before using the suite for regression decisions.</p>
+<div class="flow">
+<div class="node"><b>Same system</b><br>No code changes</div><div class="arrow">→</div>
+<div class="node"><b>5–10 runs</b><br>Same setup</div><div class="arrow">→</div>
+<div class="node"><b>Scores</b><br>Per metric</div><div class="arrow">→</div>
+<div class="node"><b>σ</b><br>Standard deviation</div><div class="arrow">→</div>
+<div class="node"><b>Threshold</b><br>≈ 2 × σ</div>
+</div>
+<p>For each metric, repeatedly run the suite without changing the application. Calculate the standard deviation of that metric's scores. The lesson uses approximately <strong>two standard deviations</strong> as a practical noise threshold. A change inside the threshold is treated as evaluator noise rather than a meaningful regression. </p>
+<pre><code>import statistics
+
+scores = [90.0, 90.8, 89.7, 90.2, 89.9, 90.4, 90.1, 89.8, 90.5, 90.0]
+
+sigma = statistics.stdev(scores)
+noise_threshold = 2 * sigma
+
+print("standard deviation:", sigma)
+print("noise threshold:", noise_threshold)</code></pre>
+<p>If baseline recall is 90 and the tolerance is ±1, a candidate value of 89.5 is treated as noise. A candidate of 87.5 lies outside the tolerance and is treated as regression. </p>
+<h3>Metric Registry</h3>
+<p>Every metric needs two important pieces of metadata:</p>
+<ol><li><strong>Direction:</strong> higher or lower is better.</li><li><strong>Noise threshold:</strong> expected evaluator variation.</li></ol>
+<pre><code># metric_registry.py — conceptual
+METRICS = {
+    "recall": {"direction": "higher", "noise_threshold": 1.0},
+    "precision": {"direction": "higher", "noise_threshold": 1.0},
+    "faithfulness": {"direction": "higher", "noise_threshold": 1.5},
+    "latency": {"direction": "lower", "noise_threshold": 0.2},
+    "cost": {"direction": "lower", "noise_threshold": 0.5},
+    "toxicity": {"direction": "lower", "noise_threshold": 2.0}
+}</code></pre>
+<p>The transcript describes storing this information in a separate metric registry so the comparison logic can determine both whether movement is desirable and whether it exceeds normal noise. </p>
+</section>
+
+<section id="datasets">
+<h2>8. Small Golden Datasets: An Important Limitation</h2>
+<p>The example golden datasets are explicitly described as very small—sometimes only around 5, 10 or 15 entries. This can produce substantial run-to-run variability. The transcript notes that increasing dataset size generally makes the system appear more stable. </p>
+<div class="callout warn"><strong>Practical lesson:</strong> do not interpret a noisy score from a tiny evaluation set as a highly precise measurement. Dataset size is itself an important factor in evaluation stability.</div>
+</section>
+
+<section id="refactor">
+<h2>9. Refactoring the Evaluation Codebase</h2>
+<p>Before automation, the evaluation modules are reorganized so they can be called consistently.</p>
+<h3>Operational and safety consolidation</h3>
+<p>The three operational evaluations—reliability, cost and latency—are combined into one operational module. Likewise, leakage, toxicity and scope evaluations are consolidated into one safety module. </p>
+<h3>Quality evaluation modules</h3>
+<p>The retriever, generator, pipeline and application evaluations remain separate. Each is refactored to expose a callable <code>run()</code> function and an <code>if __name__ == "__main__"</code> entry point. This allows the module to run directly or be invoked from another script. </p>
+<pre><code>def run():
+    return {
+        "recall": 0.96,
+        "precision": 0.90
+    }
+
+if __name__ == "__main__":
+    print(run())</code></pre>
+<h3>Test harness</h3>
+<p>A <code>harness.py</code>-style layer standardizes how the quality evaluations receive input and how their output is extracted. Its purpose is consistency, not implementing the evaluation logic itself. </p>
+</section>
+
+<section id="automation">
+<h2>10. Automating the Complete Suite</h2>
+<p>The main entry point is a <code>run_suite.py</code>-style script. It runs quality, then safety, then operational evaluations and generates a consolidated result. The first run becomes the baseline; later runs become candidates. </p>
+<div class="flow">
+<div class="node"><b>run_suite.py</b><br>Main entry point</div><div class="arrow">→</div>
+<div class="node"><b>Quality</b><br>4 evaluation groups</div><div class="arrow">→</div>
+<div class="node"><b>Safety</b><br>3 checks</div><div class="arrow">→</div>
+<div class="node"><b>Operations</b><br>Latency / Cost / Reliability</div><div class="arrow">→</div>
+<div class="node"><b>JSON</b><br>Baseline / Candidate</div>
+</div>
+<pre><code>from eval_quality import run_quality
+from eval_safety import run_safety
+from eval_ops import run_ops
+
+def run_suite():
+    results = {}
+    results.update(run_quality())
+    results.update(run_safety())
+    results.update(run_ops())
+    return results
+
+if __name__ == "__main__":
+    print(run_suite())</code></pre>
+<h3>Suggested conceptual structure</h3>
+<pre><code>evals/
+├── run_suite.py
+├── compare.py
+├── metric_registry.py
+├── harness.py
+├── eval_quality/
+│   ├── eval_retriever.py
+│   ├── eval_generator.py
+│   ├── eval_pipeline.py
+│   └── eval_application.py
+├── eval_safety.py
+├── eval_ops.py
+├── baseline.json
+└── candidate.json</code></pre>
+</section>
+
+<section id="experiment">
+<h2>11. Live Experiment: Retriever Chunk Size</h2>
+<p>The demonstrated experiment changes the retriever configuration from a chunk size of <strong>1500</strong> to <strong>500</strong>, with overlap set to <strong>100</strong>. The motivation is to try to improve contextual relevance. Because chunking changed, the vector database is rebuilt so the documents are re-embedded using the new chunks. </p>
+<pre><code>chunk_size = 500
+chunk_overlap = 100
+
+# Rebuild index because chunking changed
+vector_store.delete_all()
+
+documents = load_documents()
+chunks = split_documents(
+    documents,
+    chunk_size=chunk_size,
+    chunk_overlap=chunk_overlap
+)
+vector_store.add(chunks)</code></pre>
+<p>The updated configuration is logged with the evaluation run. The full suite then executes automatically and writes the new results to <code>candidate.json</code>. The transcript notes that the run can take several minutes because many evaluations are being executed and the vector store may need to be rebuilt. </p>
+</section>
+
+<section id="compare">
+<h2>12. Comparing Baseline vs Candidate</h2>
+<p>The comparison step consumes three inputs:</p>
+<div class="grid">
+<div class="card"><strong>baseline.json</strong>Metrics before the change.</div>
+<div class="card"><strong>candidate.json</strong>Metrics after the change.</div>
+<div class="card"><strong>metric_registry.py</strong>Direction and noise tolerance.</div>
+</div>
+<pre><code>def compare_metric(baseline, candidate, direction, threshold):
+    delta = candidate - baseline
+
+    if abs(delta) <= threshold:
+        return "flat", delta
+
+    if direction == "higher":
+        return ("improved" if delta > 0 else "regressed"), delta
+
+    if direction == "lower":
+        return ("improved" if delta < 0 else "regressed"), delta
+
+def compare(baseline, candidate, registry):
+    report = {}
+    for metric, config in registry.items():
+        status, delta = compare_metric(
+            baseline[metric],
+            candidate[metric],
+            config["direction"],
+            config["noise_threshold"]
+        )
+        report[metric] = {
+            "baseline": baseline[metric],
+            "candidate": candidate[metric],
+            "delta": delta,
+            "status": status
+        }
+    return report</code></pre>
+<table>
+<tr><th>Status</th><th>Meaning</th></tr>
+<tr><td class="good"><strong>Improved</strong></td><td>Movement is desirable and exceeds the noise threshold.</td></tr>
+<tr><td class="bad"><strong>Regressed</strong></td><td>Movement is undesirable and exceeds the noise threshold.</td></tr>
+<tr><td class="flat"><strong>Flat</strong></td><td>Difference is within expected evaluator noise.</td></tr>
+</table>
+<p>The live comparison produced many flat metrics because their variation was within the configured noise tolerance, while several metrics improved. The value of the report is that it exposes all dimensions rather than hiding trade-offs behind a single number. </p>
+<h3>Using metric groups for diagnosis</h3>
+<p>If retrieval metrics such as recall, precision and contextual relevance remain healthy but answer quality deteriorates, generation becomes a stronger suspect. If retrieval metrics deteriorate, the retriever or retrieval configuration becomes a stronger suspect. The metrics therefore serve not only as gates but also as diagnostic signals. </p>
+</section>
+
+<section id="ci">
+<h2>13. Regression Testing and CI/CD</h2>
+<p>The automated suite is effectively “CI locally” in the conceptual setup described. In a production workflow, the same idea can be integrated into CI—for example, with GitHub Actions—so changes are evaluated before deployment. The transcript explicitly connects regression testing to CI in a proper production setup. </p>
+<div class="flow">
+<div class="node"><b>RAG/code change</b></div><div class="arrow">→</div>
+<div class="node"><b>CI pipeline</b></div><div class="arrow">→</div>
+<div class="node"><b>Run eval suite</b></div><div class="arrow">→</div>
+<div class="node"><b>Compare</b></div><div class="arrow">→</div>
+<div class="node"><b>Gate / investigate / deploy</b></div>
+</div>
+</section>
+
+<section id="cost">
+<h2>14. Evaluation Cost & the Single-Score Temptation</h2>
+<p>Evaluation itself has a cost. The transcript notes that even the small example suite can consume meaningful money because many LLM-based evaluations are executed. Larger golden datasets would increase that cost. </p>
+<h3>Should all metrics become one score?</h3>
+<p>A weighted composite score is technically possible:</p>
+<pre><code>overall_score =
+    0.30 * faithfulness +
+    0.20 * answer_relevance +
+    0.20 * contextual_relevance +
+    0.15 * safety_score +
+    0.15 * reliability_score</code></pre>
+<p>However, the lesson cautions that merging all metrics into a single dimension can hide important differences between aspects of the application. Individual metrics exist because they reveal different failure modes. A composite score may be useful in a domain-specific system, but it should not replace the underlying metric-level report. </p>
+</section>
+
+<section id="takeaways">
+<h2>15. Key Takeaways</h2>
+<div class="grid">
+<div class="card"><strong>1. Full-suite evaluation</strong>Improving one metric is not sufficient evidence that a RAG change is good.</div>
+<div class="card"><strong>2. Baseline matters</strong>The previous known state is the reference for candidate changes.</div>
+<div class="card"><strong>3. Direction matters</strong>Some metrics should increase; others should decrease.</div>
+<div class="card"><strong>4. Noise matters</strong>LLM-as-a-judge is probabilistic, so small changes may be evaluator noise.</div>
+<div class="card"><strong>5. Registry matters</strong>Store metric direction and tolerance centrally.</div>
+<div class="card"><strong>6. Dataset size matters</strong>Small golden sets can produce large variability.</div>
+<div class="card"><strong>7. Automation matters</strong>One suite runner eliminates repetitive manual commands.</div>
+<div class="card"><strong>8. Diagnostics matter</strong>Metric groups can help identify retrieval vs generation problems.</div>
+<div class="card"><strong>9. Cost matters</strong>Evaluation can become expensive as datasets and judge calls grow.</div>
+<div class="card"><strong>10. CI matters</strong>Regression tests can become a pre-deployment quality gate.</div>
+</div>
+<h3>The complete mental model</h3>
+<div class="flow">
+<div class="node"><b>RAG change</b><br>Retriever / chunks / model / prompt</div><div class="arrow">→</div>
+<div class="node"><b>3-tier suite</b><br>Quality + Safety + Operations</div><div class="arrow">→</div>
+<div class="node"><b>Candidate</b><br>Metric results</div><div class="arrow">→</div>
+<div class="node"><b>Baseline comparison</b><br>Direction + noise threshold</div><div class="arrow">→</div>
+<div class="node"><b>Decision</b><br>Improved / Flat / Regressed</div>
+</div>
+<div class="callout"><strong>Bottom line:</strong> RAG regression testing proves that a system change did not silently damage another part of the application. The lesson's implementation uses a unified runner, baseline/candidate JSON files, a metric registry, repeated runs for noise estimation, and a comparison script.</div>
+</section>
+
+<footer>
+Prepared from the supplied lecture transcript. Code examples are conceptual implementations based on the workflow described in the source.
+</footer>
+</article>
+</div>
+</div>
+</body>
+</html>
