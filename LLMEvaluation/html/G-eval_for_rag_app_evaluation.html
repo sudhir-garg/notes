@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>G-Eval for RAG Application Evaluation — Correctness, Completeness & Style</title>
+<style>
+:root{
+  --bg:#f5f7fb; --surface:#ffffff; --surface2:#eef3f9; --text:#172033;
+  --muted:#5e6a7d; --border:#dce3ed; --primary:#173f70; --primary2:#2868a7;
+  --accent:#0f766e; --warning:#a16207; --danger:#b42318; --shadow:0 10px 30px rgba(20,35,55,.08);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.72 Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a{color:var(--primary2);text-decoration:none}
+a:hover{text-decoration:underline}
+.hero{background:linear-gradient(135deg,#102f55,#1d5688);color:#fff;padding:64px 6vw 54px}
+.hero .eyebrow{letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;opacity:.8}
+.hero h1{max-width:1050px;font-size:clamp(2.1rem,4vw,4rem);line-height:1.08;margin:12px 0 18px}
+.hero p{max-width:900px;font-size:1.12rem;color:#e8f1fa}
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:32px;max-width:1380px;margin:32px auto;padding:0 24px}
+.toc{position:sticky;top:20px;align-self:start;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+.toc strong{display:block;margin-bottom:10px}
+.toc a{display:block;padding:6px 4px;font-size:.91rem;color:var(--muted)}
+.toc a:hover{color:var(--primary)}
+article{min-width:0}
+section{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:30px;margin-bottom:24px;box-shadow:var(--shadow)}
+h2{font-size:1.85rem;color:var(--primary);margin-top:0}
+h3{font-size:1.25rem;color:#234b75;margin-top:28px}
+h4{margin-bottom:6px}
+.lead{font-size:1.08rem;color:#344155}
+.callout{border-left:5px solid var(--primary2);background:#edf5fc;padding:16px 18px;border-radius:10px;margin:18px 0}
+.callout.tip{border-color:var(--accent);background:#ecf8f5}
+.callout.warn{border-color:var(--warning);background:#fff8e8}
+.callout.danger{border-color:var(--danger);background:#fff0ee}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.card{border:1px solid var(--border);background:#fbfcfe;border-radius:14px;padding:18px}
+.card h3{margin-top:0}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:.94rem}
+th,td{border:1px solid var(--border);padding:11px 12px;vertical-align:top;text-align:left}
+th{background:#edf3f9;color:#203e5d}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre{background:#111827;color:#e5edf7;border-radius:14px;padding:18px;overflow:auto;line-height:1.55;font-size:.88rem}
+.inline{background:#eef2f7;padding:2px 6px;border-radius:5px}
+.formula{background:#f7f9fc;border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;font-family:ui-monospace,monospace;margin:16px 0}
+.diagram{background:#fbfdff;border:1px solid var(--border);border-radius:14px;padding:18px;margin:20px 0;overflow:auto}
+.badge{display:inline-block;padding:4px 9px;border-radius:999px;background:#e8f1fb;color:#245986;font-size:.78rem;font-weight:700}
+.timeline{border-left:3px solid #b7cce0;margin:20px 0 20px 10px;padding-left:22px}
+.timeline .step{position:relative;margin:20px 0}
+.timeline .step:before{content:"";position:absolute;left:-31px;top:7px;width:12px;height:12px;border-radius:50%;background:#2868a7;border:3px solid #d9e8f5}
+.kpi{font-size:2rem;font-weight:800;color:var(--primary)}
+.footer{max-width:1380px;margin:0 auto;padding:10px 24px 50px;color:var(--muted);font-size:.9rem}
+@media(max-width:900px){
+  .layout{grid-template-columns:1fr}
+  .toc{position:relative;top:auto}
+}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="eyebrow">LLM Evaluation • RAG Application Quality</div>
+  <h1>G-Eval for RAG Application Evaluation</h1>
+  <p>How to evaluate correctness, completeness and teaching style when simple count-based metrics are not enough.</p>
+</header>
+
+<div class="layout">
+<nav class="toc">
+  <strong>Table of Contents</strong>
+  <a href="#recap">1. Evaluation Plan</a>
+  <a href="#count-vs-judgment">2. Count-Based vs Judgment-Based</a>
+  <a href="#llm-judge">3. Why Naive LLM-as-a-Judge Is Unstable</a>
+  <a href="#geval">4. What Is G-Eval?</a>
+  <a href="#innovation1">5. Innovation #1 — Evaluation Steps</a>
+  <a href="#innovation2">6. Innovation #2 — Probability-Weighted Score</a>
+  <a href="#pipeline">7. End-to-End G-Eval Pipeline</a>
+  <a href="#correctness">8. Metric 1 — Correctness</a>
+  <a href="#completeness">9. Metric 2 — Completeness</a>
+  <a href="#style">10. Metric 3 — Tone & Style</a>
+  <a href="#prompt-engineering">11. Prompt Engineering & Rubric Tuning</a>
+  <a href="#deepeval">12. DeepEval Implementation</a>
+  <a href="#lessons">13. Key Lessons & Interview Points</a>
+  <a href="#next">14. Next Steps</a>
+</nav>
+
+<article>
+
+<section id="recap">
+<h2>1. Evaluation Plan: Where This RAG Eval Suite Fits</h2>
+<p class="lead">The lesson continues an offline evaluation suite for a RAG system. The suite is organized into three levels: component, pipeline and application.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1000 300" width="100%" role="img" aria-label="Three-tier RAG evaluation suite">
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#2868a7"/></marker></defs>
+  <rect x="45" y="75" width="250" height="135" rx="18" fill="#eef5fc" stroke="#9bbbd8"/>
+  <rect x="375" y="75" width="250" height="135" rx="18" fill="#eef8f5" stroke="#9ccfc7"/>
+  <rect x="705" y="75" width="250" height="135" rx="18" fill="#fff7e8" stroke="#e0c27a"/>
+  <text x="170" y="115" text-anchor="middle" font-size="24" fill="#173f70" font-weight="700">Component</text>
+  <text x="170" y="150" text-anchor="middle" font-size="17" fill="#425466">Individual RAG pieces</text>
+  <text x="170" y="177" text-anchor="middle" font-size="17" fill="#425466">e.g. retriever / generator</text>
+  <text x="500" y="115" text-anchor="middle" font-size="24" fill="#17665e" font-weight="700">Pipeline</text>
+  <text x="500" y="150" text-anchor="middle" font-size="17" fill="#425466">End-to-end RAG flow</text>
+  <text x="500" y="177" text-anchor="middle" font-size="17" fill="#425466">retrieval + generation</text>
+  <text x="830" y="115" text-anchor="middle" font-size="24" fill="#8a5b0a" font-weight="700">Application</text>
+  <text x="830" y="150" text-anchor="middle" font-size="17" fill="#425466">Quality • Safety • Operations</text>
+  <text x="830" y="177" text-anchor="middle" font-size="17" fill="#425466">user-facing behavior</text>
+  <line x1="295" y1="142" x2="370" y2="142" stroke="#2868a7" stroke-width="4" marker-end="url(#arrow)"/>
+  <line x1="625" y1="142" x2="700" y2="142" stroke="#2868a7" stroke-width="4" marker-end="url(#arrow)"/>
+</svg>
+</div>
+
+<div class="grid">
+<div class="card"><h3>Application Quality</h3><p>Correctness, completeness and style are evaluated in this lesson.</p></div>
+<div class="card"><h3>Application Safety</h3><p>Safety-oriented metrics are planned for the following session.</p></div>
+<div class="card"><h3>Application Operations</h3><p>Operational evaluation and regression testing are the next planned areas.</p></div>
+</div>
+
+<div class="callout tip"><strong>Lesson objective:</strong> build an application-quality evaluation pipeline using G-Eval for three judgment-based metrics: <strong>correctness, completeness and style</strong>. fileciteturn0file0L17-L27</div>
+</section>
+
+<section id="count-vs-judgment">
+<h2>2. Count-Based vs Judgment-Based Evaluation</h2>
+<p>Earlier RAG evaluation used metrics such as recall, precision, faithfulness, answer relevance and context relevance. The lesson groups these earlier techniques around a common pattern: decompose something into checkable units, count favorable vs unfavorable units, and derive a ratio.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1000 310" width="100%" role="img" aria-label="Count based evaluation versus judgment based evaluation">
+<defs><marker id="a2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#2868a7"/></marker></defs>
+<rect x="40" y="45" width="405" height="220" rx="18" fill="#eef5fc" stroke="#9bbbd8"/>
+<rect x="555" y="45" width="405" height="220" rx="18" fill="#eef8f5" stroke="#9ccfc7"/>
+<text x="242" y="82" text-anchor="middle" font-size="23" font-weight="700" fill="#173f70">Count-Based</text>
+<text x="242" y="120" text-anchor="middle" font-size="17">Answer → Claims → Check → Count</text>
+<text x="242" y="157" text-anchor="middle" font-size="17">Favorable / Total</text>
+<text x="242" y="195" text-anchor="middle" font-size="17">Ratio → Metric score</text>
+<text x="242" y="232" text-anchor="middle" font-size="15" fill="#5e6a7d">Good when units are independently testable</text>
+<text x="757" y="82" text-anchor="middle" font-size="23" font-weight="700" fill="#17665e">Judgment-Based</text>
+<text x="757" y="120" text-anchor="middle" font-size="17">Question + Answer + Criteria</text>
+<text x="757" y="157" text-anchor="middle" font-size="17">Whole-answer evaluation</text>
+<text x="757" y="195" text-anchor="middle" font-size="17">Judge → Score</text>
+<text x="757" y="232" text-anchor="middle" font-size="15" fill="#5e6a7d">Needed for holistic properties</text>
+<line x1="445" y1="155" x2="550" y2="155" stroke="#2868a7" stroke-width="4" marker-end="url(#a2)"/>
+</svg>
+</div>
+
+<h3>Why style cannot be reduced to claim counting</h3>
+<p>Suppose the desired teaching style is defined at the <em>answer</em> level—e.g., explain the “why, what and how” naturally. A single sentence does not necessarily contain every characteristic of the overall style. Therefore, checking each sentence independently and computing a ratio does not represent the holistic property reliably.</p>
+
+<h3>Why correctness can also defeat claim counting</h3>
+<p>An answer may use an analogy. The analogy can look unrelated to the reference answer when isolated, yet make perfect sense in the context of the complete explanation. Treating the analogy as an independent claim can incorrectly penalize a correct answer.</p>
+
+<div class="callout warn"><strong>Core distinction:</strong> count-based metrics ask “how many individual units satisfy a rule?” Judgment-based metrics ask “how well does the complete answer satisfy a criterion?”</div>
+</section>
+
+<section id="llm-judge">
+<h2>3. Why a Naive LLM-as-a-Judge Is Not Reliable Enough</h2>
+<p>The straightforward approach is tempting:</p>
+<ol>
+<li>Create a golden dataset containing a question and expected answer.</li>
+<li>Run the RAG application to obtain the actual answer.</li>
+<li>Give question + expected answer + actual answer to an LLM judge.</li>
+<li>Ask for a score from 0–10.</li>
+<li>Average the scores across the dataset.</li>
+</ol>
+
+<div class="diagram">
+<svg viewBox="0 0 1000 380" width="100%" role="img" aria-label="Naive LLM judge pipeline">
+<defs><marker id="a3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#2868a7"/></marker></defs>
+<g font-size="17" text-anchor="middle">
+<rect x="45" y="60" width="250" height="90" rx="14" fill="#eef5fc" stroke="#9bbbd8"/><text x="170" y="97" fill="#173f70" font-weight="700">Golden Dataset</text><text x="170" y="124">Question + Expected Answer</text>
+<rect x="375" y="60" width="250" height="90" rx="14" fill="#f5f5fa" stroke="#c9c9db"/><text x="500" y="97" fill="#333b55" font-weight="700">RAG Application</text><text x="500" y="124">Generate Actual Answer</text>
+<rect x="705" y="60" width="250" height="90" rx="14" fill="#eef8f5" stroke="#9ccfc7"/><text x="830" y="97" fill="#17665e" font-weight="700">LLM Judge</text><text x="830" y="124">Compare + score 0–10</text>
+<line x1="295" y1="105" x2="370" y2="105" stroke="#2868a7" stroke-width="4" marker-end="url(#a3)"/>
+<line x1="625" y1="105" x2="700" y2="105" stroke="#2868a7" stroke-width="4" marker-end="url(#a3)"/>
+<rect x="310" y="230" width="380" height="85" rx="14" fill="#fff8e8" stroke="#e0c27a"/>
+<text x="500" y="266" fill="#8a5b0a" font-weight="700">Problem: High Score Variance</text>
+<text x="500" y="293">Same input can produce different integer scores</text>
+<line x1="830" y1="155" x2="830" y2="210" stroke="#2868a7" stroke-width="4" marker-end="url(#a3)"/>
+<line x1="830" y1="210" x2="690" y2="250" stroke="#2868a7" stroke-width="4" marker-end="url(#a3)"/>
+</g>
+</svg>
+</div>
+
+<h3>Two causes of variance highlighted in the lesson</h3>
+<table>
+<tr><th>Cause</th><th>What happens</th><th>Why it matters</th></tr>
+<tr><td>Loose criterion</td><td>The judge receives a high-level instruction such as “decide how factually correct it is.”</td><td>Different calls may interpret “correctness” differently.</td></tr>
+<tr><td>Integer score selection</td><td>The model must choose one discrete token such as 6, 7, 8, 9 or 10.</td><td>Small probability changes can flip the selected token and create large score jumps.</td></tr>
+</table>
+
+<div class="callout danger"><strong>Reliability requirement:</strong> if nothing in the evaluation setup changes, repeated runs should have low variance. The lesson uses this as the key reason to move beyond naive direct LLM judging.</div>
+</section>
+
+<section id="geval">
+<h2>4. What Is G-Eval?</h2>
+<p>G-Eval is introduced in the lesson as a 2023 research technique designed to improve LLM-as-a-judge evaluation. The transcript frames it as an enhancement to the same basic idea—not a completely different evaluation paradigm.</p>
+
+<div class="grid">
+<div class="card"><span class="badge">Input 1</span><h3>Metric</h3><p>Define what you want to measure: correctness, completeness, style, etc.</p></div>
+<div class="card"><span class="badge">Input 2</span><h3>High-Level Criteria</h3><p>Define the broad rule used to judge that metric.</p></div>
+<div class="card"><span class="badge">G-Eval</span><h3>Evaluation Steps</h3><p>Turn the broad criterion into explicit evaluation instructions.</p></div>
+<div class="card"><span class="badge">G-Eval</span><h3>Weighted Score</h3><p>Use token probabilities rather than simply accepting one integer token as the score.</p></div>
+</div>
+
+<div class="callout tip"><strong>Memory hook:</strong> <em>G-Eval = structured evaluation steps + probability-weighted scoring.</em> Those are the two core innovations emphasized in the lesson.</div>
+</section>
+
+<section id="innovation1">
+<h2>5. G-Eval Innovation #1 — Convert Criteria into Evaluation Steps</h2>
+<p>Instead of asking a judge to interpret a vague criterion independently on every call, G-Eval first turns the criterion into a more explicit rule set. The lesson describes this as converting the high-level criterion into roughly four or five evaluation steps, creating a “constitution” or “rule book” for evaluation.</p>
+
+<div class="timeline">
+<div class="step"><strong>Step 1 — Select metric:</strong> e.g., correctness.</div>
+<div class="step"><strong>Step 2 — Define criterion:</strong> e.g., compare the actual answer with the expected answer based on factual correctness.</div>
+<div class="step"><strong>Step 3 — Derive evaluation steps:</strong> make the criterion operational and explicit.</div>
+<div class="step"><strong>Step 4 — Build judge prompt:</strong> supply question, expected answer, actual answer and evaluation steps.</div>
+<div class="step"><strong>Step 5 — Score:</strong> evaluate according to the defined rubric.</div>
+</div>
+
+<h3>Example evaluation rule set for correctness</h3>
+<pre><code>Evaluation criterion:
+Compare the actual answer against the expected answer
+and judge factual correctness.
+
+Evaluation steps:
+1. Compare factual claims in the actual answer with the expected answer.
+2. Penalize claims that contradict the expected answer.
+3. Penalize claims that are factually false.
+4. Do not penalize an answer merely because it is shorter.
+5. Do not lower the score for correct additional information.</code></pre>
+
+<p>The important design change is that the evaluator is no longer given only a single broad sentence. It receives a repeatable evaluation procedure.</p>
+</section>
+
+<section id="innovation2">
+<h2>6. G-Eval Innovation #2 — Probability-Weighted Scoring</h2>
+<p>The second innovation addresses the instability of asking the judge to output one integer directly. The lesson explains the idea using the model’s token probabilities.</p>
+
+<h3>From “pick 8” to “how likely were 7, 8 and 9?”</h3>
+<p>Suppose the judge considers these numeric output tokens:</p>
+
+<table>
+<tr><th>Token</th><th>Illustrative probability</th></tr>
+<tr><td>8</td><td>0.70</td></tr>
+<tr><td>7</td><td>0.20</td></tr>
+<tr><td>9</td><td>0.05</td></tr>
+<tr><td>Non-numeric alternatives</td><td>0.05 combined</td></tr>
+</table>
+
+<p>After retaining the relevant numeric candidates, their probabilities are normalized. The weighted score is then conceptually:</p>
+
+<div class="formula">
+Weighted score = Σ(score<sub>i</sub> × normalized probability<sub>i</sub>)
+</div>
+
+<p>Using the lesson’s illustrative numbers:</p>
+<div class="formula">
+8 × 0.73 + 7 × 0.21 + 9 × 0.05 ≈ 7.84
+</div>
+
+<p>Instead of taking the single most probable token, the evaluator uses the probability mass around plausible numeric scores. This produces a smoother score than simply switching between integer outputs.</p>
+
+<div class="callout"><strong>Why this helps:</strong> a small change from “8 is most likely” to “7 is most likely” does not necessarily turn the final score from 8 to 7. The weighted score can move gradually.</div>
+
+<h3>Normalization</h3>
+<p>If only the top-k relevant numeric tokens are retained, their probabilities may not sum to 1. The lesson therefore normalizes them before computing the weighted average.</p>
+
+<div class="formula">
+p′<sub>i</sub> = p<sub>i</sub> / Σ p<sub>j</sub>
+</div>
+
+<p>The resulting score can then be mapped to the desired range. The transcript describes dividing a 0–10 score by 10 to obtain a 0–1 metric, followed by thresholding.</p>
+</section>
+
+<section id="pipeline">
+<h2>7. End-to-End G-Eval Pipeline</h2>
+
+<div class="diagram">
+<svg viewBox="0 0 1100 560" width="100%" role="img" aria-label="End to end G-Eval evaluation pipeline">
+<defs><marker id="a4" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#2868a7"/></marker></defs>
+<g font-size="17">
+<rect x="50" y="35" width="300" height="100" rx="16" fill="#eef5fc" stroke="#9bbbd8"/>
+<text x="200" y="72" text-anchor="middle" font-weight="700" fill="#173f70">Golden Dataset</text>
+<text x="200" y="100" text-anchor="middle">Question + Expected Answer</text>
+<rect x="400" y="35" width="300" height="100" rx="16" fill="#f5f5fa" stroke="#c9c9db"/>
+<text x="550" y="72" text-anchor="middle" font-weight="700">RAG Application</text>
+<text x="550" y="100" text-anchor="middle">Generate Actual Answer</text>
+<rect x="750" y="35" width="300" height="100" rx="16" fill="#eef8f5" stroke="#9ccfc7"/>
+<text x="900" y="72" text-anchor="middle" font-weight="700" fill="#17665e">Metric + Criteria</text>
+<text x="900" y="100" text-anchor="middle">Correctness / Completeness / Style</text>
+<line x1="350" y1="85" x2="395" y2="85" stroke="#2868a7" stroke-width="4" marker-end="url(#a4)"/>
+<line x1="700" y1="85" x2="745" y2="85" stroke="#2868a7" stroke-width="4" marker-end="url(#a4)"/>
+
+<rect x="220" y="220" width="660" height="105" rx="16" fill="#fff8e8" stroke="#e0c27a"/>
+<text x="550" y="258" text-anchor="middle" font-weight="700" fill="#8a5b0a">G-Eval: Generate Evaluation Steps</text>
+<text x="550" y="288" text-anchor="middle">High-level criterion → explicit evaluation rule book / rubric</text>
+<line x1="900" y1="135" x2="900" y2="195" stroke="#2868a7" stroke-width="4" marker-end="url(#a4)"/>
+<line x1="200" y1="135" x2="200" y2="195" stroke="#2868a7" stroke-width="4" marker-end="url(#a4)"/>
+<line x1="200" y1="195" x2="220" y2="220" stroke="#2868a7" stroke-width="4" marker-end="url(#a4)"/>
+
+<rect x="220" y="375" width="660" height="105" rx="16" fill="#eef5fc" stroke="#9bbbd8"/>
+<text x="550" y="413" text-anchor="middle" font-weight="700" fill="#173f70">LLM Judge</text>
+<text x="550" y="442" text-anchor="middle">Question + Expected + Actual + Evaluation Steps → score probabilities</text>
+<line x1="550" y1="325" x2="550" y2="370" stroke="#2868a7" stroke-width="4" marker-end="url(#a4)"/>
+
+<rect x="360" y="510" width="380" height="40" rx="12" fill="#ecf8f5" stroke="#9ccfc7"/>
+<text x="550" y="536" text-anchor="middle" font-weight="700" fill="#17665e">Normalize → Weighted Score → Threshold → Pass/Fail</text>
+<line x1="550" y1="480" x2="550" y2="505" stroke="#2868a7" stroke-width="4" marker-end="url(#a4)"/>
+</g>
+</svg>
+</div>
+
+<h3>Per-test-case flow</h3>
+<ol>
+<li>Take a question from the golden dataset.</li>
+<li>Run the RAG application.</li>
+<li>Capture its actual answer.</li>
+<li>Provide question, expected answer, actual answer and evaluation criteria/steps to the G-Eval judge.</li>
+<li>Extract the relevant score-token probabilities.</li>
+<li>Normalize and calculate the weighted score.</li>
+<li>Compare the normalized score against a threshold.</li>
+<li>Aggregate results across the test set.</li>
+</ol>
+</section>
+
+<section id="correctness">
+<h2>8. Metric 1 — Correctness</h2>
+<p><strong>Correctness</strong> asks whether the RAG application's answer is factually correct against the expected answer. The lesson explicitly distinguishes this from faithfulness.</p>
+
+<table>
+<tr><th>Dimension</th><th>Question being asked</th></tr>
+<tr><td>Correctness</td><td>Is the answer factually correct in the broader sense of being objectively correct?</td></tr>
+<tr><td>Faithfulness</td><td>Is the answer grounded in the supplied retrieval context?</td></tr>
+</table>
+
+<div class="diagram">
+<svg viewBox="0 0 1000 360" width="100%" role="img" aria-label="Correctness and faithfulness matrix">
+<rect x="70" y="65" width="860" height="230" rx="18" fill="#fbfdff" stroke="#cbd7e4"/>
+<line x1="500" y1="65" x2="500" y2="295" stroke="#cbd7e4" stroke-width="2"/>
+<line x1="70" y1="180" x2="930" y2="180" stroke="#cbd7e4" stroke-width="2"/>
+<text x="500" y="45" text-anchor="middle" font-size="22" font-weight="700" fill="#173f70">Correctness vs Faithfulness</text>
+<text x="285" y="100" text-anchor="middle" font-size="18" font-weight="700">Faithful</text>
+<text x="715" y="100" text-anchor="middle" font-size="18" font-weight="700">Not Faithful</text>
+<text x="105" y="145" font-size="18" font-weight="700">Correct</text>
+<text x="285" y="150" text-anchor="middle">Ideal case</text>
+<text x="715" y="150" text-anchor="middle">Correct from model knowledge,<br/>but not grounded in context</text>
+<text x="105" y="250" font-size="18" font-weight="700">Incorrect</text>
+<text x="285" y="255" text-anchor="middle">Wrong information was<br/>faithfully reproduced</text>
+<text x="715" y="255" text-anchor="middle">Hallucinated and incorrect</text>
+</svg>
+</div>
+
+<h3>Golden dataset</h3>
+<p>The lesson uses a 15-question golden dataset containing questions and ideal/correct answers. The correct answer is framed as the answer accepted in the real world, not merely “what the course happened to teach.”</p>
+
+<h3>Correctness score</h3>
+<p>For each test case, G-Eval produces a 0–10-style score. The application-level result can be aggregated across the 15 questions and compared against a threshold.</p>
+
+<div class="callout tip"><strong>Ideal RAG behavior:</strong> the lesson emphasizes that a strong answer should be both <strong>factually correct</strong> and <strong>faithful to the retrieval context</strong>.</div>
+</section>
+
+<section id="completeness">
+<h2>9. Metric 2 — Completeness</h2>
+<p>Completeness asks whether the generated answer addresses all the parts of the user's question. This is especially important for multi-part questions.</p>
+
+<div class="card">
+<h3>Example</h3>
+<p><strong>Question:</strong> “Explain X and also compare it with Y.”</p>
+<p><strong>Partial answer:</strong> explains X but never compares it with Y.</p>
+<p><strong>Complete answer:</strong> addresses both requested components.</p>
+</div>
+
+<h3>Same G-Eval machinery, different criterion</h3>
+<p>The dataset structure remains similar: question + ideal answer + actual generated answer. The main change is the metric definition and evaluation rubric. The judge is instructed to check whether the answer covers the multiple components of the question rather than stopping after addressing only the first component.</p>
+
+<div class="callout"><strong>Lesson example:</strong> after a prompt refinement that explicitly told the generator not to miss any part of a multi-component question, the reported completeness score improved from roughly <strong>50%</strong> to <strong>75%</strong>, with failed test cases dropping from 10 to 1 in the shown run.</div>
+
+<h3>Practical rule</h3>
+<pre><code>Completeness criterion:
+- Identify every distinct requirement in the question.
+- Check whether the answer addresses each requirement.
+- Do not stop evaluation after finding one answered component.
+- Do not reward invented information simply to fill missing components.</code></pre>
+</section>
+
+<section id="style">
+<h2>10. Metric 3 — Tone & Style</h2>
+<p>Style is a particularly useful judgment-based metric because there is no single “golden answer” that the generated response must match word-for-word.</p>
+
+<div class="callout tip"><strong>Reference-free evaluation:</strong> the lesson evaluates style using a clearly defined rubric plus the generated answer, without requiring an ideal answer.</div>
+
+<h3>Example style rubric used in the lesson</h3>
+<ul>
+<li>Reward an intuitive explanatory tone.</li>
+<li>Prefer plain language.</li>
+<li>Explain the idea before introducing formulas or jargon.</li>
+<li>Briefly unpack technical terms when they are used.</li>
+<li>Prefer a direct, conversational teacher-to-student register over a dry textbook tone.</li>
+<li>Use concrete examples or analogies when they genuinely help.</li>
+</ul>
+
+<table>
+<tr><th>Score band</th><th>Interpretation from the lesson</th></tr>
+<tr><td>9–10</td><td>Clearly matches the desired teaching voice; intuitive and conversational.</td></tr>
+<tr><td>5–8</td><td>Reasonably clear but somewhat flat, formal or textbook-like.</td></tr>
+<tr><td>0–4</td><td>Dry, stiff, jargon-heavy, robotic, and not like a teaching explanation.</td></tr>
+</table>
+
+<h3>Style does not require a reference answer</h3>
+<div class="diagram">
+<svg viewBox="0 0 1000 260" width="100%" role="img" aria-label="Reference free style evaluation">
+<defs><marker id="a5" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#2868a7"/></marker></defs>
+<rect x="55" y="70" width="260" height="100" rx="16" fill="#eef5fc" stroke="#9bbbd8"/>
+<text x="185" y="108" text-anchor="middle" font-weight="700" fill="#173f70">Style Rubric</text>
+<text x="185" y="137" text-anchor="middle">Desired voice + behaviors</text>
+<rect x="685" y="70" width="260" height="100" rx="16" fill="#eef8f5" stroke="#9ccfc7"/>
+<text x="815" y="108" text-anchor="middle" font-weight="700" fill="#17665e">Generated Answer</text>
+<text x="815" y="137" text-anchor="middle">Actual response</text>
+<rect x="390" y="175" width="220" height="55" rx="14" fill="#fff8e8" stroke="#e0c27a"/>
+<text x="500" y="209" text-anchor="middle" font-weight="700" fill="#8a5b0a">G-Eval → Style Score</text>
+<line x1="315" y1="120" x2="385" y2="195" stroke="#2868a7" stroke-width="4" marker-end="url(#a5)"/>
+<line x1="685" y1="120" x2="615" y2="195" stroke="#2868a7" stroke-width="4" marker-end="url(#a5)"/>
+</svg>
+</div>
+</section>
+
+<section id="prompt-engineering">
+<h2>11. Prompt Engineering and Rubric Tuning</h2>
+<p>The lesson demonstrates an important evaluation-development loop: <strong>evaluate → inspect failures → refine the generator prompt or evaluator rubric → rerun</strong>.</p>
+
+<h3>Example: improving completeness</h3>
+<p>The generator was explicitly instructed to consider all parts of a multi-component question instead of stopping after the first component. The reported score improved substantially in the demonstrated run.</p>
+
+<h3>Example: improving style</h3>
+<p>The initial style score was reported around <strong>54</strong>. The generator prompt was then made more explicit about the desired conversational teaching style. The evaluator rubric was also refined.</p>
+
+<h3>A subtle evaluator failure: over-correction</h3>
+<p>The original style rubric rewarded examples and analogies. The evaluator began penalizing answers that did not contain an analogy—even when the question did not need one. This is a classic rubric-design problem: a desirable behavior was accidentally turned into a mandatory requirement.</p>
+
+<div class="callout warn"><strong>Rubric correction:</strong> an analogy or concrete example should be a bonus when the concept is abstract; a clear, direct explanation should remain fully acceptable without one.</div>
+
+<p>After the two refinements—generator prompt tuning and rubric tuning—the demonstrated style score rose to around <strong>74</strong>.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1050 270" width="100%" role="img" aria-label="Evaluation improvement loop">
+<defs><marker id="a6" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#2868a7"/></marker></defs>
+<rect x="40" y="80" width="180" height="80" rx="14" fill="#eef5fc" stroke="#9bbbd8"/><text x="130" y="113" text-anchor="middle" font-weight="700">Generate</text><text x="130" y="137" text-anchor="middle">RAG answer</text>
+<rect x="285" y="80" width="180" height="80" rx="14" fill="#eef8f5" stroke="#9ccfc7"/><text x="375" y="113" text-anchor="middle" font-weight="700">Evaluate</text><text x="375" y="137" text-anchor="middle">G-Eval metrics</text>
+<rect x="530" y="80" width="180" height="80" rx="14" fill="#fff8e8" stroke="#e0c27a"/><text x="620" y="113" text-anchor="middle" font-weight="700">Inspect</text><text x="620" y="137" text-anchor="middle">Failed cases</text>
+<rect x="775" y="80" width="220" height="80" rx="14" fill="#f5f5fa" stroke="#c9c9db"/><text x="885" y="113" text-anchor="middle" font-weight="700">Refine</text><text x="885" y="137" text-anchor="middle">Prompt / rubric</text>
+<line x1="220" y1="120" x2="280" y2="120" stroke="#2868a7" stroke-width="4" marker-end="url(#a6)"/>
+<line x1="465" y1="120" x2="525" y2="120" stroke="#2868a7" stroke-width="4" marker-end="url(#a6)"/>
+<line x1="710" y1="120" x2="770" y2="120" stroke="#2868a7" stroke-width="4" marker-end="url(#a6)"/>
+<path d="M885 160 C885 235 130 235 130 165" fill="none" stroke="#2868a7" stroke-width="4" marker-end="url(#a6)"/>
+</svg>
+</div>
+
+<div class="callout tip"><strong>Key lesson:</strong> evaluation is not only measurement. The metric results reveal where the application or evaluator needs refinement.</div>
+</section>
+
+<section id="deepeval">
+<h2>12. Implementing Custom G-Eval Metrics with DeepEval</h2>
+<p>The transcript shows a DeepEval implementation using the <code class="inline">GEval</code> class. The test case contains the input, actual output and expected output; a custom G-Eval metric supplies the name, criteria, model and threshold.</p>
+
+<h3>Conceptual implementation</h3>
+<pre><code>from deepeval import evaluate
+from deepeval.metrics import GEval
+from deepeval.test_case import LLMTestCase
+
+correctness = GEval(
+    name="Correctness",
+    criteria=(
+        "Compare the actual answer against the expected answer "
+        "and judge how factually correct it is."
+    ),
+    evaluation_params=[
+        # Use the input / actual output / expected output
+        # fields supported by your installed DeepEval version.
+    ],
+    threshold=0.7,
+)
+
+test_case = LLMTestCase(
+    input="YOUR QUESTION",
+    actual_output="RAG GENERATED ANSWER",
+    expected_output="GOLDEN ANSWER",
+)
+
+evaluate(
+    test_cases=[test_case],
+    metrics=[correctness],
+)</code></pre>
+
+<div class="callout warn"><strong>Implementation note:</strong> the transcript explains the structure and behavior of the code, but the displayed source excerpt does not contain every import/argument line. The snippet above is therefore a practical reference skeleton rather than a verbatim transcription. Match the exact <code>GEval</code> signature to the DeepEval version installed in your environment.</div>
+
+<h3>What the framework does conceptually</h3>
+<ol>
+<li>Accept the metric name and high-level criteria.</li>
+<li>Generate or use evaluation steps.</li>
+<li>Construct the judge prompt.</li>
+<li>Send the evaluation task to the configured judge model.</li>
+<li>Use the relevant score-token probabilities to derive a weighted score.</li>
+<li>Normalize the result.</li>
+<li>Compare the result with the configured threshold.</li>
+<li>Return a pass/fail judgment and metric score.</li>
+</ol>
+
+<h3>Adding completeness</h3>
+<pre><code>completeness = GEval(
+    name="Completeness",
+    criteria=(
+        "Check whether the actual answer addresses every distinct "
+        "part of the question without omitting requested components."
+    ),
+    evaluation_params=[
+        # input, actual output, expected output
+    ],
+    threshold=0.7,
+)</code></pre>
+
+<h3>Adding style without an expected answer</h3>
+<pre><code>style = GEval(
+    name="Tone and Style",
+    criteria=(
+        "Evaluate whether the answer uses an intuitive, conversational "
+        "teaching tone, plain language, clear explanations before jargon "
+        "or formulas, and examples/analogies when genuinely useful."
+    ),
+    evaluation_params=[
+        # input, actual output
+    ],
+    threshold=0.6,
+)</code></pre>
+
+<p>The transcript's main point is architectural: the same G-Eval mechanism can be reused to create many custom judgment-based metrics.</p>
+</section>
+
+<section id="lessons">
+<h2>13. Key Lessons and Interview-Ready Takeaways</h2>
+
+<div class="grid">
+<div class="card"><div class="kpi">01</div><h3>Not every metric is countable</h3><p>Holistic properties such as style, helpfulness, completeness and safety often require judgment.</p></div>
+<div class="card"><div class="kpi">02</div><h3>Naive LLM judging can vary</h3><p>A loose criterion plus direct integer scoring can produce unstable repeated evaluations.</p></div>
+<div class="card"><div class="kpi">03</div><h3>G-Eval adds structure</h3><p>It operationalizes a high-level criterion into explicit evaluation steps.</p></div>
+<div class="card"><div class="kpi">04</div><h3>Probability matters</h3><p>Weighted score calculation uses probability information instead of blindly taking one numeric token.</p></div>
+</div>
+
+<h3>Correctness vs faithfulness</h3>
+<table>
+<tr><th>Question</th><th>Metric</th></tr>
+<tr><td>Is the answer factually correct?</td><td>Correctness</td></tr>
+<tr><td>Is the answer grounded in retrieved context?</td><td>Faithfulness</td></tr>
+<tr><td>Does it answer every requested part?</td><td>Completeness</td></tr>
+<tr><td>Does it match the desired communication style?</td><td>Style / tone</td></tr>
+</table>
+
+<h3>Interview question: Why not just use an LLM as a judge?</h3>
+<p><strong>Answer:</strong> You can, but a direct “give me a 0–10 score” setup can be highly variable. The lesson attributes this to two main issues: the evaluation criterion is under-specified, and discrete score-token selection can change between runs. G-Eval reduces this variability by making evaluation steps explicit and using probability-weighted scoring.</p>
+
+<h3>Interview question: What are the two core innovations of G-Eval?</h3>
+<p><strong>Answer:</strong> First, convert a high-level evaluation criterion into explicit evaluation steps. Second, derive the final score from probability-weighted candidate score tokens rather than simply taking one generated integer.</p>
+
+<h3>Interview question: Does G-Eval replace LLM-as-a-judge?</h3>
+<p><strong>Answer:</strong> No. In the lesson's framing, G-Eval is an improved way to perform LLM-as-a-judge evaluation. The judge is still an LLM; G-Eval makes the judging procedure more structured and the score more stable.</p>
+
+<h3>Interview question: How do you evaluate style when there is no golden answer?</h3>
+<p><strong>Answer:</strong> Define a precise style rubric describing the desired characteristics and score the generated answer against that rubric. This is reference-free judgment-based evaluation.</p>
+</section>
+
+<section id="next">
+<h2>14. Course Recap and Next Steps</h2>
+<p>The lesson completes the <strong>application-quality</strong> portion of the RAG evaluation plan using three example metrics:</p>
+
+<div class="grid">
+<div class="card"><h3>Correctness</h3><p>Factually correct against the expected answer.</p></div>
+<div class="card"><h3>Completeness</h3><p>Covers all requested parts of the question.</p></div>
+<div class="card"><h3>Style</h3><p>Matches the desired teaching / communication style.</p></div>
+</div>
+
+<p>The transcript notes that G-Eval can also be used for additional custom metrics such as helpfulness, coherence and tonality. Safety and operational evaluation are planned as subsequent parts of the course, along with regression testing.</p>
+
+<div class="callout tip"><strong>Final mental model:</strong><br>
+RAG application → generate answer → choose quality dimension → define criterion → create explicit evaluation rules → judge with an LLM → use probability-weighted scoring → threshold/aggregate → inspect failures → improve the application or rubric → rerun.</div>
+
+<h3>One-page revision summary</h3>
+<table>
+<tr><th>Problem</th><th>Solution</th></tr>
+<tr><td>Cannot meaningfully count style properties</td><td>Use whole-answer judgment.</td></tr>
+<tr><td>Correctness can depend on context and answer-level meaning</td><td>Evaluate the complete answer against a reference.</td></tr>
+<tr><td>Loose LLM judge criteria create inconsistent interpretations</td><td>Convert criteria into explicit evaluation steps/rubric.</td></tr>
+<tr><td>Integer score tokens can flip between runs</td><td>Use probability-weighted candidate score tokens.</td></tr>
+<tr><td>Evaluator identifies weak behavior</td><td>Refine generator prompts and/or evaluation rubrics.</td></tr>
+<tr><td>Need many application-specific quality dimensions</td><td>Create custom G-Eval metrics.</td></tr>
+</table>
+</section>
+
+</article>
+</div>
+
+<div class="footer">
+  <p>Notes generated from the supplied lecture transcript. The explanations preserve the lesson's terminology and progression; implementation snippets are clearly marked where they are practical reference code rather than verbatim source code.</p>
+</div>
+</body>
+</html>
