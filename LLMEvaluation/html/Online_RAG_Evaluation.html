@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Online Evaluation: Production Monitoring, Safety, Quality & Feedback Loops</title>
+<style>
+:root{
+  --bg:#f5f7fb;--surface:#fff;--surface2:#f8fafc;--text:#182230;--muted:#5d6878;
+  --primary:#173b72;--primary2:#2459a6;--accent:#0f766e;--border:#dce3ed;
+  --shadow:0 12px 30px rgba(25,45,80,.08);--code:#101827;--codeText:#e7edf7;
+  --warn:#fff7ed;--warnBorder:#fb923c;--tip:#ecfdf5;--tipBorder:#34d399;
+  --danger:#fef2f2;--dangerBorder:#f87171;--info:#eff6ff;--infoBorder:#60a5fa;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.75 Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a{color:var(--primary2);text-decoration:none} a:hover{text-decoration:underline}
+.page{max-width:1380px;margin:auto;display:grid;grid-template-columns:260px minmax(0,1fr);gap:28px;padding:28px}
+.toc{position:sticky;top:20px;align-self:start;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--shadow);max-height:calc(100vh - 40px);overflow:auto}
+.toc h3{margin:0 0 12px;font-size:15px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.toc a{display:block;padding:7px 8px;border-radius:8px;font-size:13px;color:var(--text)}
+.toc a:hover{background:var(--surface2);text-decoration:none}
+main{min-width:0}
+.hero{background:linear-gradient(135deg,#122b52,#2459a6);color:white;border-radius:22px;padding:42px 46px;box-shadow:var(--shadow);margin-bottom:24px}
+.hero .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.13em;opacity:.8}
+.hero h1{font-size:clamp(30px,4vw,48px);line-height:1.1;margin:10px 0 16px}
+.hero p{max-width:900px;font-size:18px;opacity:.93;margin:0}
+.hero-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:26px}
+.hero-stat{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);padding:15px;border-radius:12px}
+.hero-stat b{display:block;font-size:20px}.hero-stat span{font-size:12px;opacity:.82}
+section{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:30px;margin:22px 0;box-shadow:var(--shadow)}
+h2{font-size:30px;line-height:1.2;margin:0 0 18px;color:var(--primary)}
+h3{font-size:21px;margin:26px 0 10px;color:#213b61}
+h4{font-size:17px;margin:20px 0 8px}
+p{margin:10px 0}
+.lead{font-size:18px;color:#334155}
+.callout{padding:17px 18px;border-left:5px solid;border-radius:10px;margin:18px 0}
+.callout.info{background:var(--info);border-color:var(--infoBorder)}
+.callout.tip{background:var(--tip);border-color:var(--tipBorder)}
+.callout.warn{background:var(--warn);border-color:var(--warnBorder)}
+.callout.danger{background:var(--danger);border-color:var(--dangerBorder)}
+.callout strong{display:block;margin-bottom:3px}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14px}
+th,td{border:1px solid var(--border);padding:11px 12px;text-align:left;vertical-align:top}
+th{background:#eef3f9;color:#213b61}
+tr:nth-child(even) td{background:#fbfcfe}
+.badge{display:inline-block;padding:3px 9px;border-radius:999px;background:#e9eef7;color:#23446f;font-size:12px;font-weight:700}
+.badge.yes{background:#dcfce7;color:#166534}.badge.no{background:#fee2e2;color:#991b1b}.badge.log{background:#fef3c7;color:#92400e}
+.diagram{background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:16px;margin:20px 0;overflow:auto}
+.diagram svg{width:100%;height:auto;min-width:720px}
+.code-title{font-size:13px;font-weight:700;color:#475569;margin:18px 0 6px}
+pre{background:var(--code);color:var(--codeText);border-radius:13px;padding:18px;overflow:auto;font:13px/1.65 "SFMono-Regular",Consolas,monospace}
+code{font-family:"SFMono-Regular",Consolas,monospace}
+.inline{background:#eef2f7;padding:2px 5px;border-radius:5px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.card{border:1px solid var(--border);border-radius:14px;padding:18px;background:#fff}
+.card h3{margin-top:0}
+.kpi{font-size:28px;font-weight:800;color:var(--primary)}
+.steps{counter-reset:step;display:grid;gap:12px}
+.step{display:grid;grid-template-columns:42px 1fr;gap:13px;align-items:start}
+.step:before{counter-increment:step;content:counter(step);display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--primary);color:white;font-weight:700}
+ul,ol{padding-left:25px}
+li{margin:5px 0}
+.footer{color:var(--muted);font-size:13px;text-align:center;padding:25px}
+@media(max-width:980px){.page{grid-template-columns:1fr;padding:15px}.toc{position:relative;top:auto;max-height:none}.hero-grid{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
+@media(max-width:600px){section{padding:20px}.hero{padding:28px 24px}.hero-grid{grid-template-columns:1fr}}
+</style>
+</head>
+
+<body>
+<div class="page">
+<aside class="toc">
+<h3>Contents</h3>
+<a href="#recap">1. From Offline to Online Evals</a>
+<a href="#reference">2. The Reference Constraint</a>
+<a href="#suite">3. Online Eval Suite</a>
+<a href="#tracing">4. LangSmith Tracing</a>
+<a href="#retrieval">5. Capturing Retrieval Correctly</a>
+<a href="#traffic">6. Simulating Production Traffic</a>
+<a href="#dashboard">7. Monitoring Dashboards</a>
+<a href="#alerts">8. Production Alerts & SLOs</a>
+<a href="#safety">9. Online Safety Evaluation</a>
+<a href="#sampling">10. Sampling & Evaluation Cost</a>
+<a href="#quality">11. Online Quality Evaluation</a>
+<a href="#polling">12. eval_online.py & Polling</a>
+<a href="#execution">13. Live DeepEval Execution</a>
+<a href="#flywheel">14. Online → Golden Dataset</a>
+<a href="#recap-final">15. Final Takeaways</a>
+</aside>
+
+<main>
+<header class="hero">
+<div class="eyebrow">RAG Evaluation · Production Engineering · Study Notes</div>
+<h1>LLM Online Evaluation</h1>
+<p>How to continuously monitor and evaluate a deployed RAG application using traces, operational telemetry, safety evaluators, quality evaluators, dashboards, alerts, and a feedback loop back into the golden dataset.</p>
+<div class="hero-grid">
+<div class="hero-stat"><b>Offline → Online</b><span>Pre-deployment testing becomes continuous production monitoring</span></div>
+<div class="hero-stat"><b>6 Metrics</b><span>Contextual relevancy, faithfulness, answer relevancy, toxicity, latency, cost</span></div>
+<div class="hero-stat"><b>Tracing</b><span>Capture the application execution path in LangSmith</span></div>
+<div class="hero-stat"><b>Flywheel</b><span>Bad production traces become stronger offline test cases</span></div>
+</div>
+</header>
+
+<section id="recap">
+<h2>1. From Offline Evaluation to Online Evaluation</h2>
+<p class="lead">The central transition in this lesson is simple: <strong>deployment is not the end of evaluation</strong>.</p>
+<p>The earlier RAG-evaluation work built an offline evaluation suite with roughly 14–15 metrics and then connected it to regression testing. Offline evaluation answers questions such as: “Does the new version perform better or worse on our known evaluation set?”</p>
+<p>Once the application is deployed, however, real users generate inputs that were not known when the golden dataset was created. Online evaluation extends the evaluation process into production by continuously collecting traces, measuring the live system, and looking for quality, safety, and operational degradation.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1100 330" role="img" aria-label="Offline to online evaluation lifecycle">
+<defs><marker id="arrow1" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#2459a6"/></marker></defs>
+<rect x="35" y="85" width="220" height="125" rx="18" fill="#eaf2ff" stroke="#2459a6"/>
+<text x="145" y="120" text-anchor="middle" font-size="20" font-weight="700" fill="#173b72">Offline Evals</text>
+<text x="145" y="150" text-anchor="middle" font-size="14">Golden dataset</text>
+<text x="145" y="174" text-anchor="middle" font-size="14">Known references</text>
+<text x="145" y="198" text-anchor="middle" font-size="14">Regression testing</text>
+<line x1="255" y1="147" x2="345" y2="147" stroke="#2459a6" stroke-width="4" marker-end="url(#arrow1)"/>
+<rect x="350" y="85" width="220" height="125" rx="18" fill="#eefbf7" stroke="#0f766e"/>
+<text x="460" y="120" text-anchor="middle" font-size="20" font-weight="700" fill="#0f766e">Deployment</text>
+<text x="460" y="153" text-anchor="middle" font-size="14">Application goes live</text>
+<text x="460" y="178" text-anchor="middle" font-size="14">Users generate new inputs</text>
+<line x1="570" y1="147" x2="660" y2="147" stroke="#2459a6" stroke-width="4" marker-end="url(#arrow1)"/>
+<rect x="665" y="65" width="220" height="165" rx="18" fill="#fff8ed" stroke="#ea8a19"/>
+<text x="775" y="101" text-anchor="middle" font-size="20" font-weight="700" fill="#9a5b05">Online Evals</text>
+<text x="775" y="133" text-anchor="middle" font-size="14">Trace production traffic</text>
+<text x="775" y="157" text-anchor="middle" font-size="14">Evaluate selected signals</text>
+<text x="775" y="181" text-anchor="middle" font-size="14">Monitor trends</text>
+<text x="775" y="205" text-anchor="middle" font-size="14">Alert on degradation</text>
+<path d="M775 230 C775 285 460 285 460 215" fill="none" stroke="#2459a6" stroke-width="3" marker-end="url(#arrow1)"/>
+<text x="620" y="302" text-anchor="middle" font-size="14" fill="#475569">Production findings improve the next evaluation cycle</text>
+</svg>
+</div>
+
+<div class="callout info">
+<strong>Core idea</strong>
+Observability tells you what happened; online evaluation adds structured judgments about whether the observed behavior is acceptable.
+</div>
+</section>
+
+<section id="reference">
+<h2>2. The Reference Constraint: Why Not Every Offline Metric Works Online</h2>
+<p>The major difference between the two settings is the availability of a <strong>reference answer</strong>. In offline evaluation, a golden dataset can contain the question, expected answer, and other reference information. For a new production question, that reference normally does not exist beforehand.</p>
+
+<table>
+<thead><tr><th>Metric</th><th>Reference required?</th><th>Online?</th><th>Reason</th></tr></thead>
+<tbody>
+<tr><td>Contextual Recall</td><td><span class="badge no">Yes</span></td><td><span class="badge no">No</span></td><td>Requires knowing the relevant/correct context.</td></tr>
+<tr><td>Contextual Precision</td><td><span class="badge no">Yes</span></td><td><span class="badge no">No</span></td><td>Requires reference information for judging retrieved chunks.</td></tr>
+<tr><td>Correctness</td><td><span class="badge no">Yes</span></td><td><span class="badge no">No</span></td><td>Requires a correct/reference answer.</td></tr>
+<tr><td>Completeness</td><td><span class="badge no">Yes</span></td><td><span class="badge no">No</span></td><td>Requires knowing what a complete answer should contain.</td></tr>
+<tr><td>Faithfulness</td><td><span class="badge yes">No</span></td><td><span class="badge yes">Yes</span></td><td>Can judge whether the answer is supported by the supplied context.</td></tr>
+<tr><td>Answer Relevancy</td><td><span class="badge yes">No</span></td><td><span class="badge yes">Yes</span></td><td>Can assess whether the answer addresses the question without a gold answer.</td></tr>
+<tr><td>Contextual Relevancy</td><td><span class="badge yes">No</span></td><td><span class="badge yes">Yes</span></td><td>Can assess relevance of retrieved context to the query.</td></tr>
+<tr><td>Style</td><td><span class="badge yes">No</span></td><td><span class="badge yes">Possible</span></td><td>Reference-free in the lecture, but omitted from the demo because it was expected to vary less.</td></tr>
+<tr><td>Scope / Leakage / Toxicity</td><td><span class="badge yes">No</span></td><td><span class="badge yes">Yes</span></td><td>Safety properties can be judged without a gold answer.</td></tr>
+<tr><td>Latency / Cost / Reliability</td><td><span class="badge log">N/A</span></td><td><span class="badge yes">Yes</span></td><td>Operational telemetry is logged/measured from production runs.</td></tr>
+</tbody>
+</table>
+
+<div class="callout warn">
+<strong>Important distinction</strong>
+“Reference-free” does not mean “free.” An LLM-as-a-judge can still incur model-inference cost and latency when it evaluates a production trace.
+</div>
+</section>
+
+<section id="suite">
+<h2>3. The Online Evaluation Suite Used in the Lesson</h2>
+<p>For the practical session, the instructor narrows the online suite to six metrics. The full offline suite is intentionally not reproduced one-for-one.</p>
+
+<div class="grid">
+<div class="card"><h3>Quality</h3><div class="kpi">3</div><p>Contextual relevancy · Faithfulness · Answer relevancy</p></div>
+<div class="card"><h3>Safety</h3><div class="kpi">1</div><p>Toxicity is demonstrated; scope and leakage are identified as possible online metrics.</p></div>
+<div class="card"><h3>Operations</h3><div class="kpi">2</div><p>Latency · Cost</p></div>
+<div class="card"><h3>Reliability</h3><div class="kpi">—</div><p>Discussed as an online metric, but external monitoring tooling such as Grafana/Prometheus was outside the lesson scope.</p></div>
+</div>
+
+<div class="diagram">
+<svg viewBox="0 0 1080 380" role="img" aria-label="Online evaluation suite">
+<rect x="30" y="35" width="1020" height="70" rx="18" fill="#173b72"/>
+<text x="540" y="80" text-anchor="middle" font-size="24" font-weight="700" fill="white">Production Trace</text>
+<text x="540" y="100" text-anchor="middle" font-size="12" fill="#dce9ff">question + context + answer + execution telemetry</text>
+<line x1="540" y1="105" x2="540" y2="145" stroke="#2459a6" stroke-width="4"/>
+<rect x="55" y="150" width="290" height="165" rx="18" fill="#eef6ff" stroke="#60a5fa"/>
+<text x="200" y="185" text-anchor="middle" font-size="20" font-weight="700" fill="#173b72">Quality</text>
+<text x="200" y="220" text-anchor="middle" font-size="15">Contextual relevancy</text>
+<text x="200" y="248" text-anchor="middle" font-size="15">Faithfulness</text>
+<text x="200" y="276" text-anchor="middle" font-size="15">Answer relevancy</text>
+<rect x="395" y="150" width="290" height="165" rx="18" fill="#effcf7" stroke="#34d399"/>
+<text x="540" y="185" text-anchor="middle" font-size="20" font-weight="700" fill="#0f766e">Safety</text>
+<text x="540" y="220" text-anchor="middle" font-size="15">Toxicity</text>
+<text x="540" y="248" text-anchor="middle" font-size="15">Scope / leakage</text>
+<text x="540" y="276" text-anchor="middle" font-size="15">Other safety checks</text>
+<rect x="735" y="150" width="290" height="165" rx="18" fill="#fff7ed" stroke="#fb923c"/>
+<text x="880" y="185" text-anchor="middle" font-size="20" font-weight="700" fill="#9a5b05">Operations</text>
+<text x="880" y="220" text-anchor="middle" font-size="15">Latency</text>
+<text x="880" y="248" text-anchor="middle" font-size="15">Cost</text>
+<text x="880" y="276" text-anchor="middle" font-size="15">Reliability / telemetry</text>
+<line x1="200" y1="315" x2="200" y2="350" stroke="#2459a6" stroke-width="3"/>
+<line x1="540" y1="315" x2="540" y2="350" stroke="#2459a6" stroke-width="3"/>
+<line x1="880" y1="315" x2="880" y2="350" stroke="#2459a6" stroke-width="3"/>
+<text x="540" y="370" text-anchor="middle" font-size="14" fill="#475569">Dashboard → trend analysis → threshold alerts</text>
+</svg>
+</div>
+</section>
+
+<section id="tracing">
+<h2>4. Connecting a Deployed RAG Application to LangSmith</h2>
+<p>The practical setup begins by creating a LangSmith project and connecting the application through environment variables. The lecture uses a project named <span class="inline">CX Doubt Solver</span>.</p>
+
+<h3>Typical environment configuration</h3>
+<p class="code-title">Illustrative configuration based on the transcript</p>
+<pre><code>LANGCHAIN_TRACING_V2=true
+LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
+LANGCHAIN_API_KEY=&lt;your-langsmith-api-key&gt;
+LANGCHAIN_PROJECT=CX Doubt Solver</code></pre>
+
+<div class="callout danger">
+<strong>Security rule</strong>
+Never paste a real API key into source control, screenshots, notebooks, or public examples. Store credentials in environment variables or a managed secret store.
+</div>
+
+<p>Once tracing is enabled, running the RAG pipeline creates a trace containing execution information. The lesson demonstrates that LangSmith can automatically expose latency and cost for the captured run.</p>
+</section>
+
+<section id="retrieval">
+<h2>5. The Hidden Problem: A RAG Trace May Miss Retrieval</h2>
+<p>The first trace exposed the prompt, LLM execution, and output parsing, but the instructor noticed that the retrieval stage and reranker were not visible. That is a serious observability gap for a RAG system because retrieval is part of the user-visible behavior and contributes to latency.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1120 250" role="img" aria-label="RAG trace before and after explicit tracing">
+<defs><marker id="arrow2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#2459a6"/></marker></defs>
+<text x="280" y="25" text-anchor="middle" font-size="18" font-weight="700" fill="#9a5b05">Incomplete trace</text>
+<rect x="35" y="55" width="150" height="70" rx="12" fill="#fff7ed" stroke="#fb923c"/><text x="110" y="97" text-anchor="middle" font-size="14">Prompt</text>
+<line x1="185" y1="90" x2="255" y2="90" stroke="#2459a6" stroke-width="3" marker-end="url(#arrow2)"/>
+<rect x="260" y="55" width="150" height="70" rx="12" fill="#fff7ed" stroke="#fb923c"/><text x="335" y="97" text-anchor="middle" font-size="14">LLM</text>
+<line x1="410" y1="90" x2="480" y2="90" stroke="#2459a6" stroke-width="3" marker-end="url(#arrow2)"/>
+<rect x="485" y="55" width="150" height="70" rx="12" fill="#fff7ed" stroke="#fb923c"/><text x="560" y="97" text-anchor="middle" font-size="14">Output parser</text>
+<text x="335" y="155" text-anchor="middle" font-size="13" fill="#991b1b">Retrieval / reranking missing</text>
+<text x="820" y="25" text-anchor="middle" font-size="18" font-weight="700" fill="#0f766e">Explicit trace</text>
+<rect x="655" y="55" width="135" height="70" rx="12" fill="#effcf7" stroke="#34d399"/><text x="722" y="97" text-anchor="middle" font-size="14">Retriever</text>
+<line x1="790" y1="90" x2="830" y2="90" stroke="#2459a6" stroke-width="3" marker-end="url(#arrow2)"/>
+<rect x="835" y="55" width="135" height="70" rx="12" fill="#effcf7" stroke="#34d399"/><text x="902" y="97" text-anchor="middle" font-size="14">Reranker</text>
+<line x1="970" y1="90" x2="1010" y2="90" stroke="#2459a6" stroke-width="3" marker-end="url(#arrow2)"/>
+<rect x="1015" y="55" width="85" height="70" rx="12" fill="#effcf7" stroke="#34d399"/><text x="1057" y="97" text-anchor="middle" font-size="13">LLM</text>
+<text x="875" y="155" text-anchor="middle" font-size="13" fill="#166534">All important RAG stages become observable</text>
+</svg>
+</div>
+
+<h3>Using explicit trace decorators</h3>
+<p class="code-title">Illustrative Python pattern</p>
+<pre><code>from langsmith import traceable
+
+@traceable(name="rag_pipeline")
+def run_rag_pipeline(question: str):
+    docs = retriever.invoke(question)
+    reranked = reranker.invoke(docs)
+    prompt = prompt_template.invoke({
+        "question": question,
+        "context": reranked
+    })
+    answer = llm.invoke(prompt)
+    return answer
+
+@traceable(name="retriever")
+def traced_retrieve(question: str):
+    return retriever.invoke(question)</code></pre>
+
+<p>The exact implementation can differ depending on how the RAG pipeline is structured. The lesson's practical principle is more important: <strong>when an important component is not captured automatically, explicitly mark it as traceable.</strong></p>
+
+<div class="callout tip">
+<strong>Why this matters for latency</strong>
+If retrieval takes a substantial portion of the request time but is absent from the trace, the observed end-to-end latency is difficult to decompose and optimize.
+</div>
+</section>
+
+<section id="traffic">
+<h2>6. Simulating Production Traffic</h2>
+<p>Because the example application is not actually serving real users during the lecture, several different questions are run manually to create multiple traces. The goal is to reproduce the shape of production telemetry: many user questions → many traces → aggregate monitoring signals.</p>
+
+<div class="grid">
+<div class="card"><h3>Example questions</h3><ul><li>What is MMLU?</li><li>Why do we need LLM evals?</li><li>What are LLM evals?</li><li>What are model evals?</li><li>What is the difference between model and application evals?</li><li>What are benchmarks?</li></ul></div>
+<div class="card"><h3>Production analogy</h3><p>In production, these requests would arrive continuously from users. Each request becomes a trace containing the information needed for monitoring and selected evaluators.</p></div>
+</div>
+</section>
+
+<section id="dashboard">
+<h2>7. Building a Custom Monitoring Dashboard</h2>
+<p>The dashboard is intended to provide a single operational view of application health: latency, cost, safety signals, and quality signals over a selected time window.</p>
+
+<h3>Dashboard metrics demonstrated</h3>
+<table>
+<thead><tr><th>Chart</th><th>Aggregation</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>P95 latency</td><td>95th percentile</td><td>Observe tail latency and users experiencing slower responses.</td></tr>
+<tr><td>Average cost</td><td>Average total cost</td><td>Track typical LLM spend per request over time.</td></tr>
+<tr><td>Average toxicity</td><td>Average feedback score</td><td>Monitor the safety signal over time.</td></tr>
+<tr><td>Answer relevancy</td><td>Average / minimum / percentile</td><td>Track answer-quality trends.</td></tr>
+<tr><td>Contextual relevancy</td><td>Selected aggregation</td><td>Track retrieval-context quality trends.</td></tr>
+<tr><td>Faithfulness</td><td>Selected aggregation</td><td>Track grounding quality trends.</td></tr>
+</tbody>
+</table>
+
+<div class="callout info">
+<strong>Time windows matter</strong>
+The dashboard can be inspected over windows such as the last hour, several hours, or longer periods. Trend monitoring is more informative than looking at one isolated production request.
+</div>
+</section>
+
+<section id="alerts">
+<h2>8. Alerts, Thresholds, and SLOs</h2>
+<p>The next step after visualization is automation: when a monitored signal crosses an acceptable boundary, notify the team through an operational channel such as Slack.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1050 250" role="img" aria-label="Monitoring alert flow">
+<defs><marker id="arrow3" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#2459a6"/></marker></defs>
+<rect x="30" y="75" width="190" height="90" rx="15" fill="#eef6ff" stroke="#60a5fa"/>
+<text x="125" y="110" text-anchor="middle" font-size="17" font-weight="700">Production traces</text>
+<text x="125" y="135" text-anchor="middle" font-size="13">latency / cost / evals</text>
+<line x1="220" y1="120" x2="315" y2="120" stroke="#2459a6" stroke-width="4" marker-end="url(#arrow3)"/>
+<rect x="320" y="55" width="210" height="130" rx="15" fill="#fff7ed" stroke="#fb923c"/>
+<text x="425" y="90" text-anchor="middle" font-size="17" font-weight="700">Threshold rule</text>
+<text x="425" y="118" text-anchor="middle" font-size="13">Metric &gt; limit?</text>
+<text x="425" y="145" text-anchor="middle" font-size="13">Time window</text>
+<line x1="530" y1="120" x2="625" y2="120" stroke="#2459a6" stroke-width="4" marker-end="url(#arrow3)"/>
+<rect x="630" y="75" width="170" height="90" rx="15" fill="#fef2f2" stroke="#f87171"/>
+<text x="715" y="110" text-anchor="middle" font-size="17" font-weight="700">Alert</text>
+<text x="715" y="135" text-anchor="middle" font-size="13">threshold breached</text>
+<line x1="800" y1="120" x2="895" y2="120" stroke="#2459a6" stroke-width="4" marker-end="url(#arrow3)"/>
+<rect x="900" y="75" width="120" height="90" rx="15" fill="#effcf7" stroke="#34d399"/>
+<text x="960" y="110" text-anchor="middle" font-size="17" font-weight="700">Slack</text>
+<text x="960" y="135" text-anchor="middle" font-size="13">notification</text>
+</svg>
+</div>
+
+<h3>Why the threshold should come from an SLO</h3>
+<p>The lesson emphasizes that a “sensitive” threshold is not arbitrary. It should come from the application's <strong>Service Level Objective (SLO)</strong> and business requirements. A research assistant may reasonably tolerate longer response times than a simple customer-support interaction.</p>
+
+<div class="callout warn">
+<strong>Lecture-specific tooling limitation</strong>
+The demonstrated LangSmith alert configuration supported average latency rather than the desired P95 latency alert in the example. The lesson therefore uses the available average-latency alert mechanism while explaining why P95 is useful for tail-latency analysis.
+</div>
+</section>
+
+<section id="safety">
+<h2>9. Online Safety Evaluation with Toxicity</h2>
+<p>For safety, the lesson demonstrates a built-in LangSmith toxicity evaluator. The evaluator is attached to <strong>traces</strong>, not a static dataset, because selecting a dataset would turn the workflow into offline evaluation.</p>
+
+<div class="steps">
+<div class="step"><div><strong>Open evaluators</strong><br>Select the built-in toxicity evaluator.</div></div>
+<div class="step"><div><strong>Choose the judge</strong><br>Configure the model used to make the evaluation judgment.</div></div>
+<div class="step"><div><strong>Target tracing</strong><br>Configure the evaluator against production traces.</div></div>
+<div class="step"><div><strong>Set sampling</strong><br>Choose what fraction of production traces should be evaluated.</div></div>
+<div class="step"><div><strong>Observe feedback</strong><br>The evaluator attaches a toxicity score and explanation to the trace.</div></div>
+</div>
+
+<p>In the demonstrated run, the toxicity result eventually appeared as feedback on the trace. The lecture notes that evaluator feedback may arrive after the trace itself because the evaluation runs asynchronously.</p>
+
+<h3>Interpretation</h3>
+<p>The transcript describes the demonstrated toxicity score as a 0–100-style signal: a lower value indicates less detected toxicity and a higher value indicates more. The evaluator also provides an explanation for its judgment.</p>
+</section>
+
+<section id="sampling">
+<h2>10. Sampling Rate: The Production-Cost Control</h2>
+<p>Evaluating every production trace can be expensive when an LLM is used as the evaluator. Sampling reduces evaluation cost while still providing an estimate of production behavior.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1060 280" role="img" aria-label="Sampling production traces">
+<rect x="35" y="75" width="230" height="105" rx="16" fill="#eef6ff" stroke="#60a5fa"/>
+<text x="150" y="112" text-anchor="middle" font-size="18" font-weight="700">50,000 traces/day</text>
+<text x="150" y="140" text-anchor="middle" font-size="13">All production traffic</text>
+<text x="150" y="162" text-anchor="middle" font-size="13">Potential evaluation load</text>
+<path d="M265 128 H350" stroke="#2459a6" stroke-width="4"/>
+<polygon points="350,128 338,121 338,135" fill="#2459a6"/>
+<rect x="355" y="55" width="220" height="145" rx="16" fill="#fff7ed" stroke="#fb923c"/>
+<text x="465" y="92" text-anchor="middle" font-size="18" font-weight="700">Sampling rate</text>
+<text x="465" y="122" text-anchor="middle" font-size="14">Example: 30%</text>
+<text x="465" y="151" text-anchor="middle" font-size="13">Evaluate a representative subset</text>
+<text x="465" y="174" text-anchor="middle" font-size="13">Reduce judge-model cost</text>
+<path d="M575 128 H660" stroke="#2459a6" stroke-width="4"/>
+<polygon points="660,128 648,121 648,135" fill="#2459a6"/>
+<rect x="665" y="75" width="360" height="105" rx="16" fill="#effcf7" stroke="#34d399"/>
+<text x="845" y="112" text-anchor="middle" font-size="18" font-weight="700">Estimate population behavior</text>
+<text x="845" y="141" text-anchor="middle" font-size="13">Balance statistical usefulness against budget</text>
+<text x="845" y="163" text-anchor="middle" font-size="13">Adjust sampling to traffic and risk</text>
+</svg>
+</div>
+
+<p>If 50,000 traces arrive and sampling is 100%, the evaluator runs on all 50,000. At 30%, only a subset is evaluated. The transcript uses sampling as a practical way to estimate population behavior while controlling evaluation cost.</p>
+
+<div class="callout tip">
+<strong>Production principle</strong>
+Sampling should be treated as a deliberate quality–cost trade-off. Higher-risk applications may justify higher sampling rates, while very high-volume systems may need lower rates or targeted sampling.
+</div>
+</section>
+
+<section id="quality">
+<h2>11. Online Quality Evals Must Use the Same Evaluator as Offline</h2>
+<p>This is one of the most important conceptual points in the lesson.</p>
+
+<p>For quality metrics such as <strong>contextual relevancy, faithfulness, and answer relevancy</strong>, the online evaluator should use the same evaluation methodology that was used offline. The reason is comparability.</p>
+
+<table>
+<thead><tr><th>Scenario</th><th>Offline evaluator</th><th>Online evaluator</th><th>Can numbers be compared?</th></tr></thead>
+<tbody>
+<tr><td>Bad baseline</td><td>DeepEval</td><td>Different LangSmith evaluator</td><td><span class="badge no">No</span></td></tr>
+<tr><td>Good baseline</td><td>DeepEval</td><td>Same DeepEval evaluator</td><td><span class="badge yes">Yes</span></td></tr>
+</tbody>
+</table>
+
+<h3>Why changing the evaluator breaks the comparison</h3>
+<p>Suppose offline contextual relevancy is 45 and online contextual relevancy is 55. It is tempting to conclude that production improved. But if the offline score was produced by one evaluator and the online score by another, the two numbers may live on different measurement baselines because prompts, judge models, scoring logic, or implementation details differ.</p>
+
+<p>With the same evaluator, a change such as <strong>90 → 85</strong> has a meaningful interpretation: under the same measurement system, the application's observed quality has degraded.</p>
+
+<div class="callout danger">
+<strong>Interview-ready rule</strong>
+For longitudinal quality monitoring, keep the evaluator, scoring definition, and relevant configuration consistent between offline and online evaluation whenever the objective is to compare the scores over time.
+</div>
+</section>
+
+<section id="polling">
+<h2>12. Implementing the Background Online-Evaluation Service</h2>
+<p>The lesson then moves from “tool UI configuration” to the architecture behind continuous quality evaluation.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 1160 390" role="img" aria-label="Background polling architecture">
+<defs><marker id="arrow4" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#2459a6"/></marker></defs>
+<rect x="35" y="45" width="220" height="100" rx="16" fill="#eef6ff" stroke="#60a5fa"/>
+<text x="145" y="82" text-anchor="middle" font-size="18" font-weight="700">Production App</text>
+<text x="145" y="111" text-anchor="middle" font-size="13">User requests → traces</text>
+<line x1="255" y1="95" x2="350" y2="95" stroke="#2459a6" stroke-width="4" marker-end="url(#arrow4)"/>
+<rect x="355" y="45" width="220" height="100" rx="16" fill="#effcf7" stroke="#34d399"/>
+<text x="465" y="82" text-anchor="middle" font-size="18" font-weight="700">LangSmith</text>
+<text x="465" y="111" text-anchor="middle" font-size="13">Recent production traces</text>
+<line x1="575" y1="95" x2="670" y2="95" stroke="#2459a6" stroke-width="4" marker-end="url(#arrow4)"/>
+<rect x="675" y="45" width="220" height="100" rx="16" fill="#fff7ed" stroke="#fb923c"/>
+<text x="785" y="82" text-anchor="middle" font-size="18" font-weight="700">eval_online.py</text>
+<text x="785" y="111" text-anchor="middle" font-size="13">Poll → evaluate → report</text>
+<line x1="895" y1="95" x2="990" y2="95" stroke="#2459a6" stroke-width="4" marker-end="url(#arrow4)"/>
+<rect x="995" y="45" width="130" height="100" rx="16" fill="#f5f3ff" stroke="#8b5cf6"/>
+<text x="1060" y="82" text-anchor="middle" font-size="17" font-weight="700">DeepEval</text>
+<text x="1060" y="111" text-anchor="middle" font-size="12">same evaluator</text>
+<path d="M1060 145 V220 H465 V145" fill="none" stroke="#2459a6" stroke-width="3" marker-end="url(#arrow4)"/>
+<text x="760" y="210" text-anchor="middle" font-size="13" fill="#475569">scores are written back as trace feedback</text>
+<rect x="360" y="250" width="210" height="80" rx="15" fill="#eef6ff" stroke="#60a5fa"/>
+<text x="465" y="283" text-anchor="middle" font-size="17" font-weight="700">Dashboard</text>
+<text x="465" y="307" text-anchor="middle" font-size="12">quality / safety / ops</text>
+<rect x="610" y="250" width="210" height="80" rx="15" fill="#fef2f2" stroke="#f87171"/>
+<text x="715" y="283" text-anchor="middle" font-size="17" font-weight="700">Alerts</text>
+<text x="715" y="307" text-anchor="middle" font-size="12">threshold breaches</text>
+<rect x="860" y="250" width="210" height="80" rx="15" fill="#effcf7" stroke="#34d399"/>
+<text x="965" y="283" text-anchor="middle" font-size="17" font-weight="700">Golden Dataset</text>
+<text x="965" y="307" text-anchor="middle" font-size="12">bad traces become test cases</text>
+</svg>
+</div>
+
+<h3>Polling logic</h3>
+<p>The conceptual loop is:</p>
+<ol>
+<li>Trigger a background job periodically.</li>
+<li>Fetch the most recent traces from LangSmith.</li>
+<li>Optionally sample those traces.</li>
+<li>Run the existing offline quality evaluators against the production trace data.</li>
+<li>Write the resulting scores back to LangSmith.</li>
+<li>Let dashboards and alerts consume the resulting feedback.</li>
+</ol>
+
+<h3>Illustrative <code>eval_online.py</code></h3>
+<p class="code-title">Conceptual implementation — adapt the SDK calls to your installed versions</p>
+<pre><code>import time
+from langsmith import Client
+
+PROJECT = "CX Doubt Solver"
+POLL_SECONDS = 60
+SAMPLE_RATE = 1.0
+
+client = Client()
+
+def score_recent_traces():
+    # Fetch only the recent production window.
+    runs = client.list_runs(
+        project_name=PROJECT,
+        is_root=True
+        # Add the appropriate time filter for your SDK version.
+    )
+
+    for run in runs:
+        # 1. Extract question, context and answer from the run.
+        # 2. Apply the SAME DeepEval metrics used offline.
+        # 3. Publish the scores back as feedback.
+        #
+        # Example metrics:
+        #   faithfulness
+        #   answer_relevancy
+        #   contextual_relevancy
+        pass
+
+while True:
+    score_recent_traces()
+    time.sleep(POLL_SECONDS)</code></pre>
+
+<div class="callout warn">
+<strong>Demo vs production</strong>
+The transcript uses an infinite Python loop as a simple demonstration. It explicitly notes that a real deployment should use a persistent background service or scheduled job rather than depending on an open terminal.
+</div>
+
+<h3>Cron-style scheduling</h3>
+<pre><code># Example conceptual cron schedule:
+*/5 * * * * /path/to/venv/bin/python /app/eval_online.py</code></pre>
+<p>This means the background evaluation job is triggered every five minutes. The exact deployment mechanism can instead be a container scheduler, managed job, workflow engine, or another persistent scheduling system.</p>
+</section>
+
+<section id="execution">
+<h2>13. Live Execution: Production Traces Get Scored in the Background</h2>
+<p>In the demonstration, a new production-style question is submitted while the background evaluation loop is running. The loop periodically checks recent traces and applies the same quality evaluators.</p>
+
+<div class="grid">
+<div class="card"><h3>Observed example</h3><p>For one question, the same DeepEval setup produced example scores such as answer relevancy <strong>0.92</strong>, contextual relevancy <strong>0.23</strong>, and faithfulness <strong>0.75</strong>. These are example results for a particular trace, not universal benchmarks.</p></div>
+<div class="card"><h3>Asynchronous behavior</h3><p>Scores do not necessarily appear immediately when the trace is created. The trace can arrive first, followed by evaluator feedback after the background evaluation completes.</p></div>
+</div>
+
+<h3>Adding quality charts</h3>
+<p>The same dashboard pattern can be applied to answer relevancy, contextual relevancy, and faithfulness. Each can be visualized over time and, where supported, associated with alerting rules.</p>
+</section>
+
+<section id="flywheel">
+<h2>14. Closing the Flywheel: Failed Production Traces → Golden Dataset</h2>
+<p>This is the final and most valuable architectural idea: <strong>online evaluation can continuously improve the offline evaluation dataset.</strong></p>
+
+<div class="diagram">
+<svg viewBox="0 0 1080 330" role="img" aria-label="Evaluation flywheel">
+<defs><marker id="arrow5" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#2459a6"/></marker></defs>
+<rect x="425" y="20" width="230" height="75" rx="16" fill="#eef6ff" stroke="#60a5fa"/>
+<text x="540" y="50" text-anchor="middle" font-size="18" font-weight="700">Production traffic</text>
+<text x="540" y="74" text-anchor="middle" font-size="12">real user questions</text>
+<path d="M655 58 H790" stroke="#2459a6" stroke-width="4" marker-end="url(#arrow5)"/>
+<rect x="795" y="20" width="230" height="75" rx="16" fill="#fff7ed" stroke="#fb923c"/>
+<text x="910" y="50" text-anchor="middle" font-size="18" font-weight="700">Online evaluation</text>
+<text x="910" y="74" text-anchor="middle" font-size="12">find failures / bad traces</text>
+<path d="M910 95 V160 H805" fill="none" stroke="#2459a6" stroke-width="4" marker-end="url(#arrow5)"/>
+<rect x="575" y="165" width="230" height="75" rx="16" fill="#fef2f2" stroke="#f87171"/>
+<text x="690" y="195" text-anchor="middle" font-size="18" font-weight="700">Curate failure</text>
+<text x="690" y="219" text-anchor="middle" font-size="12">add reference answer</text>
+<path d="M575 202 H440" stroke="#2459a6" stroke-width="4" marker-end="url(#arrow5)"/>
+<rect x="55" y="165" width="385" height="75" rx="16" fill="#effcf7" stroke="#34d399"/>
+<text x="247" y="195" text-anchor="middle" font-size="18" font-weight="700">Golden dataset grows</text>
+<text x="247" y="219" text-anchor="middle" font-size="12">stronger regression coverage</text>
+<path d="M247 165 V120 H425" fill="none" stroke="#2459a6" stroke-width="4" marker-end="url(#arrow5)"/>
+<text x="540" y="292" text-anchor="middle" font-size="15" fill="#475569">Online failures become future offline tests → the system is improved → repeat</text>
+</svg>
+</div>
+
+<h3>Why a bad trace is valuable</h3>
+<p>Suppose a user asks a question and the application produces a poor answer. That production interaction is more than an incident: it is a candidate evaluation example. The trace can be added to a dataset, and an expert can provide the correct/reference answer. The resulting example can then support correctness, completeness, and other reference-based offline evaluations.</p>
+
+<h3>Conceptual curation workflow</h3>
+<ol>
+<li>Identify a production trace with poor quality or safety signals.</li>
+<li>Add the trace to an evaluation dataset.</li>
+<li>Review the generated answer.</li>
+<li>Have an expert create the reference answer when reference-based metrics are needed.</li>
+<li>Version the dataset.</li>
+<li>Use the expanded dataset in offline regression testing.</li>
+<li>Deploy improvements and continue monitoring online.</li>
+</ol>
+
+<div class="callout tip">
+<strong>Single source of truth</strong>
+The lesson recommends managing the golden dataset centrally so that the same dataset can support offline evaluation while new production failures can be added and versioned over time.
+</div>
+</section>
+
+<section id="recap-final">
+<h2>15. Final Course Recap</h2>
+<p>The online-evaluation lesson completes the transition from “evaluate before deployment” to “evaluate continuously after deployment.” The practical stack demonstrated is centered on LangSmith for tracing, monitoring, dashboards, and built-in safety evaluation, while the existing DeepEval quality evaluators are reused for comparable online quality measurements.</p>
+
+<h3>The complete production loop</h3>
+<div class="steps">
+<div class="step"><div><strong>Deploy the RAG application</strong><br>Users begin generating real production traffic.</div></div>
+<div class="step"><div><strong>Trace requests</strong><br>Capture the execution path, including retrieval and reranking where necessary.</div></div>
+<div class="step"><div><strong>Measure operations</strong><br>Track latency and cost from production traces.</div></div>
+<div class="step"><div><strong>Evaluate safety</strong><br>Run reference-free safety checks such as toxicity, with sampling when necessary.</div></div>
+<div class="step"><div><strong>Evaluate quality</strong><br>Reuse the same evaluator methodology used offline for contextual relevancy, faithfulness, and answer relevancy.</div></div>
+<div class="step"><div><strong>Monitor trends</strong><br>Plot metrics on dashboards rather than inspecting isolated requests.</div></div>
+<div class="step"><div><strong>Alert on degradation</strong><br>Connect thresholds to business/SLO requirements and notify operators.</div></div>
+<div class="step"><div><strong>Feed failures back</strong><br>Turn valuable production failures into curated golden-dataset examples.</div></div>
+<div class="step"><div><strong>Run regression testing</strong><br>Use the improved dataset to validate future application changes.</div></div>
+</div>
+
+<h3>Key interview questions</h3>
+<table>
+<thead><tr><th>Question</th><th>Strong answer</th></tr></thead>
+<tbody>
+<tr><td>Why can't every offline metric run online?</td><td>Many offline metrics require a reference answer or reference context that is unavailable for unknown production queries.</td></tr>
+<tr><td>Why trace retrieval explicitly?</td><td>Without retrieval traces, RAG latency and retrieval behavior are invisible, making diagnosis and optimization incomplete.</td></tr>
+<tr><td>Why sample online evaluations?</td><td>LLM-based evaluators add cost; sampling provides a practical estimate of production behavior without judging every request.</td></tr>
+<tr><td>Why use the same evaluator offline and online?</td><td>To keep scores on the same measurement baseline so changes over time are actually comparable.</td></tr>
+<tr><td>What should determine a latency threshold?</td><td>The application's SLO and business use case, not an arbitrary number.</td></tr>
+<tr><td>How can online evaluation improve offline evaluation?</td><td>Bad or interesting production traces can be curated into the golden dataset with expert reference answers.</td></tr>
+<tr><td>Why isn't a terminal-based infinite loop production-ready?</td><td>The process stops when the terminal/service stops; production needs a persistent scheduler or background service.</td></tr>
+</tbody>
+</table>
+
+<div class="callout info">
+<strong>One-line mental model</strong>
+<strong>Offline evals</strong> tell you whether a known test suite passes before release; <strong>online evals</strong> tell you how the deployed system behaves on real, previously unknown traffic—and continuously turn production failures into better future tests.
+</div>
+</section>
+
+<footer class="footer">
+These notes are based on the uploaded lecture transcript. Code marked “illustrative” expresses the architecture and concepts demonstrated in the lesson; exact SDK method names and configuration options may vary by installed tool version.
+</footer>
+</main>
+</div>
+</body>
+</html>
