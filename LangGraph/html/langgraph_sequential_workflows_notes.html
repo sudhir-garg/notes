@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LangGraph Sequential Workflows — Practical Notes</title>
+<style>
+:root{--ink:#172033;--muted:#5b667a;--bg:#f4f7fb;--paper:#fff;--line:#dce4ef;--blue:#2457c5;--blue2:#eaf1ff;--teal:#087f8c;--tealbg:#e7f8f7;--gold:#9a6500;--goldbg:#fff6df;--code:#101827;--shadow:0 10px 28px rgba(24,42,75,.08)}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.72 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}.hero{background:linear-gradient(125deg,#10264c,#1f4e9b 65%,#167d8a);color:#fff;padding:56px max(24px,calc((100vw - 1180px)/2)) 48px}.eyebrow{text-transform:uppercase;letter-spacing:.15em;font-size:.76rem;font-weight:800;color:#b9d8ff}.hero h1{font-size:clamp(2.1rem,5vw,3.6rem);line-height:1.08;max-width:900px;margin:14px 0}.hero p{font-size:1.1rem;max-width:820px;color:#e1ebff}.pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}.pill{border:1px solid #ffffff55;border-radius:999px;padding:5px 12px;font-size:.84rem;background:#ffffff12}
+.layout{max-width:1240px;margin:28px auto;padding:0 22px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:26px;align-items:start}.toc{position:sticky;top:18px;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow);max-height:calc(100vh - 36px);overflow:auto}.toc h2{font-size:.9rem;text-transform:uppercase;letter-spacing:.08em;margin:0 0 10px}.toc ol{padding-left:20px;margin:0}.toc li{padding:3px 0;font-size:.9rem}.toc a{color:#34435b}.content{min-width:0}.section{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:clamp(20px,3vw,34px);margin-bottom:22px;box-shadow:var(--shadow)}h2{font-size:1.7rem;line-height:1.25;margin:0 0 16px}h3{font-size:1.2rem;margin:25px 0 8px}h4{margin:18px 0 6px}p{margin:10px 0}ul,ol{padding-left:24px}li{margin:5px 0}.lead{font-size:1.08rem;color:#35445c}.callout{border-left:4px solid var(--blue);background:var(--blue2);padding:14px 17px;border-radius:8px;margin:18px 0}.callout.tip{border-color:var(--teal);background:var(--tealbg)}.callout.warn{border-color:#d59b22;background:var(--goldbg)}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.mini{border:1px solid var(--line);border-radius:13px;padding:16px;background:#fbfcff}.mini h3{margin:0 0 8px;font-size:1.05rem}.tag{display:inline-block;background:#edf2fa;border-radius:6px;padding:2px 8px;font-size:.78rem;font-weight:700;color:#40516d}table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.94rem}th,td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#eef3fb}pre{background:var(--code);color:#e5edf9;padding:18px;border-radius:12px;overflow:auto;font-size:.88rem;line-height:1.55;tab-size:4}code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}p code,li code,td code{background:#edf2f8;padding:2px 5px;border-radius:5px;color:#20314b}.diagram{border:1px solid var(--line);border-radius:14px;padding:14px;background:linear-gradient(#fff,#f8fbff);margin:18px 0;overflow:hidden}.diagram svg{display:block;width:100%;height:auto}.caption{font-size:.86rem;color:var(--muted);text-align:center;margin-top:8px}.step{display:flex;gap:14px;margin:15px 0}.num{flex:0 0 34px;height:34px;border-radius:10px;background:var(--blue);color:#fff;font-weight:800;display:grid;place-items:center}.step-body{flex:1}.step-body h3{margin:0 0 4px}.checklist li{margin:8px 0}.footer{max-width:1240px;margin:0 auto 40px;padding:0 22px;color:var(--muted);font-size:.88rem}.small{font-size:.9rem;color:var(--muted)}.anchor{color:inherit}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.toc{position:relative;top:auto;max-height:none}.toc ol{columns:2}.grid2{grid-template-columns:1fr}}@media(max-width:540px){.hero{padding:38px 20px}.layout{padding:0 12px}.toc ol{columns:1}.section{padding:20px 16px}table{display:block;overflow-x:auto}}
+@media print{body{background:#fff}.hero{padding:28px;color:#fff}.layout{display:block;margin:0}.toc{position:static;max-height:none;margin:16px 0;box-shadow:none}.section{box-shadow:none;break-inside:avoid}.footer{margin:20px}}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="eyebrow">Practical LangGraph tutorial · Study notes</div>
+  <h1>Building Sequential Workflows with LangGraph</h1>
+  <p>From a first graph to stateful BMI processing, a single-node LLM question-answering workflow, and multi-step prompt chaining.</p>
+  <div class="pills"><span class="pill">StateGraph</span><span class="pill">TypedDict state</span><span class="pill">Nodes & edges</span><span class="pill">Compile & invoke</span><span class="pill">LangChain + OpenAI</span></div>
+</header>
+<div class="layout">
+<nav class="toc" aria-label="Table of contents">
+  <h2>On this page</h2>
+  <ol>
+    <li><a href="#overview">Learning goals</a></li>
+    <li><a href="#mental-model">Mental model</a></li>
+    <li><a href="#setup">Environment setup</a></li>
+    <li><a href="#state">State and StateGraph</a></li>
+    <li><a href="#bmi">Example 1: BMI workflow</a></li>
+    <li><a href="#visualize">Visualize a graph</a></li>
+    <li><a href="#llm">Example 2: LLM Q&amp;A</a></li>
+    <li><a href="#chaining">Example 3: Prompt chaining</a></li>
+    <li><a href="#compare">Why carry state?</a></li>
+    <li><a href="#debug">Common mistakes</a></li>
+    <li><a href="#homework">Practice exercise</a></li>
+    <li><a href="#recap">Quick recap</a></li>
+  </ol>
+</nav>
+<main class="content">
+<section class="section" id="overview">
+<h2>1. Learning goals and context</h2>
+<p class="lead">The lesson moves from conceptual LangGraph discussions into hands-on implementation. Its focus is the simplest workflow pattern: a <strong>sequential workflow</strong>, where tasks run one after another along a linear path.</p>
+<div class="grid2">
+<div class="mini"><h3>What you will build</h3><ul><li>A one-node BMI calculator</li><li>A two-node BMI categorizer</li><li>A minimal LLM question-answering graph</li><li>A prompt chain that generates an outline, then a blog</li></ul></div>
+<div class="mini"><h3>What you will learn</h3><ul><li>Define typed graph state</li><li>Register Python functions as nodes</li><li>Connect nodes with edges</li><li>Compile and invoke a graph</li><li>Use LangChain models inside LangGraph nodes</li></ul></div>
+</div>
+<div class="callout tip"><strong>Core idea:</strong> LangGraph is not necessary for every simple linear task. The point of these small examples is to learn the graph programming model, which becomes more useful when workflows later need branching, cycles, persistence, or more complex control flow.</div>
+</section>
+
+<section class="section" id="mental-model">
+<h2>2. The mental model: state + nodes + edges</h2>
+<p>A LangGraph workflow can be understood as a directed graph that passes a shared state through a sequence of node functions. A node reads the current state, performs one unit of work, and returns an update. Edges define which node runs next.</p>
+<div class="diagram">
+<svg viewBox="0 0 900 230" role="img" aria-label="LangGraph workflow construction sequence: define state, add nodes, add edges, compile, invoke">
+<defs><marker id="arr1" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#58719a"/></marker></defs>
+<g font-family="system-ui,sans-serif" text-anchor="middle">
+<rect x="16" y="58" width="155" height="92" rx="14" fill="#eaf1ff" stroke="#8daeea"/><text x="93" y="91" font-size="15" font-weight="700" fill="#173e87">1. Define</text><text x="93" y="114" font-size="14" fill="#243752">State schema</text><text x="93" y="133" font-size="11" fill="#536985">TypedDict</text>
+<path d="M174 104 H197" stroke="#58719a" stroke-width="2.5" marker-end="url(#arr1)"/>
+<rect x="204" y="58" width="155" height="92" rx="14" fill="#e7f8f7" stroke="#83c9c8"/><text x="281" y="91" font-size="15" font-weight="700" fill="#086a73">2. Add nodes</text><text x="281" y="114" font-size="14" fill="#243752">Python functions</text><text x="281" y="133" font-size="11" fill="#536985">Work units</text>
+<path d="M362 104 H385" stroke="#58719a" stroke-width="2.5" marker-end="url(#arr1)"/>
+<rect x="392" y="58" width="155" height="92" rx="14" fill="#fff6df" stroke="#e7c56e"/><text x="469" y="91" font-size="15" font-weight="700" fill="#8a5a00">3. Add edges</text><text x="469" y="114" font-size="14" fill="#243752">Control flow</text><text x="469" y="133" font-size="11" fill="#536985">Start → nodes → End</text>
+<path d="M550 104 H573" stroke="#58719a" stroke-width="2.5" marker-end="url(#arr1)"/>
+<rect x="580" y="58" width="130" height="92" rx="14" fill="#f1eafe" stroke="#c1a5ee"/><text x="645" y="91" font-size="15" font-weight="700" fill="#6840a5">4. Compile</text><text x="645" y="114" font-size="14" fill="#243752">Validate/build</text><text x="645" y="133" font-size="11" fill="#536985">Runnable graph</text>
+<path d="M713 104 H736" stroke="#58719a" stroke-width="2.5" marker-end="url(#arr1)"/>
+<rect x="743" y="58" width="140" height="92" rx="14" fill="#eaf7ec" stroke="#9bceaa"/><text x="813" y="91" font-size="15" font-weight="700" fill="#206b36">5. Invoke</text><text x="813" y="114" font-size="14" fill="#243752">Input state</text><text x="813" y="133" font-size="11" fill="#536985">Final state</text>
+<text x="450" y="194" font-size="13" fill="#536985">A typical build sequence for a small LangGraph workflow</text>
+</g></svg>
+<div class="caption">Workflow setup is declarative; invoking the compiled graph runs the workflow.</div>
+</div>
+<table>
+<thead><tr><th>Concept</th><th>Meaning</th><th>In code</th></tr></thead>
+<tbody>
+<tr><td><strong>State</strong></td><td>Structured data shared across the workflow, such as input values and intermediate results.</td><td><code>class BMIState(TypedDict): ...</code></td></tr>
+<tr><td><strong>Node</strong></td><td>A unit of work, implemented as a Python callable that receives state and returns updates.</td><td><code>graph.add_node("calculate_bmi", calculate_bmi)</code></td></tr>
+<tr><td><strong>Edge</strong></td><td>A connection describing the next step in the graph.</td><td><code>graph.add_edge("calculate_bmi", END)</code></td></tr>
+<tr><td><strong>START / END</strong></td><td>Special graph markers for the entry and exit points.</td><td><code>from langgraph.graph import START, END</code></td></tr>
+<tr><td><strong>Compile</strong></td><td>Builds the graph into an executable runnable.</td><td><code>workflow = graph.compile()</code></td></tr>
+<tr><td><strong>Invoke</strong></td><td>Runs the compiled graph with an initial state and returns the final state.</td><td><code>workflow.invoke(initial_state)</code></td></tr>
+</tbody></table>
+</section>
+
+<section class="section" id="setup">
+<h2>3. Set up the Python environment</h2>
+<p>The lesson uses a virtual environment and Jupyter notebooks so the graph can be inspected and visualized interactively. It installs LangGraph, LangChain, the OpenAI integration, and <code>python-dotenv</code>.</p>
+<h3>Create and activate a virtual environment</h3>
+<pre><code># Windows PowerShell
+python -m venv my_env
+.\my_env\Scripts\Activate.ps1
+
+# macOS / Linux
+python3 -m venv my_env
+source my_env/bin/activate</code></pre>
+<h3>Install packages</h3>
+<pre><code>python -m pip install --upgrade pip
+pip install langgraph langchain langchain-openai python-dotenv
+pip install ipykernel jupyter</code></pre>
+<p>In VS Code, open a notebook (for example, <code>bmi_workflow.ipynb</code>) and select the Python interpreter from <code>my_env</code>. If prompted, install the notebook kernel into that environment.</p>
+<div class="callout warn"><strong>API key safety:</strong> keep credentials in a local <code>.env</code> file and never commit that file to Git. Add <code>.env</code> to <code>.gitignore</code>. The key should not be pasted directly into notebook code or shared screenshots.</div>
+<pre><code># .env — keep this file private
+OPENAI_API_KEY=your_api_key_here</code></pre>
+<pre><code>from dotenv import load_dotenv
+load_dotenv()</code></pre>
+<p class="small">The exact package versions may change over time. If a method or visualization API differs in your environment, check the documentation for the installed version.</p>
+</section>
+
+<section class="section" id="state">
+<h2>4. Define state with <code>TypedDict</code></h2>
+<p>State is the data contract for the workflow. In these examples, it is represented as a Python <code>TypedDict</code>: a dictionary-shaped object whose expected keys and value types are documented for type checkers and readers.</p>
+<pre><code>from typing import TypedDict
+
+class BMIState(TypedDict):
+    weight_kg: float
+    height_m: float
+    bmi: float
+    category: str</code></pre>
+<p>Each node receives the current state and returns the fields it updates. In LangGraph, returning a partial dictionary is generally enough; LangGraph applies that update to the graph state. Returning the entire state also works in simple examples, but returning only changed fields is often clearer.</p>
+<div class="callout"><strong>Important distinction:</strong> <code>TypedDict</code> describes the expected shape of a dictionary; it does not perform runtime validation or automatically populate missing keys.</div>
+</section>
+
+<section class="section" id="bmi">
+<h2>5. Example 1 — Build a sequential BMI workflow</h2>
+<p>The BMI example intentionally avoids LLMs. It isolates the LangGraph mechanics: take height and weight as input, calculate BMI, then optionally classify the result.</p>
+<div class="diagram">
+<svg viewBox="0 0 820 180" role="img" aria-label="BMI workflow with calculate BMI then label BMI">
+<defs><marker id="arr2" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#5b7195"/></marker></defs>
+<g font-family="system-ui,sans-serif" text-anchor="middle">
+<rect x="25" y="53" width="105" height="58" rx="29" fill="#edf2fa" stroke="#aab8cc"/><text x="77" y="87" font-size="15" font-weight="700" fill="#34445d">START</text>
+<path d="M132 82 H177" stroke="#5b7195" stroke-width="2.5" marker-end="url(#arr2)"/>
+<rect x="185" y="39" width="190" height="86" rx="13" fill="#eaf1ff" stroke="#7ca2e7"/><text x="280" y="72" font-size="16" font-weight="700" fill="#17418e">calculate_bmi</text><text x="280" y="96" font-size="12" fill="#33445f">weight ÷ height²</text>
+<path d="M377 82 H422" stroke="#5b7195" stroke-width="2.5" marker-end="url(#arr2)"/>
+<rect x="430" y="39" width="190" height="86" rx="13" fill="#e7f8f7" stroke="#78c3c4"/><text x="525" y="72" font-size="16" font-weight="700" fill="#086a73">label_bmi</text><text x="525" y="96" font-size="12" fill="#33445f">Assign category</text>
+<path d="M622 82 H667" stroke="#5b7195" stroke-width="2.5" marker-end="url(#arr2)"/>
+<rect x="675" y="53" width="120" height="58" rx="29" fill="#edf2fa" stroke="#aab8cc"/><text x="735" y="87" font-size="15" font-weight="700" fill="#34445d">END</text>
+<text x="410" y="157" font-size="12" fill="#61718a">State carries input values and gains bmi, then category</text>
+</g></svg>
+<div class="caption">Linear control flow: every run follows the same path.</div>
+</div>
+<h3>Step A — Implement the node functions</h3>
+<pre><code>from typing import TypedDict
+from langgraph.graph import StateGraph, START, END
+
+class BMIState(TypedDict):
+    weight_kg: float
+    height_m: float
+    bmi: float
+    category: str
+
+def calculate_bmi(state: BMIState) -&gt; dict:
+    weight = state["weight_kg"]
+    height = state["height_m"]
+
+    if height &lt;= 0:
+        raise ValueError("height_m must be greater than zero")
+
+    bmi = weight / (height ** 2)
+    return {"bmi": round(bmi, 2)}
+
+def label_bmi(state: BMIState) -&gt; dict:
+    bmi = state["bmi"]
+
+    if bmi &lt; 18.5:
+        category = "Underweight"
+    elif bmi &lt; 25:
+        category = "Normal"
+    elif bmi &lt; 30:
+        category = "Overweight"
+    else:
+        category = "Obesity"
+
+    return {"category": category}</code></pre>
+<p>The first node reads <code>weight_kg</code> and <code>height_m</code>, computes \(BMI = \frac{weight\ (kg)}{height\ (m)^2}\), and returns the new <code>bmi</code> field. The second node reads that field and returns <code>category</code>.</p>
+<div class="callout warn"><strong>Health note:</strong> BMI categories here are illustrative educational logic, not a diagnosis. BMI is a screening measure and must be interpreted in context.</div>
+<h3>Step B — Register nodes and connect edges</h3>
+<pre><code>builder = StateGraph(BMIState)
+
+builder.add_node("calculate_bmi", calculate_bmi)
+builder.add_node("label_bmi", label_bmi)
+
+builder.add_edge(START, "calculate_bmi")
+builder.add_edge("calculate_bmi", "label_bmi")
+builder.add_edge("label_bmi", END)
+
+bmi_workflow = builder.compile()</code></pre>
+<h3>Step C — Invoke the compiled graph</h3>
+<pre><code>initial_state = {
+    "weight_kg": 80.0,
+    "height_m": 1.73,
+}
+
+final_state = bmi_workflow.invoke(initial_state)
+print(final_state)</code></pre>
+<p>Expected result (approximately):</p>
+<pre><code>{
+    'weight_kg': 80.0,
+    'height_m': 1.73,
+    'bmi': 26.73,
+    'category': 'Overweight'
+}</code></pre>
+<p class="small">The initial state only needs the input fields consumed by the first node. The compiled graph returns the resulting state, including the fields produced by nodes.</p>
+</section>
+
+<section class="section" id="visualize">
+<h2>6. Visualize the graph</h2>
+<p>Visual inspection is especially helpful once a workflow has more than one node. LangGraph versions commonly support Mermaid output; in a notebook, you can render it as an image if the required rendering dependencies are available.</p>
+<pre><code># After compiling the graph:
+print(bmi_workflow.get_graph().draw_mermaid())</code></pre>
+<p>Depending on your installed version and notebook environment, you may also be able to render the graph directly:</p>
+<pre><code># Optional notebook visualization (availability depends on version)
+from IPython.display import Image, display
+display(Image(bmi_workflow.get_graph().draw_mermaid_png()))</code></pre>
+<div class="callout tip">If PNG rendering fails because a renderer or dependency is missing, use the Mermaid text output or the inline diagrams in these notes to verify the intended structure. Visualization is a debugging aid; it does not change graph execution.</div>
+</section>
+
+<section class="section" id="llm">
+<h2>7. Example 2 — A minimal LLM question-answering graph</h2>
+<p>Now the graph contains one node that calls a chat model. LangGraph orchestrates the workflow, while LangChain's <code>ChatOpenAI</code> integration supplies the model interface.</p>
+<div class="diagram">
+<svg viewBox="0 0 760 155" role="img" aria-label="LLM question-answering graph: start, LLM QA node, end">
+<defs><marker id="arr3" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#5b7195"/></marker></defs>
+<g font-family="system-ui,sans-serif" text-anchor="middle">
+<rect x="45" y="40" width="110" height="56" rx="28" fill="#edf2fa" stroke="#aab8cc"/><text x="100" y="74" font-size="15" font-weight="700" fill="#34445d">START</text>
+<path d="M157 68 H245" stroke="#5b7195" stroke-width="2.5" marker-end="url(#arr3)"/>
+<rect x="253" y="25" width="254" height="86" rx="14" fill="#eaf1ff" stroke="#7ca2e7"/><text x="380" y="58" font-size="17" font-weight="700" fill="#17418e">llm_qa</text><text x="380" y="82" font-size="13" fill="#33445f">Question → model → answer</text>
+<path d="M509 68 H597" stroke="#5b7195" stroke-width="2.5" marker-end="url(#arr3)"/>
+<rect x="605" y="40" width="110" height="56" rx="28" fill="#edf2fa" stroke="#aab8cc"/><text x="660" y="74" font-size="15" font-weight="700" fill="#34445d">END</text>
+</g></svg>
+</div>
+<h3>State schema</h3>
+<pre><code>from typing import TypedDict
+
+class LLMState(TypedDict):
+    question: str
+    answer: str</code></pre>
+<h3>Node logic and graph construction</h3>
+<pre><code>import os
+from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
+from langgraph.graph import StateGraph, START, END
+
+load_dotenv()
+
+model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+def llm_qa(state: LLMState) -&gt; dict:
+    question = state["question"]
+    prompt = f"Answer the following question clearly:\n{question}"
+    response = model.invoke(prompt)
+    return {"answer": response.content}
+
+builder = StateGraph(LLMState)
+builder.add_node("llm_qa", llm_qa)
+builder.add_edge(START, "llm_qa")
+builder.add_edge("llm_qa", END)
+
+llm_workflow = builder.compile()
+
+initial_state = {
+    "question": "How far is the Moon from Earth?"
+}
+final_state = llm_workflow.invoke(initial_state)
+print(final_state["answer"])</code></pre>
+<p>The transcript's example uses a question about the Moon's distance from Earth. The response is model-generated, so its exact wording can vary. The important mechanics are stable: extract the question from state, construct a prompt, call <code>model.invoke()</code>, extract <code>response.content</code>, and return an answer update.</p>
+<div class="callout"><strong>Why not just call the model directly?</strong> For one call, a direct <code>model.invoke(prompt)</code> is simpler. This graph is a learning exercise that introduces the same state, node, edge, compile, and invoke pattern used in larger systems.</div>
+</section>
+
+<section class="section" id="chaining">
+<h2>8. Example 3 — Prompt chaining for blog generation</h2>
+<p><strong>Prompt chaining</strong> decomposes a larger task into multiple sequential LLM calls. Instead of asking one prompt to produce a complete blog immediately, the workflow first generates an outline, then asks the model to write the blog using that outline.</p>
+<div class="diagram">
+<svg viewBox="0 0 900 205" role="img" aria-label="Prompt chaining: topic enters create outline, then create blog, then final state contains topic outline and content">
+<defs><marker id="arr4" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#5b7195"/></marker></defs>
+<g font-family="system-ui,sans-serif" text-anchor="middle">
+<rect x="15" y="45" width="115" height="60" rx="30" fill="#edf2fa" stroke="#aab8cc"/><text x="72" y="81" font-size="15" font-weight="700" fill="#34445d">START</text>
+<path d="M132 75 H178" stroke="#5b7195" stroke-width="2.5" marker-end="url(#arr4)"/>
+<rect x="186" y="28" width="205" height="94" rx="14" fill="#eaf1ff" stroke="#7ca2e7"/><text x="288" y="61" font-size="16" font-weight="700" fill="#17418e">create_outline</text><text x="288" y="84" font-size="12" fill="#33445f">Topic → outline</text><text x="288" y="102" font-size="11" fill="#536985">LLM call #1</text>
+<path d="M393 75 H439" stroke="#5b7195" stroke-width="2.5" marker-end="url(#arr4)"/>
+<rect x="447" y="28" width="205" height="94" rx="14" fill="#e7f8f7" stroke="#78c3c4"/><text x="549" y="61" font-size="16" font-weight="700" fill="#086a73">create_blog</text><text x="549" y="84" font-size="12" fill="#33445f">Topic + outline → blog</text><text x="549" y="102" font-size="11" fill="#536985">LLM call #2</text>
+<path d="M654 75 H700" stroke="#5b7195" stroke-width="2.5" marker-end="url(#arr4)"/>
+<rect x="708" y="45" width="175" height="60" rx="30" fill="#edf2fa" stroke="#aab8cc"/><text x="795" y="70" font-size="14" font-weight="700" fill="#34445d">END / Final state</text><text x="795" y="88" font-size="11" fill="#536985">Topic + outline + content</text>
+<rect x="205" y="146" width="428" height="36" rx="9" fill="#fff6df" stroke="#e7c56e"/><text x="419" y="169" font-size="12" fill="#76520c">Intermediate outputs remain available in shared state</text>
+</g></svg>
+</div>
+<h3>State and node functions</h3>
+<pre><code>from typing import TypedDict
+
+class BlogState(TypedDict):
+    topic: str
+    outline: str
+    content: str
+
+def create_outline(state: BlogState) -&gt; dict:
+    topic = state["topic"]
+    prompt = (
+        f"Generate a detailed outline for a blog on: {topic}. "
+        "Include a logical sequence of sections and useful subtopics."
+    )
+    outline = model.invoke(prompt).content
+    return {"outline": outline}
+
+def create_blog(state: BlogState) -&gt; dict:
+    topic = state["topic"]
+    outline = state["outline"]
+    prompt = (
+        f"Write a detailed blog on: {topic}\n\n"
+        f"Use this outline:\n{outline}\n\n"
+        "Write clear, cohesive sections and explain key ideas."
+    )
+    content = model.invoke(prompt).content
+    return {"content": content}</code></pre>
+<h3>Connect, compile, and run</h3>
+<pre><code>builder = StateGraph(BlogState)
+builder.add_node("create_outline", create_outline)
+builder.add_node("create_blog", create_blog)
+
+builder.add_edge(START, "create_outline")
+builder.add_edge("create_outline", "create_blog")
+builder.add_edge("create_blog", END)
+
+blog_workflow = builder.compile()
+
+initial_state = {"topic": "The rise of AI in India"}
+final_state = blog_workflow.invoke(initial_state)
+
+print("OUTLINE:\n", final_state["outline"])
+print("\nBLOG:\n", final_state["content"])</code></pre>
+<p>The model is invoked twice, so execution generally takes longer than a single call. In return, the outline becomes an explicit intermediate artifact that can be inspected, logged, revised, scored, or reused by later nodes.</p>
+<h3>How the state evolves</h3>
+<table>
+<thead><tr><th>Moment</th><th>State fields available</th><th>New field</th></tr></thead>
+<tbody>
+<tr><td>Initial input</td><td><code>topic</code></td><td>—</td></tr>
+<tr><td>After <code>create_outline</code></td><td><code>topic</code>, <code>outline</code></td><td><code>outline</code></td></tr>
+<tr><td>After <code>create_blog</code></td><td><code>topic</code>, <code>outline</code>, <code>content</code></td><td><code>content</code></td></tr>
+</tbody></table>
+<div class="callout tip"><strong>Design principle:</strong> make intermediate outputs explicit in state when downstream steps need them or when you want to inspect them for debugging and evaluation.</div>
+</section>
+
+<section class="section" id="compare">
+<h2>9. Why use LangGraph state instead of a simple chain?</h2>
+<p>The lesson highlights a practical benefit of stateful orchestration: the final result can retain the topic, generated outline, and generated content together. A simple chain may expose only its final output unless intermediate values are deliberately carried forward.</p>
+<table>
+<thead><tr><th>Dimension</th><th>Simple direct call / chain</th><th>LangGraph workflow</th></tr></thead>
+<tbody>
+<tr><td>Best fit</td><td>One prompt or a straightforward fixed sequence</td><td>Explicit multi-step orchestration and evolving state</td></tr>
+<tr><td>Intermediate data</td><td>Depends on chain design and output configuration</td><td>Can be preserved in shared state across nodes</td></tr>
+<tr><td>Control flow</td><td>Often linear and abstraction-specific</td><td>Graph structure explicitly represents nodes and edges</td></tr>
+<tr><td>Complex workflows</td><td>Can become awkward as orchestration grows</td><td>Supports richer routing and cycles when needed</td></tr>
+</tbody></table>
+<div class="callout warn">Do not add LangGraph just to wrap every single LLM call. Choose it when explicit workflow control, shared state, intermediate artifacts, or future complexity justify the additional structure.</div>
+</section>
+
+<section class="section" id="debug">
+<h2>10. Common mistakes and debugging checks</h2>
+<ul class="checklist">
+<li><strong>Wrong interpreter:</strong> install packages into the same virtual environment selected by the notebook kernel.</li>
+<li><strong>Missing API key:</strong> call <code>load_dotenv()</code> and verify the environment variable exists without printing the secret.</li>
+<li><strong>Node not registered:</strong> every node referenced by an edge must be added to the graph.</li>
+<li><strong>Missing edge:</strong> define the complete route from <code>START</code> through the intended nodes to <code>END</code>.</li>
+<li><strong>Incorrect state key:</strong> keys used by nodes must match the initial state and the updates produced by earlier nodes.</li>
+<li><strong>Unexpected return value:</strong> a chat model response is a message object; use <code>.content</code> when the next step expects plain text.</li>
+<li><strong>Graph not compiled:</strong> invoke the compiled runnable returned by <code>builder.compile()</code>, not the builder itself.</li>
+<li><strong>State field not initialized:</strong> ensure every field is available before a node reads it. The outline node must run before the blog node.</li>
+<li><strong>Visualization fails:</strong> try Mermaid text output first; PNG rendering may require additional dependencies or a compatible environment.</li>
+</ul>
+</section>
+
+<section class="section" id="homework">
+<h2>11. Practice exercise — Add a blog evaluation node</h2>
+<p>The lesson's homework is to extend the prompt-chaining graph with a third LLM node that evaluates the generated blog based on the outline and returns an integer score.</p>
+<div class="step"><div class="num">1</div><div class="step-body"><h3>Extend the state</h3><p>Add a score field, for example <code>score: int</code>. Since the LLM initially returns text, decide how to reliably parse and validate the integer.</p></div></div>
+<div class="step"><div class="num">2</div><div class="step-body"><h3>Write an evaluation node</h3><p>Give the evaluator the topic, outline, and generated blog. Ask it to rate how well the blog follows the outline on a defined scale, such as 1–10.</p></div></div>
+<div class="step"><div class="num">3</div><div class="step-body"><h3>Connect the graph</h3><p>Add <code>evaluate_blog</code> after <code>create_blog</code>, then connect it to <code>END</code>.</p></div></div>
+<div class="step"><div class="num">4</div><div class="step-body"><h3>Inspect the final state</h3><p>Print the outline, blog content, and score. Try changing the topic and compare the results.</p></div></div>
+<h3>Suggested graph shape</h3>
+<pre><code>START
+  |
+  v
+create_outline
+  |
+  v
+create_blog
+  |
+  v
+evaluate_blog
+  |
+  v
+ END</code></pre>
+<div class="callout tip"><strong>Evaluation tip:</strong> define the score rubric before prompting the evaluator. For example, score outline coverage, factual coherence, organization, and relevance. A numeric score is more useful when its meaning is consistent across runs.</div>
+</section>
+
+<section class="section" id="recap">
+<h2>12. Quick recap</h2>
+<ul>
+<li>A sequential workflow executes nodes in a fixed order without branching.</li>
+<li>Define the shared state schema before building the graph.</li>
+<li>LangGraph nodes are Python callables that read state and return updates.</li>
+<li><code>StateGraph</code> creates the graph; <code>add_node()</code> registers work; <code>add_edge()</code> connects steps.</li>
+<li>Use <code>START</code> and <code>END</code> to mark entry and exit points.</li>
+<li>Call <code>compile()</code> to create an executable graph, then <code>invoke(initial_state)</code> to run it.</li>
+<li>LangChain model integrations can be called inside LangGraph nodes.</li>
+<li>Prompt chaining splits a larger task into multiple LLM calls, with intermediate outputs carried through state.</li>
+<li>The blog workflow preserves both outline and content in the final state, making intermediate results easy to inspect.</li>
+</ul>
+<div class="callout"><strong>One-sentence summary:</strong> LangGraph turns a workflow into an explicit stateful graph: define the data, implement each task as a node, connect the path with edges, compile it, and invoke it with an initial state.</div>
+</section>
+</main>
+</div>
+<footer class="footer">Prepared as technical study notes from the supplied lecture transcript. Code examples are teaching templates; confirm model names and optional graph-rendering APIs against the versions installed in your environment.</footer>
+</body>
+</html>
