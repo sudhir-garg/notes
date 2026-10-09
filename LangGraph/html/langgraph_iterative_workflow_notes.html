@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Study notes on iterative and looping workflows in LangGraph, using a generate-evaluate-optimize tweet-writing agent as the example.">
+<title>Iterative Workflows in LangGraph — Study Notes</title>
+<style>
+:root{--ink:#20283a;--muted:#5f6b7c;--paper:#fff;--bg:#f4f6fb;--line:#dfe5ef;--accent:#4f46e5;--accent2:#0f766e;--soft:#eef2ff;--warm:#fff7ed;--code:#111827;--good:#e9f9f1;--bad:#fff0f0}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:linear-gradient(130deg,#151b35,#343c79 65%,#4f46e5);color:#fff;padding:58px 22px 48px}
+.hero{max-width:1050px;margin:auto}.eyebrow{text-transform:uppercase;letter-spacing:.13em;font-size:.78rem;font-weight:800;color:#c7d2fe}.hero h1{font-size:clamp(2rem,5vw,3.7rem);line-height:1.12;margin:.5rem 0 1rem;max-width:850px}.hero p{max-width:780px;color:#e0e7ff;font-size:1.1rem;margin:0}.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}.chips span{border:1px solid #ffffff45;background:#ffffff12;border-radius:999px;padding:5px 12px;font-size:.85rem}
+.layout{max-width:1150px;margin:28px auto;padding:0 18px;display:grid;grid-template-columns:245px minmax(0,1fr);gap:28px}.toc{position:sticky;top:18px;align-self:start;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:18px}.toc strong{display:block;margin-bottom:10px}.toc a{display:block;text-decoration:none;color:var(--muted);font-size:.91rem;padding:5px 0}.toc a:hover{color:var(--accent)}main{min-width:0}.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:clamp(20px,3vw,34px);margin-bottom:22px;box-shadow:0 5px 22px #1c2a4410}.card h2{font-size:1.65rem;line-height:1.3;margin:0 0 14px;letter-spacing:-.02em}.card h3{font-size:1.15rem;margin:25px 0 8px}.lead{font-size:1.08rem;color:#39465b}.muted{color:var(--muted)}.callout{padding:15px 18px;border-radius:12px;background:var(--soft);border-left:4px solid var(--accent);margin:18px 0}.callout.warm{background:var(--warm);border-color:#ea580c}.callout.good{background:var(--good);border-color:#159568}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.mini{border:1px solid var(--line);border-radius:12px;padding:16px}.mini h3{margin:0 0 6px}.tag{display:inline-block;border-radius:7px;padding:2px 8px;background:#eef2ff;color:#3730a3;font-size:.78rem;font-weight:700}.diagram{overflow-x:auto;border:1px solid var(--line);border-radius:14px;padding:12px;margin:18px 0;background:#fbfcff}.diagram svg{display:block;width:100%;min-width:550px;height:auto}.caption{font-size:.88rem;color:var(--muted);margin-top:7px}pre{overflow:auto;background:var(--code);color:#e5e7eb;padding:18px;border-radius:12px;line-height:1.55;font-size:.88rem;tab-size:4}code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}p code,li code,td code{background:#edf0f7;padding:2px 5px;border-radius:5px;color:#312e81;font-size:.92em}table{border-collapse:collapse;width:100%;margin:14px 0;font-size:.94rem}th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:10px 12px}th{background:#f5f7fc}ul,ol{padding-left:1.3rem}li{margin:.35rem 0}.pillrow{display:flex;flex-wrap:wrap;gap:8px}.pill{background:#f0fdfa;color:#115e59;border:1px solid #b8e8df;padding:5px 10px;border-radius:999px;font-size:.84rem}.flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}.flow div{padding:15px;border-radius:12px;border:1px solid var(--line);background:#fafbff}.flow b{display:block;margin-bottom:5px}.checklist li::marker{color:var(--accent)}footer{max-width:1050px;margin:0 auto;padding:12px 20px 45px;color:var(--muted);font-size:.9rem}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.toc{position:relative;top:auto}.toc a{display:inline-block;margin-right:12px}.grid2,.flow{grid-template-columns:1fr}}
+@media print{body{background:#fff}.layout{display:block;max-width:none}.toc{display:none}.card{box-shadow:none;break-inside:avoid}header{padding:28px}.diagram{break-inside:avoid}a{color:inherit}}
+</style>
+</head>
+<body>
+<header><div class="hero">
+<div class="eyebrow">Agentic AI · LangGraph · Study Guide</div>
+<h1>Iterative Workflows in LangGraph</h1>
+<p>Build a feedback loop that repeatedly generates, evaluates, and improves a tweet until it meets a quality bar—or reaches a maximum iteration limit.</p>
+<div class="chips"><span>Generate → Evaluate → Optimize</span><span>Conditional edges</span><span>Typed state</span><span>Structured output</span></div>
+</div></header>
+<div class="layout">
+<nav class="toc" aria-label="Table of contents"><strong>On this page</strong>
+<a href="#overview">1. Overview</a><a href="#workflow-types">2. Workflow types</a><a href="#use-case">3. Example use case</a><a href="#architecture">4. Architecture</a><a href="#state">5. State design</a><a href="#implementation">6. Implementation</a><a href="#routing">7. Conditional routing</a><a href="#history">8. History & reducers</a><a href="#run">9. Running the graph</a><a href="#pitfalls">10. Pitfalls & improvements</a><a href="#recap">11. Quick recap</a>
+</nav>
+<main>
+<section class="card" id="overview">
+<h2>1. What is an iterative workflow?</h2>
+<p class="lead">An <strong>iterative workflow</strong> (also called a <strong>looping workflow</strong>) repeats one or more steps to improve an output. Instead of accepting the first model response, the system checks it, gives feedback, and tries again when necessary.</p>
+<div class="callout"><strong>Core idea:</strong> Generate a draft → evaluate it against explicit criteria → if it needs improvement, revise it using the feedback → evaluate again.</div>
+<p>This pattern is useful when a single LLM call may produce mediocre, repetitive, or insufficiently useful content. The evaluation criteria guide the loop, while a maximum-iteration limit prevents endless retries.</p>
+<h3>Learning objectives</h3>
+<ul><li>Understand iterative/looping workflows in the LangGraph context.</li><li>Represent workflow data in a typed state.</li><li>Create generator, evaluator, and optimizer nodes.</li><li>Use structured output for reliable evaluation decisions.</li><li>Route execution with a conditional edge and loop back for another evaluation.</li><li>Track intermediate drafts and feedback for debugging.</li></ul>
+</section>
+
+<section class="card" id="workflow-types">
+<h2>2. Recap: four workflow patterns</h2>
+<table><thead><tr><th>Pattern</th><th>How it behaves</th><th>Typical use</th></tr></thead><tbody>
+<tr><td><strong>Sequential</strong></td><td>Tasks run one after another in a fixed order.</td><td>Extract text, then summarize it, then format the summary.</td></tr>
+<tr><td><strong>Parallel</strong></td><td>Multiple tasks run at the same time when they do not depend on each other.</td><td>Analyze sentiment, keywords, and language independently.</td></tr>
+<tr><td><strong>Conditional</strong></td><td>A condition chooses which path executes.</td><td>Send a support request to billing or technical support.</td></tr>
+<tr><td><strong>Iterative / looping</strong></td><td>A result is checked; execution repeats when improvement is needed.</td><td>Draft and refine a social post until it meets a quality threshold.</td></tr>
+</tbody></table>
+<div class="callout good">Iterative workflows often combine the other patterns: the nodes may run sequentially, and a conditional edge determines whether the graph ends or loops back.</div>
+</section>
+
+<section class="card" id="use-case">
+<h2>3. Example use case: generate a funny, original tweet</h2>
+<p>The example workflow takes a user-provided topic—such as <em>Indian Railways</em>—and creates a short, funny, original tweet. The draft should not be published automatically just because it was generated: it first goes through an evaluator.</p>
+<h3>Why use a loop?</h3>
+<ul><li>The first LLM response may not be funny or original enough.</li><li>A separate evaluator can apply consistent criteria.</li><li>Specific feedback tells the optimizer what to change.</li><li>The revised tweet is evaluated again rather than being accepted blindly.</li></ul>
+<div class="grid2">
+<div class="mini"><span class="tag">Generator</span><h3>Write</h3><p>Creates a tweet for the requested topic using the writing instructions.</p></div>
+<div class="mini"><span class="tag">Evaluator</span><h3>Judge</h3><p>Checks originality, humor, punchiness, viral potential, and formatting. Returns a decision and feedback.</p></div>
+<div class="mini"><span class="tag">Optimizer</span><h3>Revise</h3><p>Uses the current tweet and evaluator feedback to produce an improved version.</p></div>
+<div class="mini"><span class="tag">Guardrail</span><h3>Stop safely</h3><p>Ends when approved or when the maximum iteration limit is reached.</p></div>
+</div>
+<p>In a production system, the approved draft could be shown to a person for final approval (“human in the loop”) before a platform API publishes it. That publishing step is a proposed real-world extension, not required for the basic graph.</p>
+</section>
+
+<section class="card" id="architecture">
+<h2>4. Workflow architecture</h2>
+<div class="diagram">
+<svg viewBox="0 0 820 350" role="img" aria-label="LangGraph iterative workflow: Start to Generate to Evaluate. Approved goes to End; needs improvement goes to Optimize and loops back to Evaluate.">
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#64748b"/></marker></defs>
+<rect x="25" y="125" width="100" height="54" rx="25" fill="#e0e7ff" stroke="#6366f1"/><text x="75" y="157" text-anchor="middle" font-size="16" font-weight="700" fill="#312e81">START</text>
+<rect x="170" y="125" width="145" height="54" rx="12" fill="#dbeafe" stroke="#3b82f6"/><text x="242" y="148" text-anchor="middle" font-size="16" font-weight="700" fill="#1e3a8a">Generate</text><text x="242" y="166" text-anchor="middle" font-size="11" fill="#1e3a8a">draft tweet</text>
+<rect x="365" y="125" width="145" height="54" rx="12" fill="#fef3c7" stroke="#d97706"/><text x="437" y="148" text-anchor="middle" font-size="16" font-weight="700" fill="#78350f">Evaluate</text><text x="437" y="166" text-anchor="middle" font-size="11" fill="#78350f">decision + feedback</text>
+<rect x="590" y="35" width="145" height="54" rx="12" fill="#dcfce7" stroke="#16a34a"/><text x="662" y="67" text-anchor="middle" font-size="16" font-weight="700" fill="#14532d">END / Approved</text>
+<rect x="590" y="220" width="145" height="54" rx="12" fill="#f3e8ff" stroke="#9333ea"/><text x="662" y="243" text-anchor="middle" font-size="16" font-weight="700" fill="#581c87">Optimize</text><text x="662" y="261" text-anchor="middle" font-size="11" fill="#581c87">revise using feedback</text>
+<path d="M125 152 H165" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" fill="none"/><path d="M315 152 H360" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+<path d="M510 137 C545 137 545 62 585 62" stroke="#16a34a" stroke-width="2" marker-end="url(#arrow)" fill="none"/><text x="548" y="95" font-size="12" fill="#15803d">approved</text>
+<path d="M510 166 C548 166 548 247 585 247" stroke="#9333ea" stroke-width="2" marker-end="url(#arrow)" fill="none"/><text x="519" y="207" font-size="12" fill="#7e22ce">needs improvement</text>
+<path d="M662 220 V195 H437 V184" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" fill="none"/><text x="515" y="188" font-size="12" fill="#475569">loop back to Evaluate</text>
+<text x="25" y="320" font-size="13" fill="#64748b">A max-iteration guard should also provide a stop path when the loop limit is reached.</text>
+</svg>
+</div>
+<p class="caption">Conceptual diagram of the control flow described in the source material. The evaluator's result determines the next route.</p>
+<h3>Three main nodes</h3>
+<ol><li><code>generate</code> → <code>generate_tweet</code></li><li><code>evaluate</code> → <code>evaluate_tweet</code></li><li><code>optimize</code> → <code>optimize_tweet</code></li></ol>
+<p>The graph also needs a start edge, a normal edge from generation to evaluation, a conditional edge from evaluation, and a loop edge from optimization back to evaluation.</p>
+</section>
+
+<section class="card" id="state">
+<h2>5. Design the graph state</h2>
+<p>LangGraph nodes read the current state and return updates to it. The example state stores the topic, current tweet, evaluation decision, feedback, iteration counters, and (optionally) histories.</p>
+<table><thead><tr><th>Field</th><th>Type / example</th><th>Purpose</th></tr></thead><tbody>
+<tr><td><code>topic</code></td><td><code>str</code></td><td>The subject supplied by the user.</td></tr>
+<tr><td><code>tweet</code></td><td><code>str</code></td><td>The latest generated or optimized draft.</td></tr>
+<tr><td><code>evaluation</code></td><td><code>"approved" | "needs_improvement"</code></td><td>Controls whether the workflow ends or revises.</td></tr>
+<tr><td><code>feedback</code></td><td><code>str</code></td><td>Explains strengths and weaknesses and gives revision guidance.</td></tr>
+<tr><td><code>iteration</code></td><td><code>int</code></td><td>Tracks the current attempt / revision count.</td></tr>
+<tr><td><code>max_iterations</code></td><td><code>int</code></td><td>Prevents endless looping.</td></tr>
+<tr><td><code>tweet_history</code></td><td><code>list[str]</code> (optional)</td><td>Retains each draft for inspection.</td></tr>
+<tr><td><code>feedback_history</code></td><td><code>list[str]</code> (optional)</td><td>Retains feedback from each evaluation.</td></tr>
+</tbody></table>
+<div class="callout warm"><strong>Important:</strong> Keep field names consistent everywhere—state definition, node return dictionaries, routing logic, and initial input. The source walkthrough encountered a naming mismatch around the maximum-iteration field; consistent naming avoids that class of bug.</div>
+<h3>Example state schema</h3>
+<pre><code>from typing import Annotated, Literal
+import operator
+from typing_extensions import TypedDict
+
+class TweetState(TypedDict):
+    topic: str
+    tweet: str
+    evaluation: Literal["approved", "needs_improvement"]
+    feedback: str
+    iteration: int
+    max_iterations: int
+    tweet_history: Annotated[list[str], operator.add]
+    feedback_history: Annotated[list[str], operator.add]</code></pre>
+<p class="muted">The history fields are optional. If you include them, initialize them as empty lists or make sure your graph's input/state handling supports omitted values.</p>
+</section>
+
+<section class="card" id="implementation">
+<h2>6. Build the nodes</h2>
+<p>The walkthrough uses three LLM roles. It mentions GPT-4o for generation, GPT-4o mini for evaluation, and GPT-4o for optimization as example choices. These are examples from the source, not a claim that they are the best current models for every task.</p>
+<div class="flow"><div><b>1 · Generate</b>Prompt the model to write a short, funny, original tweet on <code>state["topic"]</code>.</div><div><b>2 · Evaluate</b>Apply a strict rubric and return a decision plus constructive feedback.</div><div><b>3 · Optimize</b>Rewrite the current draft using the evaluator's feedback and update the iteration count.</div></div>
+<h3>6.1 Generator prompt checklist</h3>
+<ul><li>Set the role, e.g. “a funny and clever social-media writer.”</li><li>Specify the topic from the state.</li><li>Request a short, original, humorous tweet.</li><li>Avoid question-and-answer format.</li><li>Keep the tweet within 280 characters.</li><li>Encourage observational humor, irony, sarcasm, meme logic, punchlines, and relatable everyday language.</li></ul>
+<h3>6.2 Evaluator rubric</h3>
+<ul><li><strong>Originality:</strong> Does it feel fresh rather than familiar or recycled?</li><li><strong>Humor:</strong> Is it actually funny?</li><li><strong>Punchiness:</strong> Is the payoff concise and clear?</li><li><strong>Viral potential:</strong> Is it relatable and shareable?</li><li><strong>Format:</strong> Does it follow the tweet constraints?</li></ul>
+<p>Reject automatically if it uses question-and-answer format, exceeds 280 characters, or relies on a conventional/overused joke, according to the example rubric. An evaluator should return only the defined structured fields rather than free-form prose.</p>
+<h3>6.3 Structured evaluation output</h3>
+<pre><code>from pydantic import BaseModel, Field
+from typing import Literal
+
+class TweetEvaluation(BaseModel):
+    evaluation: Literal["approved", "needs_improvement"] = Field(
+        description="Whether the tweet meets the quality criteria"
+    )
+    feedback: str = Field(
+        description="Brief, actionable feedback explaining strengths and weaknesses"
+    )</code></pre>
+<p>Structured output helps make routing dependable: the graph can check a known field and one of two allowed values rather than trying to infer a decision from an unstructured paragraph.</p>
+<h3>6.4 Example node implementation pattern</h3>
+<p>The code below is a teaching template showing the responsibilities and state updates. Add your own model configuration, imports, and exact LangChain/LangGraph version-specific setup before running it.</p>
+<pre><code>from langchain_core.messages import SystemMessage, HumanMessage
+
+def generate_tweet(state: TweetState):
+    messages = [
+        SystemMessage(content="You are a funny, clever tweet writer."),
+        HumanMessage(content=(
+            f"Write a short, original, funny tweet about: {state['topic']}. "
+            "Avoid Q&amp;A format and stay under 280 characters."
+        )),
+    ]
+    response = generator_llm.invoke(messages)
+    tweet = response.content
+    return {
+        "tweet": tweet,
+        "tweet_history": [tweet],
+    }
+
+def evaluate_tweet(state: TweetState):
+    messages = [
+        SystemMessage(content="Evaluate tweets strictly against the rubric."),
+        HumanMessage(content=(
+            f"Topic: {state['topic']}\\n"
+            f"Tweet: {state['tweet']}\\n"
+            "Assess originality, humor, punchiness, shareability, and format. "
+            "Return the structured evaluation and actionable feedback."
+        )),
+    ]
+    result = structured_evaluator_llm.invoke(messages)
+    return {
+        "evaluation": result.evaluation,
+        "feedback": result.feedback,
+        "feedback_history": [result.feedback],
+    }
+
+def optimize_tweet(state: TweetState):
+    messages = [
+        SystemMessage(content="Improve tweets using specific feedback."),
+        HumanMessage(content=(
+            f"Topic: {state['topic']}\\n"
+            f"Original tweet: {state['tweet']}\\n"
+            f"Evaluator feedback: {state['feedback']}\\n"
+            "Rewrite as a short, funny, original tweet under 280 characters. "
+            "Avoid Q&amp;A format."
+        )),
+    ]
+    response = optimizer_llm.invoke(messages)
+    tweet = response.content
+    return {
+        "tweet": tweet,
+        "tweet_history": [tweet],
+        "iteration": state["iteration"] + 1,
+    }</code></pre>
+<div class="callout warm">Depending on the installed framework version, message construction, structured-output setup, and model return types may differ. Treat the snippets as an instructional pattern and verify them against your environment.</div>
+</section>
+
+<section class="card" id="routing">
+<h2>7. Conditional routing and loop termination</h2>
+<p>The evaluator node does not directly decide graph topology. A routing function reads the updated state and returns the name of the next node. In the example, approval sends execution to the end; a rejected draft sends it to the optimizer.</p>
+<h3>Routing logic</h3>
+<pre><code>from langgraph.graph import END
+
+def route_evaluation(state: TweetState):
+    if state["evaluation"] == "approved":
+        return END
+    if state["iteration"] >= state["max_iterations"]:
+        return END
+    return "optimize"</code></pre>
+<p>This template stops when the draft is approved or the iteration limit has been reached. A production workflow should make the “limit reached but not approved” outcome explicit—for example, mark it as exhausted or send it for human review—rather than treating it as approved.</p>
+<div class="diagram">
+<svg viewBox="0 0 760 230" role="img" aria-label="Decision tree for routing: if approved, end; otherwise if max iterations reached, stop for review; else optimize and return to evaluation.">
+<defs><marker id="arrow2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#64748b"/></marker></defs>
+<rect x="260" y="12" width="240" height="48" rx="10" fill="#fef3c7" stroke="#d97706"/><text x="380" y="41" text-anchor="middle" font-size="15" font-weight="700" fill="#78350f">Read evaluation result</text>
+<path d="M380 60 V82 H145 V101" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow2)"/><path d="M380 82 H380 V101" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow2)"/><path d="M380 82 H615 V101" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow2)"/>
+<rect x="45" y="104" width="200" height="54" rx="10" fill="#dcfce7" stroke="#16a34a"/><text x="145" y="126" text-anchor="middle" font-size="14" font-weight="700" fill="#14532d">Approved</text><text x="145" y="145" text-anchor="middle" font-size="12" fill="#14532d">End successfully</text>
+<rect x="280" y="104" width="200" height="54" rx="10" fill="#ffedd5" stroke="#ea580c"/><text x="380" y="126" text-anchor="middle" font-size="14" font-weight="700" fill="#9a3412">Limit reached</text><text x="380" y="145" text-anchor="middle" font-size="12" fill="#9a3412">Stop / human review</text>
+<rect x="515" y="104" width="200" height="54" rx="10" fill="#f3e8ff" stroke="#9333ea"/><text x="615" y="126" text-anchor="middle" font-size="14" font-weight="700" fill="#581c87">More attempts allowed</text><text x="615" y="145" text-anchor="middle" font-size="12" fill="#581c87">Optimize → Evaluate</text>
+<text x="380" y="202" text-anchor="middle" font-size="12" fill="#64748b">The order of checks matters: do not label an unapproved draft as approved just because the limit was reached.</text>
+</svg>
+</div>
+<h3>Connect and compile the graph</h3>
+<pre><code>from langgraph.graph import StateGraph, START, END
+
+builder = StateGraph(TweetState)
+builder.add_node("generate", generate_tweet)
+builder.add_node("evaluate", evaluate_tweet)
+builder.add_node("optimize", optimize_tweet)
+
+builder.add_edge(START, "generate")
+builder.add_edge("generate", "evaluate")
+builder.add_conditional_edges(
+    "evaluate",
+    route_evaluation,
+    {
+        END: END,
+        "optimize": "optimize",
+    },
+)
+builder.add_edge("optimize", "evaluate")
+
+graph = builder.compile()</code></pre>
+<p class="muted">Exact conditional-edge mapping syntax can vary by LangGraph version. Check the API for the version installed in your project.</p>
+</section>
+
+<section class="card" id="history">
+<h2>8. Track draft and feedback history with reducers</h2>
+<p>When debugging a loop, inspecting only the final tweet hides what happened during earlier attempts. The walkthrough adds two lists:</p>
+<ul><li><code>tweet_history</code> — every generated or optimized draft.</li><li><code>feedback_history</code> — the evaluator's feedback for each evaluation.</li></ul>
+<p>In a LangGraph state, a reducer defines how updates to a field are combined. Using <code>operator.add</code> for list fields appends new list items instead of replacing the existing list.</p>
+<pre><code>from typing import Annotated
+import operator
+
+class TweetState(TypedDict):
+    # Other state fields omitted here
+    tweet_history: Annotated[list[str], operator.add]
+    feedback_history: Annotated[list[str], operator.add]
+
+# Each node returns a list containing the new item:
+return {
+    "tweet_history": [new_tweet],
+}</code></pre>
+<div class="callout"><strong>Why return a list?</strong> The reducer combines the existing list with the new list. Returning the new tweet as a string instead of a list would not match the intended list-append behavior.</div>
+<h3>Inspect the result</h3>
+<pre><code>result = graph.invoke({
+    "topic": "Indian Railways",
+    "iteration": 1,
+    "max_iterations": 5,
+    "tweet_history": [],
+    "feedback_history": [],
+})
+
+for number, tweet in enumerate(result.get("tweet_history", []), start=1):
+    print(f"Attempt {number}: {tweet}")
+
+for number, feedback in enumerate(result.get("feedback_history", []), start=1):
+    print(f"Feedback {number}: {feedback}")</code></pre>
+<p>Histories are useful for tracing why a draft was rejected, whether revisions responded to the feedback, and whether the evaluator is too strict or inconsistent.</p>
+</section>
+
+<section class="card" id="run">
+<h2>9. Run and test the workflow</h2>
+<h3>Initial input</h3>
+<pre><code>initial_state = {
+    "topic": "Indian Railways",
+    "iteration": 1,
+    "max_iterations": 5,
+    "tweet_history": [],
+    "feedback_history": [],
+}
+
+result = graph.invoke(initial_state)
+print(result["tweet"])
+print(result["evaluation"])
+print(result["iteration"])</code></pre>
+<h3>What to verify</h3>
+<ul class="checklist">
+<li>Generation creates a tweet for the requested topic.</li>
+<li>Evaluation returns exactly one allowed decision plus feedback.</li>
+<li>An approved tweet reaches the end path.</li>
+<li>A tweet needing improvement is sent to the optimizer.</li>
+<li>Optimization increments the iteration count and returns to evaluation.</li>
+<li>The loop stops at the configured maximum.</li>
+<li>History lists contain the intermediate drafts and feedback.</li>
+<li>The final result clearly distinguishes “approved” from “stopped because the limit was reached.”</li>
+</ul>
+<div class="callout warm"><strong>LLM outputs are variable.</strong> A model may approve a draft on the first attempt, so repeated runs will not necessarily show multiple iterations. For predictable tests, use mocked node outputs or a controlled test evaluator rather than deliberately feeding meaningless text to the model.</div>
+</section>
+
+<section class="card" id="pitfalls">
+<h2>10. Common pitfalls and practical improvements</h2>
+<table><thead><tr><th>Potential issue</th><th>Why it matters</th><th>Better practice</th></tr></thead><tbody>
+<tr><td>State key mismatch</td><td>A node or router may look up a key that was never provided.</td><td>Use one spelling consistently, such as <code>max_iterations</code>.</td></tr>
+<tr><td>Infinite loop</td><td>The evaluator may repeatedly reject the draft.</td><td>Use a maximum-iteration guard and an explicit exhausted outcome.</td></tr>
+<tr><td>Unstructured evaluator text</td><td>Routing becomes fragile if the model changes wording.</td><td>Use a schema with a constrained decision field.</td></tr>
+<tr><td>Vague rubric</td><td>“Make it good” gives the evaluator little guidance.</td><td>Define measurable criteria, rejection rules, and actionable feedback.</td></tr>
+<tr><td>Model roles not differentiated</td><td>One model may not be equally strong at writing, judging, and revising.</td><td>Choose and test models by role, quality, latency, and cost.</td></tr>
+<tr><td>History gets overwritten</td><td>Only the most recent draft remains visible.</td><td>Use a list reducer and return each new item as a one-element list.</td></tr>
+<tr><td>Iteration limit treated as approval</td><td>A low-quality tweet could be mistaken for a successful result.</td><td>Return a separate status such as <code>max_iterations_reached</code> or route to human review.</td></tr>
+<tr><td>Automatic publishing too early</td><td>A generated post can still be incorrect or unsuitable.</td><td>Use human approval before calling a social-platform publishing API.</td></tr>
+</tbody></table>
+<h3>Production-minded extensions</h3>
+<div class="pillrow"><span class="pill">Human approval</span><span class="pill">Logging & tracing</span><span class="pill">Retry/error handling</span><span class="pill">Cost limits</span><span class="pill">Model evaluation tests</span><span class="pill">Platform-specific formatting</span></div>
+<p>These are extensions to consider beyond the tutorial's basic graph. The central pattern remains the same: a draft is generated, judged against a rubric, revised using feedback, and routed until an explicit stop condition is met.</p>
+</section>
+
+<section class="card" id="recap">
+<h2>11. Quick recap</h2>
+<ol>
+<li><strong>Iterative workflow:</strong> repeats work to improve an output.</li>
+<li><strong>Generator:</strong> creates the first draft from the topic.</li>
+<li><strong>Evaluator:</strong> checks quality and returns a constrained decision plus feedback.</li>
+<li><strong>Optimizer:</strong> rewrites the draft using the feedback.</li>
+<li><strong>Conditional edge:</strong> decides whether to end or continue the loop.</li>
+<li><strong>Maximum iterations:</strong> prevents endless retries.</li>
+<li><strong>Reducers and histories:</strong> preserve intermediate drafts and feedback.</li>
+<li><strong>Human in the loop:</strong> can provide a final quality check before publication.</li>
+</ol>
+<div class="callout good"><strong>Remember the pattern:</strong> Generate → Evaluate → (Approved? End : Optimize → Evaluate again). Always include a reliable stop condition.</div>
+<h3>Self-check questions</h3>
+<ol><li>How is an iterative workflow different from a sequential workflow?</li><li>Why should the evaluator return structured output?</li><li>What two pieces of information should evaluation provide?</li><li>What does the optimizer do with feedback?</li><li>Why is a maximum-iteration limit necessary?</li><li>How does a list reducer help preserve tweet history?</li><li>Why should “max attempts reached” not automatically mean “approved”?</li></ol>
+<details><summary><strong>Show short answers</strong></summary><ol><li>Sequential work moves forward once; iterative work loops back to improve an output.</li><li>It makes decisions predictable and easier to route on.</li><li>An evaluation decision and actionable feedback.</li><li>It revises the current draft in response to the feedback.</li><li>It prevents a workflow from running indefinitely.</li><li>It combines each new list item with the existing list instead of overwriting it.</li><li>Because the draft may still fail the quality criteria and needs a distinct stop/review status.</li></ol></details>
+</section>
+</main>
+</div>
+<footer>Study notes prepared from the supplied transcript. Code is illustrative and may require adjustments for the versions of LangChain, LangGraph, and model APIs installed in your environment.</footer>
+</body>
+</html>
