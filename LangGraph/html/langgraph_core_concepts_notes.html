@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LangGraph Core Concepts — A Practical Learning Guide</title>
+<style>
+:root{--bg:#f5f7fb;--paper:#fff;--ink:#172033;--muted:#5b667b;--line:#dfe5ef;--blue:#2457c5;--blue2:#eaf1ff;--teal:#087f8c;--teal2:#e7f8f8;--amber:#9a5a00;--amber2:#fff4df;--purple:#6841a5;--purple2:#f2ebff;--shadow:0 10px 30px rgba(27,45,80,.07)}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.72 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.hero{background:linear-gradient(125deg,#10254d,#1e4c96 58%,#087f8c);color:#fff;padding:62px 24px 54px}.hero-inner{max-width:1180px;margin:auto}.eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:.78rem;font-weight:800;color:#bcd8ff}.hero h1{font-size:clamp(2.1rem,5vw,3.8rem);line-height:1.08;max-width:900px;margin:14px 0}.hero p{max-width:780px;color:#e0ebff;font-size:1.12rem;margin:0}.hero-pills{display:flex;flex-wrap:wrap;gap:9px;margin-top:24px}.pill{border:1px solid #ffffff45;border-radius:99px;padding:5px 12px;font-size:.85rem;color:#f3f7ff}
+.layout{max-width:1280px;margin:30px auto;padding:0 22px;display:grid;grid-template-columns:255px minmax(0,1fr);gap:28px}.toc{align-self:start;position:sticky;top:18px;max-height:calc(100vh - 36px);overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow)}.toc h2{font-size:.95rem;margin:0 0 10px}.toc a{display:block;text-decoration:none;color:var(--muted);font-size:.88rem;padding:5px 0;line-height:1.4}.toc a:hover{color:var(--blue)}main{min-width:0}.section{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:clamp(20px,3vw,36px);margin-bottom:22px;box-shadow:var(--shadow)}h2{font-size:1.75rem;line-height:1.25;margin:0 0 14px}h3{font-size:1.2rem;line-height:1.35;margin:26px 0 8px}h4{font-size:1rem;margin:18px 0 6px}p{margin:10px 0}ul,ol{padding-left:1.35rem}li{margin:5px 0}.lead{font-size:1.08rem;color:#36435a}.muted{color:var(--muted)}.callout{padding:15px 18px;border-left:4px solid var(--blue);background:var(--blue2);border-radius:10px;margin:18px 0}.callout.tip{border-color:var(--teal);background:var(--teal2)}.callout.warn{border-color:#d28a14;background:var(--amber2)}.callout.purple{border-color:var(--purple);background:var(--purple2)}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.mini{border:1px solid var(--line);border-radius:13px;padding:16px;background:#fff}.mini h3,.mini h4{margin-top:0}.tag{display:inline-block;font-size:.76rem;font-weight:800;border-radius:7px;padding:2px 8px;background:#eef2f8;color:#44516a}.diagram{border:1px solid var(--line);border-radius:14px;background:#fbfcff;padding:14px;margin:18px 0;overflow:hidden}.diagram svg{display:block;width:100%;height:auto;max-height:420px}.diagram figcaption{font-size:.86rem;color:var(--muted);margin:8px 5px 0}pre{background:#101a2c;color:#e8efff;border-radius:12px;padding:18px;overflow:auto;font-size:.88rem;line-height:1.55;tab-size:4}code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}p code,li code,td code{background:#edf1f8;padding:2px 5px;border-radius:5px;color:#22314e;font-size:.92em}table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.94rem}th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:11px 12px}th{background:#f0f4fa;font-weight:750}tr:last-child td{border-bottom:0}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}.table-wrap table{margin:0}.step{display:flex;gap:13px;margin:14px 0;align-items:flex-start}.num{width:32px;height:32px;flex:0 0 32px;border-radius:50%;display:grid;place-items:center;background:var(--blue);color:#fff;font-weight:800}.footer{max-width:1180px;margin:0 auto;padding:10px 22px 45px;color:var(--muted);font-size:.9rem}.small{font-size:.9rem}.kicker{font-weight:800;color:var(--blue);font-size:.8rem;text-transform:uppercase;letter-spacing:.09em}.flowtext{font-weight:700}.checklist li{list-style:"✓  ";padding-left:4px}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.toc{position:relative;top:auto;max-height:none}.toc nav{columns:2}.grid3{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
+@media(max-width:540px){.hero{padding:42px 18px}.layout{padding:0 12px;margin-top:16px}.section{padding:20px}.toc nav{columns:1}th,td{padding:9px;font-size:.87rem}}
+@media print{body{background:#fff}.hero{padding:25px}.layout{display:block;margin:0}.toc{position:static;max-height:none;margin-bottom:20px}.section{box-shadow:none;break-inside:avoid}.footer{padding-bottom:0}}
+</style>
+</head>
+<body>
+<header class="hero">
+ <div class="hero-inner">
+  <div class="eyebrow">Agentic AI · LangGraph · Study Notes</div>
+  <h1>LangGraph Core Concepts</h1>
+  <p>A practical, text-first guide to LLM workflows, graph structure, shared state, reducers, and the LangGraph execution lifecycle—based on the supplied CampusX lecture transcript.</p>
+  <div class="hero-pills"><span class="pill">Workflows</span><span class="pill">Nodes &amp; Edges</span><span class="pill">State</span><span class="pill">Reducers</span><span class="pill">Execution Model</span></div>
+ </div>
+</header>
+<div class="layout">
+<aside class="toc">
+ <h2>On this page</h2>
+ <nav>
+  <a href="#overview">1. What is LangGraph?</a>
+  <a href="#workflows">2. LLM workflows</a>
+  <a href="#patterns">3. Five workflow patterns</a>
+  <a href="#graph">4. Graphs, nodes &amp; edges</a>
+  <a href="#state">5. State</a>
+  <a href="#reducers">6. Reducers</a>
+  <a href="#execution">7. Execution model</a>
+  <a href="#code">8. Code walkthrough</a>
+  <a href="#comparison">9. Quick comparison</a>
+  <a href="#mistakes">10. Common mistakes</a>
+  <a href="#recap">11. Recap &amp; checklist</a>
+ </nav>
+</aside>
+<main>
+<section class="section" id="overview">
+ <div class="kicker">01 · Foundation</div><h2>What is LangGraph?</h2>
+ <p class="lead"><strong>LangGraph is an orchestration framework for building stateful, multi-step LLM workflows.</strong> It represents a workflow as a graph and executes the tasks according to the graph's connections.</p>
+ <p>Rather than treating an AI application as one large prompt, you break it into smaller tasks: call a model, call a tool, evaluate a result, make a decision, or ask the user for more information. LangGraph lets you define how those tasks connect and what should happen next.</p>
+ <figure class="diagram">
+ <svg viewBox="0 0 900 245" role="img" aria-label="Workflow graph: input, classify, branch to tools, combine results, respond">
+ <defs><marker id="arr1" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#55709b"/></marker></defs>
+ <rect x="20" y="86" width="120" height="64" rx="12" fill="#eaf1ff" stroke="#2457c5" stroke-width="2"/><text x="80" y="113" text-anchor="middle" font-size="15" fill="#172033" font-weight="700">User input</text><text x="80" y="133" text-anchor="middle" font-size="12" fill="#526078">starting data</text>
+ <rect x="190" y="86" width="145" height="64" rx="12" fill="#f2ebff" stroke="#6841a5" stroke-width="2"/><text x="262" y="113" text-anchor="middle" font-size="15" fill="#172033" font-weight="700">Router node</text><text x="262" y="133" text-anchor="middle" font-size="12" fill="#526078">classify intent</text>
+ <rect x="405" y="20" width="145" height="58" rx="12" fill="#e7f8f8" stroke="#087f8c" stroke-width="2"/><text x="477" y="45" text-anchor="middle" font-size="14" fill="#172033" font-weight="700">Refund node</text><text x="477" y="63" text-anchor="middle" font-size="12" fill="#526078">policy / action</text>
+ <rect x="405" y="92" width="145" height="58" rx="12" fill="#e7f8f8" stroke="#087f8c" stroke-width="2"/><text x="477" y="117" text-anchor="middle" font-size="14" fill="#172033" font-weight="700">Technical node</text><text x="477" y="135" text-anchor="middle" font-size="12" fill="#526078">troubleshoot</text>
+ <rect x="405" y="164" width="145" height="58" rx="12" fill="#e7f8f8" stroke="#087f8c" stroke-width="2"/><text x="477" y="189" text-anchor="middle" font-size="14" fill="#172033" font-weight="700">Sales node</text><text x="477" y="207" text-anchor="middle" font-size="12" fill="#526078">product advice</text>
+ <rect x="645" y="86" width="220" height="64" rx="12" fill="#fff4df" stroke="#b9780b" stroke-width="2"/><text x="755" y="113" text-anchor="middle" font-size="15" fill="#172033" font-weight="700">Response node</text><text x="755" y="133" text-anchor="middle" font-size="12" fill="#526078">format and return</text>
+ <g fill="none" stroke="#55709b" stroke-width="2.2" marker-end="url(#arr1)"><path d="M140 118 H190"/><path d="M335 106 C365 106 365 49 405 49"/><path d="M335 118 H405"/><path d="M335 130 C365 130 365 193 405 193"/><path d="M550 49 C610 49 590 104 645 104"/><path d="M550 121 H645"/><path d="M550 193 C610 193 590 132 645 132"/></g>
+ </svg><figcaption>Illustrative routing graph: a node performs a task; an edge determines where execution can go next.</figcaption>
+ </figure>
+ <div class="grid2">
+  <div class="mini"><h3>Core building blocks</h3><ul><li><strong>Nodes:</strong> tasks or functions.</li><li><strong>Edges:</strong> execution transitions.</li><li><strong>State:</strong> data shared across the run.</li><li><strong>Reducers:</strong> rules for applying state updates.</li></ul></div>
+  <div class="mini"><h3>Capabilities highlighted in the lecture</h3><ul><li>Sequential and parallel execution</li><li>Conditional branching and loops</li><li>Conversation/workflow state</li><li>Persistence and resuming after interruption</li></ul></div>
+ </div>
+ <div class="callout tip"><strong>Mental model:</strong> LangGraph describes both <em>what each step does</em> and <em>how execution moves between steps</em>.</div>
+</section>
+
+<section class="section" id="workflows">
+ <div class="kicker">02 · Design before code</div><h2>What is an LLM workflow?</h2>
+ <p>A <strong>workflow</strong> is a sequence of tasks executed to achieve a goal. An <strong>LLM workflow</strong> is a workflow in which one or more steps use an LLM—for example, to generate text, reason over information, classify a request, call tools, or make a decision.</p>
+ <h3>Example: automated hiring</h3>
+ <figure class="diagram"><svg viewBox="0 0 850 115" role="img" aria-label="Hiring workflow sequence">
+ <defs><marker id="arr2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#55709b"/></marker></defs>
+ <g font-size="14" text-anchor="middle" fill="#172033" font-weight="700"><rect x="8" y="25" width="145" height="58" rx="10" fill="#eaf1ff" stroke="#2457c5"/><text x="80" y="49">Write job</text><text x="80" y="67">description</text><rect x="180" y="25" width="145" height="58" rx="10" fill="#eaf1ff" stroke="#2457c5"/><text x="252" y="49">Publish</text><text x="252" y="67">job listing</text><rect x="352" y="25" width="145" height="58" rx="10" fill="#eaf1ff" stroke="#2457c5"/><text x="424" y="49">Shortlist</text><text x="424" y="67">candidates</text><rect x="524" y="25" width="145" height="58" rx="10" fill="#eaf1ff" stroke="#2457c5"/><text x="596" y="49">Conduct</text><text x="596" y="67">interviews</text><rect x="696" y="25" width="145" height="58" rx="10" fill="#e7f8f8" stroke="#087f8c"/><text x="768" y="58">Onboard</text></g><g stroke="#55709b" stroke-width="2" fill="none" marker-end="url(#arr2)"><path d="M153 54 H180"/><path d="M325 54 H352"/><path d="M497 54 H524"/><path d="M669 54 H696"/></g></svg><figcaption>A workflow is more than a single model call: the tasks must happen in a meaningful order.</figcaption></figure>
+ <p>Other workflows can be non-linear. Some tasks can run concurrently, some require a conditional decision, and some repeat until a quality condition is met.</p>
+ <div class="table-wrap"><table><thead><tr><th>Shape</th><th>Execution idea</th><th>Example</th></tr></thead><tbody>
+ <tr><td><strong>Linear</strong></td><td>Step A → B → C</td><td>Outline, then draft a report</td></tr>
+ <tr><td><strong>Parallel</strong></td><td>Independent tasks run concurrently</td><td>Run several content checks</td></tr>
+ <tr><td><strong>Branching</strong></td><td>Choose a path based on a condition</td><td>Route refund vs technical support</td></tr>
+ <tr><td><strong>Looped</strong></td><td>Repeat a task until a stopping condition</td><td>Revise an essay after feedback</td></tr>
+ </tbody></table></div>
+</section>
+
+<section class="section" id="patterns">
+ <div class="kicker">03 · Common patterns</div><h2>Five common LLM workflow patterns</h2>
+ <p>The lecture introduces five reusable patterns. Real applications often combine more than one of them.</p>
+ <h3>1. Prompt chaining</h3>
+ <p>Use multiple LLM calls in sequence, where a later call uses the earlier call's output. This is useful when a large task can be decomposed into smaller, more manageable subtasks.</p>
+ <figure class="diagram"><svg viewBox="0 0 820 130" role="img" aria-label="Prompt chaining: topic to outline to report">
+ <defs><marker id="arr3" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#55709b"/></marker></defs>
+ <g text-anchor="middle" font-size="15" fill="#172033"><rect x="20" y="25" width="140" height="66" rx="11" fill="#f0f4fa" stroke="#a9b7ce"/><text x="90" y="53" font-weight="700">Topic</text><text x="90" y="73" font-size="12">user input</text><rect x="230" y="25" width="160" height="66" rx="11" fill="#eaf1ff" stroke="#2457c5" stroke-width="2"/><text x="310" y="53" font-weight="700">LLM call 1</text><text x="310" y="73" font-size="12">create outline</text><rect x="470" y="25" width="160" height="66" rx="11" fill="#e7f8f8" stroke="#087f8c" stroke-width="2"/><text x="550" y="53" font-weight="700">LLM call 2</text><text x="550" y="73" font-size="12">write report</text><rect x="690" y="25" width="110" height="66" rx="11" fill="#fff4df" stroke="#b9780b"/><text x="745" y="53" font-weight="700">Check</text><text x="745" y="73" font-size="12">e.g. length</text></g><g fill="none" stroke="#55709b" stroke-width="2" marker-end="url(#arr3)"><path d="M160 58 H230"/><path d="M390 58 H470"/><path d="M630 58 H690"/></g></svg><figcaption>Example from the lecture: generate an outline from a topic, then expand the outline into a report and optionally validate the result.</figcaption></figure>
+ <p><strong>Use it when:</strong> the task benefits from intermediate representations or checkpoints. A check between calls can reject an output that violates a constraint, such as a maximum word count.</p>
+ <h3>2. Routing</h3>
+ <p>A router interprets the request and directs it to the most appropriate specialist or processing path.</p>
+ <div class="callout"><strong>Example:</strong> a customer-support request is classified as refund-related, technical, or sales-related, then sent to the relevant handler.</div>
+ <p><strong>Use it when:</strong> different request categories require different prompts, tools, policies, or specialist models.</p>
+ <h3>3. Parallelization</h3>
+ <p>Split one task into known, independent subtasks, execute them concurrently, and combine their results.</p>
+ <figure class="diagram"><svg viewBox="0 0 850 235" role="img" aria-label="Parallel moderation checks and aggregation">
+ <defs><marker id="arr4" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#55709b"/></marker></defs>
+ <rect x="20" y="85" width="145" height="62" rx="11" fill="#f0f4fa" stroke="#a9b7ce"/><text x="92" y="111" text-anchor="middle" font-size="14" font-weight="700" fill="#172033">Video / transcript</text><text x="92" y="130" text-anchor="middle" font-size="12" fill="#526078">input</text>
+ <g font-size="14" text-anchor="middle" fill="#172033"><rect x="270" y="15" width="200" height="52" rx="10" fill="#eaf1ff" stroke="#2457c5"/><text x="370" y="37" font-weight="700">Guideline check</text><text x="370" y="54" font-size="12">policy compliance</text><rect x="270" y="88" width="200" height="52" rx="10" fill="#e7f8f8" stroke="#087f8c"/><text x="370" y="110" font-weight="700">Misinformation check</text><text x="370" y="127" font-size="12">factual risk</text><rect x="270" y="161" width="200" height="52" rx="10" fill="#f2ebff" stroke="#6841a5"/><text x="370" y="183" font-weight="700">Sensitive-content check</text><text x="370" y="200" font-size="12">content policy</text><rect x="610" y="85" width="210" height="62" rx="11" fill="#fff4df" stroke="#b9780b"/><text x="715" y="111" font-weight="700">Aggregator</text><text x="715" y="130" font-size="12">combine all results</text></g>
+ <g fill="none" stroke="#55709b" stroke-width="2" marker-end="url(#arr4)"><path d="M165 116 C210 116 210 41 270 41"/><path d="M165 116 H270"/><path d="M165 116 C210 116 210 187 270 187"/><path d="M470 41 C535 41 545 98 610 98"/><path d="M470 114 H610"/><path d="M470 187 C535 187 545 134 610 134"/></g></svg><figcaption>Three predefined checks can run independently; the aggregator makes the final decision from their results.</figcaption></figure>
+ <p><strong>Use it when:</strong> subtasks are independent and can be performed at the same time. Parallelism may reduce latency, but the aggregation rule must be explicit.</p>
+ <h3>4. Orchestrator–workers</h3>
+ <p>This also distributes work across multiple workers, but the orchestrator decides <em>dynamically</em> what subtasks are needed based on the input. The exact tasks are not all predefined.</p>
+ <div class="grid2"><div class="mini"><span class="tag">Parallelization</span><h4>Known work</h4><p>Checks and their responsibilities are specified ahead of time.</p></div><div class="mini"><span class="tag">Orchestrator–workers</span><h4>Dynamic work</h4><p>An orchestrator plans tasks and assigns them to workers according to the request.</p></div></div>
+ <p><strong>Lecture example:</strong> a research assistant may search academic papers for a scientific query and news sources for a current social or political topic. The query influences which sources and tasks are assigned.</p>
+ <h3>5. Evaluator–optimizer</h3>
+ <p>A generator creates a solution; an evaluator judges it against explicit criteria. If the solution is rejected, the evaluator provides feedback and the generator tries again.</p>
+ <figure class="diagram"><svg viewBox="0 0 850 205" role="img" aria-label="Evaluator optimizer feedback loop">
+ <defs><marker id="arr5" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#55709b"/></marker></defs>
+ <rect x="25" y="65" width="180" height="70" rx="12" fill="#eaf1ff" stroke="#2457c5" stroke-width="2"/><text x="115" y="92" text-anchor="middle" font-size="15" font-weight="700" fill="#172033">Generator</text><text x="115" y="113" text-anchor="middle" font-size="12" fill="#526078">draft / solution</text>
+ <rect x="330" y="65" width="180" height="70" rx="12" fill="#f2ebff" stroke="#6841a5" stroke-width="2"/><text x="420" y="92" text-anchor="middle" font-size="15" font-weight="700" fill="#172033">Evaluator</text><text x="420" y="113" text-anchor="middle" font-size="12" fill="#526078">criteria + feedback</text>
+ <rect x="640" y="65" width="180" height="70" rx="12" fill="#e7f8f8" stroke="#087f8c" stroke-width="2"/><text x="730" y="92" text-anchor="middle" font-size="15" font-weight="700" fill="#172033">Final output</text><text x="730" y="113" text-anchor="middle" font-size="12" fill="#526078">accepted solution</text>
+ <g fill="none" stroke="#55709b" stroke-width="2" marker-end="url(#arr5)"><path d="M205 100 H330"/><path d="M510 100 H640"/><path d="M420 135 V174 H115 V135"/></g><text x="570" y="88" font-size="12" fill="#087f8c">accept</text><text x="267" y="164" font-size="12" fill="#6841a5">reject → feedback → revise</text></svg><figcaption>The loop needs a stopping condition, such as acceptance, a maximum number of attempts, or a timeout.</figcaption></figure>
+ <p><strong>Use it when:</strong> output quality is iterative—such as drafting an email, blog post, poem, or story—and evaluation criteria can guide revisions.</p>
+ <div class="callout warn"><strong>Production note:</strong> never rely only on an evaluator eventually accepting an answer. Define a maximum iteration count and a fallback path to avoid an endless loop.</div>
+</section>
+
+<section class="section" id="graph">
+ <div class="kicker">04 · Graph structure</div><h2>Graphs, nodes, and edges</h2>
+ <p>In LangGraph, a workflow is represented as a graph. In the lecture's simplified model, a node is a Python function that performs one task; edges define which node may execute next.</p>
+ <figure class="diagram"><svg viewBox="0 0 850 210" role="img" aria-label="Graph with sequential nodes and conditional branches">
+ <defs><marker id="arr6" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#55709b"/></marker></defs>
+ <rect x="20" y="74" width="125" height="62" rx="11" fill="#eaf1ff" stroke="#2457c5" stroke-width="2"/><text x="82" y="100" text-anchor="middle" font-size="14" font-weight="700" fill="#172033">Collect essay</text><text x="82" y="119" text-anchor="middle" font-size="12" fill="#526078">node</text>
+ <rect x="205" y="74" width="135" height="62" rx="11" fill="#eaf1ff" stroke="#2457c5" stroke-width="2"/><text x="272" y="100" text-anchor="middle" font-size="14" font-weight="700" fill="#172033">Evaluate</text><text x="272" y="119" text-anchor="middle" font-size="12" fill="#526078">node</text>
+ <path d="M420 65 L470 105 L420 145 L370 105 Z" fill="#fff4df" stroke="#b9780b" stroke-width="2"/><text x="420" y="101" text-anchor="middle" font-size="12" font-weight="700" fill="#172033">Score ≥</text><text x="420" y="116" text-anchor="middle" font-size="12" font-weight="700" fill="#172033">threshold?</text>
+ <rect x="535" y="20" width="140" height="58" rx="11" fill="#e7f8f8" stroke="#087f8c" stroke-width="2"/><text x="605" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#172033">Celebrate</text><text x="605" y="63" text-anchor="middle" font-size="12" fill="#526078">success path</text>
+ <rect x="535" y="133" width="140" height="58" rx="11" fill="#f2ebff" stroke="#6841a5" stroke-width="2"/><text x="605" y="158" text-anchor="middle" font-size="14" font-weight="700" fill="#172033">Give feedback</text><text x="605" y="176" text-anchor="middle" font-size="12" fill="#526078">revision path</text>
+ <rect x="725" y="133" width="105" height="58" rx="11" fill="#f0f4fa" stroke="#a9b7ce"/><text x="777" y="157" text-anchor="middle" font-size="13" font-weight="700" fill="#172033">Revise</text><text x="777" y="175" text-anchor="middle" font-size="12" fill="#526078">loop back</text>
+ <g fill="none" stroke="#55709b" stroke-width="2" marker-end="url(#arr6)"><path d="M145 105 H205"/><path d="M340 105 H370"/><path d="M460 91 C490 91 490 49 535 49"/><path d="M445 131 C480 131 490 162 535 162"/><path d="M675 162 H725"/><path d="M777 133 V205 H82 V136"/></g>
+ <text x="483" y="53" font-size="12" fill="#087f8c">yes</text><text x="480" y="151" font-size="12" fill="#6841a5">no</text></svg><figcaption>Essay-feedback example from the lecture: conditional edges select success or revision, and a loop supports another attempt.</figcaption></figure>
+ <div class="table-wrap"><table><thead><tr><th>Element</th><th>Meaning</th><th>Question it answers</th></tr></thead><tbody>
+ <tr><td><strong>Node</strong></td><td>A unit of work, typically a function that reads state and returns updates.</td><td>What should this step do?</td></tr>
+ <tr><td><strong>Edge</strong></td><td>A connection describing the next step or steps.</td><td>Where does execution go next?</td></tr>
+ <tr><td><strong>Conditional edge</strong></td><td>Selects the next path based on state or a routing decision.</td><td>Which path should run?</td></tr>
+ <tr><td><strong>Loop</strong></td><td>An edge that returns execution to an earlier node.</td><td>Should a step be repeated?</td></tr>
+ </tbody></table></div>
+ <p>Thinking in graph form makes sequential, parallel, branching, and iterative behavior explicit. It also makes it easier to inspect the workflow before implementing it.</p>
+</section>
+
+<section class="section" id="state">
+ <div class="kicker">05 · Shared data</div><h2>State: the information that travels through a graph</h2>
+ <p><strong>State</strong> is the shared data structure that carries information between nodes while the workflow runs. It holds the values needed to make progress, and those values may change as execution proceeds.</p>
+ <p>For the essay-evaluation application described in the lecture, state might include:</p>
+ <div class="grid3"><div class="mini"><h4>Input</h4><p>Essay topic and current essay text.</p></div><div class="mini"><h4>Evaluation</h4><p>Clarity, depth, and language scores.</p></div><div class="mini"><h4>Decision</h4><p>Total score, threshold result, feedback, and revision history.</p></div></div>
+ <h3>How state moves</h3>
+ <figure class="diagram"><svg viewBox="0 0 850 170" role="img" aria-label="Shared state passed from node to node and updated">
+ <defs><marker id="arr7" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#55709b"/></marker></defs>
+ <rect x="20" y="45" width="155" height="70" rx="11" fill="#eaf1ff" stroke="#2457c5" stroke-width="2"/><text x="97" y="71" text-anchor="middle" font-size="14" font-weight="700" fill="#172033">Node A</text><text x="97" y="92" text-anchor="middle" font-size="12" fill="#526078">read + update</text>
+ <rect x="230" y="45" width="170" height="70" rx="11" fill="#f0f4fa" stroke="#a9b7ce"/><text x="315" y="71" text-anchor="middle" font-size="14" font-weight="700" fill="#172033">Shared state</text><text x="315" y="92" text-anchor="middle" font-size="12" fill="#526078">essay, scores, etc.</text>
+ <rect x="455" y="45" width="155" height="70" rx="11" fill="#e7f8f8" stroke="#087f8c" stroke-width="2"/><text x="532" y="71" text-anchor="middle" font-size="14" font-weight="700" fill="#172033">Node B</text><text x="532" y="92" text-anchor="middle" font-size="12" fill="#526078">read + update</text>
+ <rect x="665" y="45" width="165" height="70" rx="11" fill="#fff4df" stroke="#b9780b" stroke-width="2"/><text x="747" y="71" text-anchor="middle" font-size="14" font-weight="700" fill="#172033">Updated state</text><text x="747" y="92" text-anchor="middle" font-size="12" fill="#526078">passed onward</text>
+ <g stroke="#55709b" stroke-width="2" fill="none" marker-end="url(#arr7)"><path d="M175 80 H230"/><path d="M400 80 H455"/><path d="M610 80 H665"/></g><text x="315" y="139" text-anchor="middle" font-size="12" fill="#526078">Nodes use a shared schema; each node returns updates.</text></svg><figcaption>Conceptually, each node receives the current state and contributes updates for subsequent execution.</figcaption></figure>
+ <p>In Python, the lecture introduces a <code>TypedDict</code> as a common way to describe the keys and types in state. Pydantic models can also be used when runtime validation is desirable.</p>
+ <pre><code>from typing import TypedDict
+
+class EssayState(TypedDict):
+    topic: str
+    essay: str
+    clarity_score: int
+    depth_score: int
+    language_score: int
+    total_score: int
+    feedback: str</code></pre>
+ <div class="callout tip"><strong>Design rule:</strong> define the state schema before writing nodes. Ask what data each step needs, what it produces, and what must survive across a loop or interruption.</div>
+</section>
+
+<section class="section" id="reducers">
+ <div class="kicker">06 · State updates</div><h2>Reducers: how state updates are applied</h2>
+ <p>Nodes can return updates to state. A <strong>reducer</strong> defines how a new value is combined with the existing value for a particular state key. The update policy can differ from one key to another.</p>
+ <div class="table-wrap"><table><thead><tr><th>Policy</th><th>What happens</th><th>Example</th></tr></thead><tbody>
+ <tr><td><strong>Replace</strong></td><td>New value replaces the old value.</td><td>Current essay text or latest calculated score.</td></tr>
+ <tr><td><strong>Append / accumulate</strong></td><td>New item is added while earlier items remain.</td><td>Conversation messages or essay attempts.</td></tr>
+ <tr><td><strong>Merge</strong></td><td>New information is merged according to a defined rule.</td><td>Combining partial structured results.</td></tr>
+ </tbody></table></div>
+ <h3>Why replacement is sometimes wrong</h3>
+ <p>For a calculation workflow, replacement is reasonable: a node may write a sum of <code>11</code>, and the next node can replace it with the doubled result <code>22</code>.</p>
+ <p>For a chatbot, replacing the entire message history with the latest message loses context. If a user first says “My name is Nitesh” and later asks “What is my name?”, the model needs the earlier message or a separately stored memory field to answer correctly.</p>
+ <p>Likewise, for essay feedback, overwriting <code>essay</code> with each revision preserves only the latest draft. If the user needs to compare progress, keep a separate list of attempts or history.</p>
+ <pre><code>from typing import Annotated, TypedDict
+from langgraph.graph.message import add_messages
+
+class ChatState(TypedDict):
+    # Appends/merges messages using LangGraph's message-aware reducer.
+    messages: Annotated[list, add_messages]</code></pre>
+ <div class="callout warn"><strong>Important distinction:</strong> a reducer is not a node and does not decide the next node. It determines how an update to a state key is applied. Edges control execution flow.</div>
+ <h3>Reducers matter especially in parallel workflows</h3>
+ <p>When multiple branches return values for the same key, the graph needs a clear aggregation strategy. A list-accumulating reducer can preserve all branch results; a replacement-style key may not represent multiple independent outputs appropriately. Design and test these rules deliberately.</p>
+</section>
+
+<section class="section" id="execution">
+ <div class="kicker">07 · Runtime lifecycle</div><h2>LangGraph execution model</h2>
+ <p>The lecture describes the execution model as inspired by Google's Pregel graph-processing approach. Its key teaching sequence is: define the graph, compile it, and then invoke it with input.</p>
+ <div class="step"><div class="num">1</div><div><strong>Define the graph</strong><p>Create the state schema, define node functions, and connect nodes with edges. This describes the workflow structure.</p></div></div>
+ <div class="step"><div class="num">2</div><div><strong>Compile the graph</strong><p>Compile the graph into an executable application. Compilation is also a place for the framework to validate graph structure and prepare execution.</p></div></div>
+ <div class="step"><div class="num">3</div><div><strong>Invoke with input</strong><p>Start execution by supplying initial state. LangGraph runs eligible nodes according to the graph's edges and state updates.</p></div></div>
+ <div class="step"><div class="num">4</div><div><strong>Update state and continue</strong><p>Nodes return updates. Reducers apply them; edges determine subsequent work. Conditional edges can branch, and loops can revisit earlier nodes.</p></div></div>
+ <div class="step"><div class="num">5</div><div><strong>Stop at a terminal condition</strong><p>The graph finishes when execution reaches an ending path, such as <code>END</code>, or when the run is interrupted or fails.</p></div></div>
+ <figure class="diagram"><svg viewBox="0 0 850 145" role="img" aria-label="Define, compile, invoke, update and finish execution lifecycle">
+ <defs><marker id="arr8" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#55709b"/></marker></defs>
+ <g font-size="14" text-anchor="middle" fill="#172033"><rect x="12" y="35" width="145" height="65" rx="11" fill="#eaf1ff" stroke="#2457c5"/><text x="84" y="61" font-weight="700">Define</text><text x="84" y="81" font-size="12">state + graph</text><rect x="183" y="35" width="145" height="65" rx="11" fill="#f2ebff" stroke="#6841a5"/><text x="255" y="61" font-weight="700">Compile</text><text x="255" y="81" font-size="12">prepare runnable</text><rect x="354" y="35" width="145" height="65" rx="11" fill="#e7f8f8" stroke="#087f8c"/><text x="426" y="61" font-weight="700">Invoke</text><text x="426" y="81" font-size="12">initial input</text><rect x="525" y="35" width="145" height="65" rx="11" fill="#fff4df" stroke="#b9780b"/><text x="597" y="61" font-weight="700">Execute</text><text x="597" y="81" font-size="12">nodes + updates</text><rect x="696" y="35" width="142" height="65" rx="11" fill="#f0f4fa" stroke="#a9b7ce"/><text x="767" y="61" font-weight="700">Finish</text><text x="767" y="81" font-size="12">result / END</text></g><g stroke="#55709b" stroke-width="2" fill="none" marker-end="url(#arr8)"><path d="M157 67 H183"/><path d="M328 67 H354"/><path d="M499 67 H525"/><path d="M670 67 H696"/></g></svg><figcaption>Conceptual lifecycle from graph construction to execution and final output.</figcaption></figure>
+ <div class="callout"><strong>Keep the concepts separate:</strong> compilation prepares the graph; invocation starts a run; state carries data; reducers apply updates; edges determine the next task.</div>
+ <p class="small muted">The transcript excerpt names graph definition and compilation and discusses the Pregel inspiration. This section summarizes those ideas at a conceptual level rather than treating it as a complete specification of every runtime detail.</p>
+</section>
+
+<section class="section" id="code">
+ <div class="kicker">08 · From concept to code</div><h2>Minimal LangGraph code walkthrough</h2>
+ <p>The following example makes the lecture's graph concepts concrete: a state schema, Python-function nodes, a conditional edge, compilation, and invocation. It is an illustrative starter example; install a compatible version of <code>langgraph</code> before running it.</p>
+ <pre><code>from typing import TypedDict, Literal
+from langgraph.graph import StateGraph, START, END
+
+class EssayState(TypedDict):
+    essay: str
+    score: int
+    feedback: str
+    passed: bool
+
+def evaluate_essay(state: EssayState) -&gt; dict:
+    # Replace this simple rule with an LLM or rubric-based evaluator.
+    score = min(len(state["essay"].split()) // 10, 15)
+    return {
+        "score": score,
+        "passed": score &gt;= 10,
+        "feedback": "Good work." if score &gt;= 10 else "Add depth and supporting examples."
+    }
+
+def route_after_evaluation(
+    state: EssayState
+) -&gt; Literal["accepted", "revise"]:
+    return "accepted" if state["passed"] else "revise"
+
+def accepted(state: EssayState) -&gt; dict:
+    return {"feedback": "Essay accepted. " + state["feedback"]}
+
+def revise(state: EssayState) -&gt; dict:
+    # In a real app, this could return feedback to the user
+    # and pause for a revised essay rather than looping blindly.
+    return {"feedback": "Please revise and submit again. " + state["feedback"]}
+
+builder = StateGraph(EssayState)
+builder.add_node("evaluate", evaluate_essay)
+builder.add_node("accepted", accepted)
+builder.add_node("revise", revise)
+
+builder.add_edge(START, "evaluate")
+builder.add_conditional_edges(
+    "evaluate",
+    route_after_evaluation,
+    {
+        "accepted": "accepted",
+        "revise": "revise",
+    },
+)
+builder.add_edge("accepted", END)
+builder.add_edge("revise", END)
+
+graph = builder.compile()
+
+result = graph.invoke({
+    "essay": "A sample essay with enough supporting discussion ...",
+    "score": 0,
+    "feedback": "",
+    "passed": False,
+})
+print(result)</code></pre>
+ <h3>Read the example through the core concepts</h3>
+ <ul>
+ <li><strong>State:</strong> <code>EssayState</code> describes the data that moves between nodes.</li>
+ <li><strong>Nodes:</strong> <code>evaluate_essay</code>, <code>accepted</code>, and <code>revise</code> are Python functions.</li>
+ <li><strong>Edges:</strong> <code>START</code> leads to evaluation; conditional routing selects the next node.</li>
+ <li><strong>Compile:</strong> <code>builder.compile()</code> prepares the graph for execution.</li>
+ <li><strong>Invoke:</strong> <code>graph.invoke(...)</code> runs it with an initial state.</li>
+ </ul>
+ <div class="callout warn"><strong>Note on this teaching example:</strong> it ends after returning feedback. It does not automatically collect a new essay from a human. A real human-in-the-loop revision flow needs an interaction mechanism, persistence/checkpointing where appropriate, and a deliberate resume path.</div>
+ <h3>Example: append message history instead of overwriting it</h3>
+ <pre><code>from typing import Annotated, TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langchain_core.messages import HumanMessage, AIMessage
+
+class ConversationState(TypedDict):
+    messages: Annotated[list, add_messages]
+
+def greet(state: ConversationState) -&gt; dict:
+    # Illustrative fixed response; a real node would call a chat model.
+    return {"messages": [AIMessage(content="Hello! How can I help?")]}
+
+builder = StateGraph(ConversationState)
+builder.add_node("greet", greet)
+builder.add_edge(START, "greet")
+builder.add_edge("greet", END)
+chat_graph = builder.compile()
+
+result = chat_graph.invoke({
+    "messages": [HumanMessage(content="Hi, my name is Nitesh.")]
+})</code></pre>
+ <p class="small muted">This snippet illustrates a message-aware reducer. In a production conversational application, model invocation, turn management, persistence, and privacy controls would need to be implemented as well.</p>
+</section>
+
+<section class="section" id="comparison">
+ <div class="kicker">09 · At a glance</div><h2>Quick comparison of the five patterns</h2>
+ <div class="table-wrap"><table><thead><tr><th>Pattern</th><th>Main question</th><th>Structure</th><th>Lecture example</th></tr></thead><tbody>
+ <tr><td><strong>Prompt chaining</strong></td><td>What step should follow this output?</td><td>Sequential calls</td><td>Topic → outline → report</td></tr>
+ <tr><td><strong>Routing</strong></td><td>Who should handle this request?</td><td>Conditional branch</td><td>Refund / technical / sales support</td></tr>
+ <tr><td><strong>Parallelization</strong></td><td>Which independent checks can run together?</td><td>Fan-out then aggregate</td><td>Multiple content-moderation checks</td></tr>
+ <tr><td><strong>Orchestrator–workers</strong></td><td>What subtasks are needed for this input?</td><td>Dynamic planning + parallel workers</td><td>Research assistant that varies its searches</td></tr>
+ <tr><td><strong>Evaluator–optimizer</strong></td><td>How can this result improve iteratively?</td><td>Generate → evaluate → feedback loop</td><td>Improve an email, blog, or essay</td></tr>
+ </tbody></table></div>
+ <h3>Which concepts answer which design questions?</h3>
+ <div class="table-wrap"><table><thead><tr><th>Design question</th><th>LangGraph concept</th></tr></thead><tbody>
+ <tr><td>What work does each step perform?</td><td>Nodes</td></tr><tr><td>What happens after a step?</td><td>Edges / conditional edges</td></tr><tr><td>What information must survive between steps?</td><td>State</td></tr><tr><td>Should new information replace or accumulate?</td><td>Reducers</td></tr><tr><td>How do I make the definition executable?</td><td>Compile, then invoke</td></tr>
+ </tbody></table></div>
+</section>
+
+<section class="section" id="mistakes">
+ <div class="kicker">10 · Practical cautions</div><h2>Common mistakes to avoid</h2>
+ <ul>
+ <li><strong>Starting with code instead of the workflow.</strong> First write down the tasks, decisions, loops, and stopping conditions.</li>
+ <li><strong>Putting everything in one node.</strong> Split distinct responsibilities when it improves observability, testing, or routing.</li>
+ <li><strong>Designing state after nodes.</strong> Define the fields and their lifecycle first, then implement nodes around them.</li>
+ <li><strong>Overwriting information that should be retained.</strong> Chat history, parallel branch outputs, and revision history often need accumulation rather than replacement.</li>
+ <li><strong>Leaving conditional routes incomplete.</strong> Ensure each possible outcome has a valid next step and a defined terminal path.</li>
+ <li><strong>Creating unbounded loops.</strong> Set maximum attempts, timeouts, or other termination conditions.</li>
+ <li><strong>Assuming parallel results automatically combine correctly.</strong> Decide how multiple updates to a state key should be reduced.</li>
+ <li><strong>Confusing workflow state with durable memory.</strong> State used during a run is not automatically a complete long-term memory or persistence strategy; configure persistence/checkpointing when the application requires it.</li>
+ </ul>
+</section>
+
+<section class="section" id="recap">
+ <div class="kicker">11 · Revision notes</div><h2>Recap and self-check</h2>
+ <div class="callout tip"><strong>One-sentence summary:</strong> LangGraph models an LLM application as connected tasks (nodes and edges), passes shared state between those tasks, and uses reducers to define how returned updates affect that state.</div>
+ <ul class="checklist">
+ <li>I can explain why LangGraph is an orchestration framework.</li>
+ <li>I can distinguish a workflow from an LLM workflow.</li>
+ <li>I can identify prompt chaining, routing, parallelization, orchestrator–workers, and evaluator–optimizer.</li>
+ <li>I can explain nodes, sequential edges, conditional edges, branches, and loops.</li>
+ <li>I can propose a state schema for a multi-step application.</li>
+ <li>I can explain why message history may need an accumulating reducer.</li>
+ <li>I can distinguish state-update policy from control-flow routing.</li>
+ <li>I can describe the define → compile → invoke execution lifecycle.</li>
+ </ul>
+ <h3>Try these questions</h3>
+ <ol>
+ <li>A customer query may be about refunds, sales, or technical support. Which workflow pattern fits?</li>
+ <li>Three independent safety checks must run on the same video. Which pattern fits, and what must happen to their outputs?</li>
+ <li>Why can replacing the <code>messages</code> state key break a multi-turn conversation?</li>
+ <li>What is the difference between a conditional edge and a reducer?</li>
+ <li>Why should a revision loop have a maximum attempt count?</li>
+ </ol>
+ <details><summary><strong>Show suggested answers</strong></summary><ol><li>Routing.</li><li>Parallelization, followed by aggregation of the check results.</li><li>Earlier turns may be lost, so the model cannot use the conversation context.</li><li>A conditional edge selects the next node; a reducer determines how an update is applied to a state key.</li><li>To avoid unbounded execution, excessive cost, or a workflow that never terminates.</li></ol></details>
+</section>
+</main>
+</div>
+<footer class="footer">Prepared as a standalone HTML learning article from the supplied lecture transcript. The diagrams are embedded SVGs, so they remain sharp when resized and do not depend on external image links.</footer>
+</body>
+</html>
