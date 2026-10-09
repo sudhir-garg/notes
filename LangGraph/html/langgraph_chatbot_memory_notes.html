@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building a Conversational Chatbot with LangGraph — Study Notes</title>
+<style>
+:root{--ink:#182230;--muted:#596579;--paper:#fff;--bg:#f3f6fb;--line:#dce4ef;--blue:#2457c5;--blue2:#eaf1ff;--green:#16734a;--greenbg:#e8f7ef;--amber:#8a5700;--amberbg:#fff4d9;--code:#101827}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.72 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.wrap{max-width:980px;margin:auto;padding:28px 20px 70px}.hero{background:linear-gradient(135deg,#12234b,#2457c5);color:white;border-radius:22px;padding:42px 36px;margin-bottom:22px;box-shadow:0 14px 35px #1d3b771f}.eyebrow{text-transform:uppercase;letter-spacing:.13em;font-size:.78rem;font-weight:700;opacity:.85}.hero h1{font-size:clamp(2rem,5vw,3.1rem);line-height:1.12;margin:.6rem 0 1rem}.hero p{max-width:760px;color:#e4ecff;font-size:1.07rem}.meta{display:flex;gap:9px;flex-wrap:wrap;margin-top:20px}.pill{border:1px solid #ffffff55;border-radius:999px;padding:4px 11px;font-size:.82rem}
+.layout{display:grid;grid-template-columns:240px minmax(0,1fr);gap:22px;align-items:start}.toc,.content-card{background:var(--paper);border:1px solid var(--line);border-radius:16px}.toc{padding:18px;position:sticky;top:16px}.toc h2{font-size:1rem;margin:0 0 10px}.toc a{display:block;color:var(--blue);text-decoration:none;font-size:.91rem;padding:5px 0}.toc a:hover{text-decoration:underline}.content-card{padding:clamp(20px,4vw,38px);min-width:0}.content-card section{scroll-margin-top:24px;margin:0 0 36px}.content-card section:last-child{margin-bottom:0}h2{font-size:1.65rem;line-height:1.25;margin:0 0 14px}h3{font-size:1.16rem;margin:24px 0 8px}p{margin:.65rem 0}ul,ol{padding-left:1.4rem}li{margin:.28rem 0}.lead{font-size:1.08rem;color:#35445b}.callout{padding:15px 17px;border-left:4px solid var(--blue);background:var(--blue2);border-radius:9px;margin:17px 0}.success{border-color:var(--green);background:var(--greenbg)}.warning{border-color:#d29317;background:var(--amberbg)}.diagram{border:1px solid var(--line);border-radius:14px;background:#fbfdff;padding:18px;margin:18px 0;text-align:center}.flow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}.node{background:white;border:2px solid #91a9d8;border-radius:10px;padding:10px 14px;font-weight:650;min-width:105px}.node.startend{border-color:#7a8aa1;border-radius:999px;min-width:80px}.arrow{font-weight:800;color:var(--blue);font-size:1.3rem}.caption{font-size:.88rem;color:var(--muted);margin-top:10px}pre{background:var(--code);color:#e7edf7;padding:19px;border-radius:12px;overflow:auto;font-size:.87rem;line-height:1.6;tab-size:4}code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}p code,li code,td code{background:#edf1f7;color:#25324a;padding:.12em .34em;border-radius:5px;font-size:.91em}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;margin:15px 0;font-size:.94rem}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f2f6fc}.kicker{color:var(--muted);font-size:.9rem}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.mini{border:1px solid var(--line);border-radius:12px;padding:15px}.mini h3{margin:0 0 5px}.checklist li::marker{color:var(--green)}.footer{color:var(--muted);text-align:center;font-size:.9rem;margin-top:24px}
+@media(max-width:760px){.layout{grid-template-columns:1fr}.toc{position:static}.toc nav{columns:2}.hero{padding:30px 24px}.grid2{grid-template-columns:1fr}}
+@media print{body{background:white}.wrap{max-width:none;padding:0}.hero{box-shadow:none}.layout{display:block}.toc{position:static;margin-bottom:20px}.content-card,.toc,.hero{break-inside:avoid}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:inherit}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+<div class="eyebrow">Agentic AI · LangGraph · Study Guide</div>
+<h1>Building a Conversational Chatbot with Memory</h1>
+<p>Structured notes from the supplied lesson: design a one-node LangGraph chatbot, model conversation history as messages, add a console chat loop, diagnose why history disappears between calls, and introduce in-memory persistence with a checkpointer and thread ID.</p>
+<div class="meta"><span class="pill">Text-first notes</span><span class="pill">Python examples</span><span class="pill">Workflow diagrams</span><span class="pill">Approx. 0:00–36:33</span></div>
+</header>
+<div class="layout">
+<aside class="toc">
+<h2>On this page</h2>
+<nav>
+<a href="#overview">1. Lesson overview</a>
+<a href="#design">2. Chatbot workflow</a>
+<a href="#messages">3. State and messages</a>
+<a href="#baseline">4. Basic implementation</a>
+<a href="#loop">5. Console chat loop</a>
+<a href="#problem">6. The memory bug</a>
+<a href="#persistence">7. Persistence</a>
+<a href="#complete">8. Integrated example</a>
+<a href="#concepts">9. Key concepts</a>
+<a href="#limits">10. Limitations & next steps</a>
+<a href="#revision">11. Revision checklist</a>
+</nav>
+</aside>
+<main class="content-card">
+<section id="overview">
+<h2>1. Lesson overview</h2>
+<p class="lead">The lesson builds a simple conversational chatbot with LangGraph and then makes it remember earlier messages across repeated user turns.</p>
+<p>The instructor positions this as the first part of a larger chatbot project. Later stages are planned to add document-based RAG, tools, a user interface, LangSmith integration, retries, fault tolerance, and human-in-the-loop behaviour. The focus of this lesson is narrower: a chat loop plus conversation memory.</p>
+<div class="grid2">
+<div class="mini"><h3>Learning goals</h3><ul><li>Represent chat history in graph state.</li><li>Use message objects rather than plain strings.</li><li>Build and compile a one-node graph.</li><li>Keep chatting in a loop.</li><li>Persist state between graph invocations.</li></ul></div>
+<div class="mini"><h3>Core takeaway</h3><p>Sending only the newest user message to a fresh graph invocation does not give the model earlier context. A checkpointer plus a consistent thread ID lets LangGraph retrieve the state associated with that conversation.</p></div>
+</div>
+</section>
+
+<section id="design">
+<h2>2. Chatbot workflow design</h2>
+<p>The first chatbot is a sequential workflow with one processing node. The user message enters the graph, the chat node sends the accumulated messages to an LLM, and the generated AI message is returned in the updated state.</p>
+<div class="diagram" role="img" aria-label="Workflow: Start to Chat Node to End">
+<div class="flow"><div class="node startend">START</div><div class="arrow">→</div><div class="node">Chat node<br><small>LLM call</small></div><div class="arrow">→</div><div class="node startend">END</div></div>
+<div class="caption">Figure 1. The graph handles one turn per invocation. A separate outer loop can repeatedly invoke it.</div>
+</div>
+<h3>Execution sequence</h3>
+<ol><li>The application receives a user message.</li><li>The message is placed in the graph input state.</li><li>The <code>chat_node</code> passes the state’s messages to the model.</li><li>The model returns an AI message.</li><li>The node returns the new message; the graph ends.</li><li>The console loop waits for another user message and invokes the graph again.</li></ol>
+<div class="callout">The graph itself does not need a loop for this design. The graph processes one turn; the Python application loop manages the ongoing chat session.</div>
+</section>
+
+<section id="messages">
+<h2>3. State and message types</h2>
+<p>LangGraph workflows use a <strong>state</strong> object to carry information between nodes. For a chatbot, the important information is the sequence of messages exchanged between the user and the assistant.</p>
+<h3>Why use message objects?</h3>
+<p>The lesson uses LangChain message classes. Common message types include:</p>
+<div class="table-wrap"><table><thead><tr><th>Type</th><th>Purpose</th><th>Example</th></tr></thead><tbody>
+<tr><td><code>HumanMessage</code></td><td>Message from the user</td><td>“What is the capital of India?”</td></tr>
+<tr><td><code>AIMessage</code></td><td>Message generated by the model</td><td>“New Delhi.”</td></tr>
+<tr><td><code>SystemMessage</code></td><td>Instructions that shape model behaviour</td><td>“You are a helpful assistant.”</td></tr>
+<tr><td><code>ToolMessage</code></td><td>Output returned by a tool</td><td>A tool’s result or status</td></tr>
+</tbody></table></div>
+<p>Using a list of base message objects allows the state to hold different message roles, rather than forcing every entry to be a plain string.</p>
+<h3>The <code>add_messages</code> reducer</h3>
+<p>When graph nodes update state, fields normally follow their configured update behaviour. The lesson uses the <code>add_messages</code> reducer for the messages field so new messages are merged into the conversation history instead of replacing the whole list.</p>
+<pre><code>from typing import Annotated
+from typing_extensions import TypedDict
+from langchain_core.messages import BaseMessage
+from langgraph.graph.message import add_messages
+
+class ChatState(TypedDict):
+    messages: Annotated[list[BaseMessage], add_messages]</code></pre>
+<div class="callout warning"><strong>Important distinction:</strong> the reducer combines messages within the graph’s state updates. It does not, by itself, preserve state across separate invocations. Cross-invocation persistence is configured separately with a checkpointer.</div>
+</section>
+
+<section id="baseline">
+<h2>4. Basic one-node implementation</h2>
+<p>This example follows the lesson’s structure. Model names and provider setup can vary by installed package version; configure your API key in your environment rather than hard-coding it.</p>
+<pre><code>from typing import Annotated
+from typing_extensions import TypedDict
+
+from langchain_core.messages import BaseMessage
+from langchain_openai import ChatOpenAI
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+
+class ChatState(TypedDict):
+    messages: Annotated[list[BaseMessage], add_messages]
+
+llm = ChatOpenAI(model="gpt-4o-mini")
+
+def chat_node(state: ChatState):
+    answer = llm.invoke(state["messages"])
+    return {"messages": [answer]}
+
+builder = StateGraph(ChatState)
+builder.add_node("chat_node", chat_node)
+builder.add_edge(START, "chat_node")
+builder.add_edge("chat_node", END)
+
+chatbot = builder.compile()</code></pre>
+<h3>Try one turn</h3>
+<pre><code>from langchain_core.messages import HumanMessage
+
+result = chatbot.invoke({
+    "messages": [HumanMessage(content="What is the capital of India?")]
+})
+
+print(result["messages"][-1].content)</code></pre>
+<p>The returned state contains the human message and the model response. The last message is usually the assistant’s latest answer, so <code>result["messages"][-1].content</code> extracts its text.</p>
+</section>
+
+<section id="loop">
+<h2>5. Add a console chat loop</h2>
+<p>A single invocation answers one turn and ends. To make the program feel like a chatbot, the lesson wraps calls in a Python <code>while</code> loop and stops when the user enters an exit word.</p>
+<pre><code>while True:
+    user_text = input("You: ").strip()
+
+    if user_text.lower() in {"exit", "quit", "bye"}:
+        print("Chat ended.")
+        break
+
+    result = chatbot.invoke({
+        "messages": [HumanMessage(content=user_text)]
+    })
+
+    print("AI:", result["messages"][-1].content)</code></pre>
+<p>This creates a working chat interface in the terminal, but there is a subtle problem: every call to <code>invoke</code> above supplies only the latest user message. Without persistence, the next invocation has no stored history from the previous turn.</p>
+</section>
+
+<section id="problem">
+<h2>6. The memory problem: why the bot forgets</h2>
+<p>The lesson demonstrates two failures:</p>
+<ul><li>The user says their name, then asks “What is my name?” The chatbot cannot reliably answer because the earlier turn is missing from the new invocation’s input.</li><li>The user asks “Add 10 to 100,” then “Multiply the result by 2.” If the second call only includes the follow-up question, the model may not know which result “the result” refers to.</li></ul>
+<div class="diagram" role="img" aria-label="Without persistence, each invocation receives only the current message">
+<div class="flow"><div class="node">Turn 1<br><small>“My name is Nitesh”</small></div><div class="arrow">→</div><div class="node">Invoke #1<br><small>temporary state</small></div></div>
+<div style="font-size:1.6rem;color:#b45309;margin:8px">↓ state not reused ↓</div>
+<div class="flow"><div class="node">Turn 2<br><small>“What is my name?”</small></div><div class="arrow">→</div><div class="node">Invoke #2<br><small>new input state</small></div></div>
+<div class="caption">Figure 2. An outer Python loop does not automatically carry graph state into the next call.</div>
+</div>
+<h3>Root cause</h3>
+<p>The loop invokes the graph again with a new input dictionary. Unless the application manually sends the previous messages or the graph uses persistence, each invocation is effectively started with the input it receives. The message reducer cannot recover messages that were never loaded into the new state.</p>
+<div class="callout success"><strong>Fix introduced in the lesson:</strong> compile the graph with a checkpointer, assign a stable <code>thread_id</code> to the conversation, and pass that configuration to every invocation in the same chat.</div>
+</section>
+
+<section id="persistence">
+<h2>7. Persistence with a checkpointer</h2>
+<p>Persistence saves graph state at checkpoints so it can be retrieved in a later invocation. The lesson uses <code>MemorySaver</code>, an in-memory checkpointer, and a thread ID to identify the conversation.</p>
+<h3>Concepts</h3>
+<div class="table-wrap"><table><thead><tr><th>Concept</th><th>Meaning in this example</th></tr></thead><tbody>
+<tr><td><strong>Checkpointer</strong></td><td>Component that saves and restores graph state at checkpoints.</td></tr>
+<tr><td><strong><code>MemorySaver</code></strong></td><td>Stores checkpoint data in process memory for development and demonstrations.</td></tr>
+<tr><td><strong><code>thread_id</code></strong></td><td>Identifier for a conversation’s state. Reuse it for turns belonging to the same conversation.</td></tr>
+<tr><td><strong><code>config</code></strong></td><td>Configuration passed to graph calls, including the configurable thread ID.</td></tr>
+</tbody></table></div>
+<h3>Configure the graph</h3>
+<pre><code>from langgraph.checkpoint.memory import MemorySaver
+
+memory = MemorySaver()
+
+# Reuse the graph builder defined earlier.
+chatbot = builder.compile(checkpointer=memory)
+
+config = {
+    "configurable": {
+        "thread_id": "demo-conversation-001"
+    }
+}</code></pre>
+<h3>Invoke repeatedly with the same thread</h3>
+<pre><code>from langchain_core.messages import HumanMessage
+
+first = chatbot.invoke(
+    {"messages": [HumanMessage(content="Hi, my name is Nitesh.")]},
+    config=config
+)
+print(first["messages"][-1].content)
+
+second = chatbot.invoke(
+    {"messages": [HumanMessage(content="What is my name?")]},
+    config=config
+)
+print(second["messages"][-1].content)</code></pre>
+<p>With a checkpointer configured, the same thread ID lets LangGraph resume that thread’s saved state and merge in the new message. The model can then receive the earlier exchange as part of the message history.</p>
+<div class="callout warning"><strong>Memory scope:</strong> <code>MemorySaver</code> is in-memory. Its data is typically lost when the Python process or notebook kernel restarts. For durable production conversations, use an appropriate persistent checkpointer/backend and consider authentication, access controls, retention, and privacy requirements.</div>
+<h3>Inspect the saved state</h3>
+<pre><code>snapshot = chatbot.get_state(config)
+
+for message in snapshot.values["messages"]:
+    print(type(message).__name__, ":", message.content)</code></pre>
+<p>Inspecting the state is a useful debugging technique: it shows whether user and AI messages are actually being retained for that thread.</p>
+</section>
+
+<section id="complete">
+<h2>8. Integrated example: console chatbot with memory</h2>
+<p>The following combines the main ideas into one runnable-style script. Install compatible versions of LangGraph, LangChain Core, and the OpenAI integration, and set the provider API key in your environment first.</p>
+<pre><code>from typing import Annotated
+from typing_extensions import TypedDict
+
+from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_openai import ChatOpenAI
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langgraph.checkpoint.memory import MemorySaver
+
+# 1. Define state and its message-append/update behaviour.
+class ChatState(TypedDict):
+    messages: Annotated[list[BaseMessage], add_messages]
+
+# 2. Define the model and graph node.
+llm = ChatOpenAI(model="gpt-4o-mini")
+
+def chat_node(state: ChatState):
+    response = llm.invoke(state["messages"])
+    return {"messages": [response]}
+
+# 3. Build the one-node graph.
+builder = StateGraph(ChatState)
+builder.add_node("chat_node", chat_node)
+builder.add_edge(START, "chat_node")
+builder.add_edge("chat_node", END)
+
+# 4. Compile with an in-memory checkpointer.
+checkpointer = MemorySaver()
+chatbot = builder.compile(checkpointer=checkpointer)
+
+# 5. Keep a stable thread ID for this conversation.
+config = {
+    "configurable": {
+        "thread_id": "terminal-session-001"
+    }
+}
+
+# 6. Repeatedly invoke the same conversation thread.
+print("Chatbot ready. Type exit, quit, or bye to stop.")
+while True:
+    user_text = input("You: ").strip()
+
+    if user_text.lower() in {"exit", "quit", "bye"}:
+        print("AI: Goodbye!")
+        break
+
+    if not user_text:
+        continue
+
+    result = chatbot.invoke(
+        {"messages": [HumanMessage(content=user_text)]},
+        config=config
+    )
+    print("AI:", result["messages"][-1].content)</code></pre>
+<h3>Expected interaction (illustrative)</h3>
+<pre><code>You: Hi, my name is Nitesh.
+AI: Hello, Nitesh! Nice to meet you.
+
+You: What is my name?
+AI: You told me your name is Nitesh.
+
+You: exit
+AI: Goodbye!</code></pre>
+<p class="kicker">The exact wording is generated by the model and may differ. This example demonstrates the intended state flow, not a guarantee about a particular model response.</p>
+</section>
+
+<section id="concepts">
+<h2>9. Key concepts to remember</h2>
+<div class="table-wrap"><table><thead><tr><th>Term</th><th>Plain-English explanation</th></tr></thead><tbody>
+<tr><td>State</td><td>The data available to the graph while processing a turn.</td></tr>
+<tr><td>Node</td><td>A function that reads state and returns an update.</td></tr>
+<tr><td>Edge</td><td>Defines which node runs next.</td></tr>
+<tr><td>Reducer</td><td>Defines how a state field is updated or merged.</td></tr>
+<tr><td><code>add_messages</code></td><td>Reducer specialised for updating message histories.</td></tr>
+<tr><td>Invocation</td><td>One call to execute the graph, such as <code>chatbot.invoke(...)</code>.</td></tr>
+<tr><td>Persistence</td><td>Saving graph state so a later invocation can continue from it.</td></tr>
+<tr><td>Thread</td><td>A logically grouped conversation identified by a thread ID.</td></tr>
+<tr><td>In-memory storage</td><td>Fast temporary storage that generally does not survive process restarts.</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="limits">
+<h2>10. Limitations and next steps</h2>
+<ul><li><strong>Not durable across restarts:</strong> the in-memory checkpointer is for demos and short-lived processes.</li><li><strong>Thread IDs must be managed:</strong> reuse the same ID for the same conversation; use different IDs to keep conversations separate.</li><li><strong>Context grows:</strong> passing the full message history to the model can eventually increase token usage. Longer-lived applications may need summarisation or trimming strategies.</li><li><strong>Memory is not the same as factual accuracy:</strong> the model may still misinterpret or misremember details even when the history is present.</li><li><strong>Production hardening is separate:</strong> secure per-user thread access, handle errors and retries, monitor model calls, and choose durable storage when needed.</li></ul>
+<p>The larger roadmap mentioned in the lesson includes RAG over documents, tools for actions, a UI, LangSmith integration, human-in-the-loop flows, retry logic, and fault tolerance. Those are planned extensions rather than implementations completed in this lesson.</p>
+</section>
+
+<section id="revision">
+<h2>11. Revision checklist</h2>
+<ul class="checklist">
+<li>Can I explain why a chatbot’s state contains a list of messages?</li>
+<li>Can I distinguish <code>HumanMessage</code>, <code>AIMessage</code>, <code>SystemMessage</code>, and <code>ToolMessage</code>?</li>
+<li>Can I explain what the <code>add_messages</code> reducer does?</li>
+<li>Can I draw the <code>START → chat_node → END</code> graph?</li>
+<li>Can I explain why a Python loop alone does not preserve graph state?</li>
+<li>Can I configure a checkpointer and a stable <code>thread_id</code>?</li>
+<li>Can I explain why in-memory persistence disappears after a process restart?</li>
+<li>Can I inspect a conversation using <code>chatbot.get_state(config)</code>?</li>
+</ul>
+<div class="callout success"><strong>One-sentence summary:</strong> A LangGraph chatbot can maintain conversational context by representing the conversation as message state, merging message updates with <code>add_messages</code>, and using a checkpointer plus a stable thread ID to restore state between turns.</div>
+</section>
+</main>
+</div>
+<div class="footer">Prepared from the supplied lesson transcript · Code is an educational reference; check package-version documentation when running it.</div>
+</div>
+</body>
+</html>
