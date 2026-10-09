@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Practical notes on streaming LLM responses with LangGraph and Streamlit, including concepts, diagrams, code, and debugging tips.">
+<title>LLM Streaming with LangGraph & Streamlit — Practical Notes</title>
+<style>
+:root{
+ --bg:#f5f7fb;--paper:#fff;--ink:#1d2939;--muted:#58677c;--line:#e3e8f0;
+ --brand:#4f46e5;--brand2:#0f766e;--code:#101827;--codeink:#e5edf8;
+ --soft:#eef2ff;--softgreen:#e7f8f3;--warn:#fff7e6;--shadow:0 12px 32px rgba(20,35,70,.07)
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a{color:var(--brand);text-decoration:none}a:hover{text-decoration:underline}
+.hero{background:linear-gradient(135deg,#171d4b,#4338ca 58%,#0f766e);color:white;padding:64px 24px 58px}
+.hero-inner{max-width:1080px;margin:auto}
+.eyebrow{text-transform:uppercase;letter-spacing:.15em;font-size:.78rem;font-weight:800;color:#c7d2fe}
+h1{font-size:clamp(2.2rem,5vw,3.7rem);line-height:1.12;max-width:850px;margin:14px 0 18px;letter-spacing:-.04em}
+.hero p{font-size:1.12rem;color:#e5e7ff;max-width:760px;margin:0}
+.meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:25px}
+.pill{border:1px solid #ffffff45;background:#ffffff14;padding:5px 11px;border-radius:99px;font-size:.84rem}
+.layout{max-width:1160px;margin:32px auto;padding:0 22px;display:grid;grid-template-columns:260px minmax(0,1fr);gap:28px;align-items:start}
+.toc{position:sticky;top:18px;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow);max-height:calc(100vh - 36px);overflow:auto}
+.toc h2{font-size:.9rem;margin:0 0 10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.toc a{display:block;font-size:.9rem;color:#39465a;padding:5px 0;line-height:1.45}
+main{min-width:0}
+article{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:clamp(22px,4vw,48px);box-shadow:var(--shadow)}
+section{scroll-margin-top:20px;margin-bottom:48px}
+section:last-child{margin-bottom:0}
+h2{font-size:1.8rem;line-height:1.25;letter-spacing:-.025em;margin:0 0 18px}
+h3{font-size:1.22rem;line-height:1.35;margin:28px 0 10px}
+p{margin:12px 0}
+.lead{font-size:1.08rem;color:#344054}
+.kicker{font-size:.8rem;color:var(--brand);font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.callout{border-left:4px solid var(--brand);background:var(--soft);padding:15px 18px;border-radius:0 10px 10px 0;margin:20px 0}
+.callout.green{border-color:var(--brand2);background:var(--softgreen)}
+.callout.warn{border-color:#d97706;background:var(--warn)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:20px 0}
+.mini{border:1px solid var(--line);border-radius:12px;padding:17px;background:#fcfdff}
+.mini h3{margin:0 0 6px;font-size:1.03rem}
+.diagram{border:1px solid var(--line);border-radius:14px;padding:16px;background:linear-gradient(180deg,#fff,#f8faff);margin:22px 0;overflow:hidden}
+.diagram figcaption{font-size:.87rem;color:var(--muted);margin-top:10px;text-align:center}
+.diagram svg{width:100%;height:auto;display:block;max-width:850px;margin:auto}
+.flowbox{fill:#eef2ff;stroke:#818cf8;stroke-width:1.5}
+.flowbox2{fill:#e7f8f3;stroke:#5bb8a6;stroke-width:1.5}
+.flowtext{font:600 15px system-ui,sans-serif;fill:#25324a}
+.flowline{stroke:#64748b;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+pre{background:var(--code);color:var(--codeink);padding:20px;border-radius:12px;overflow:auto;line-height:1.6;font-size:.88rem;tab-size:4}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+:not(pre)>code{background:#eef1f7;color:#293653;padding:.12em .38em;border-radius:5px;font-size:.9em}
+.code-label{display:flex;justify-content:space-between;align-items:center;font-size:.82rem;font-weight:800;color:var(--muted);margin:20px 0 0}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:.94rem}
+th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f4f6fb;color:#344054}
+ul,ol{padding-left:1.35rem}
+li{padding:3px 0}
+.checklist{list-style:none;padding:0}
+.checklist li{padding-left:1.7rem;position:relative}
+.checklist li:before{content:"✓";position:absolute;left:0;color:var(--brand2);font-weight:900}
+.small{font-size:.9rem;color:var(--muted)}
+hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+footer{max-width:1160px;margin:0 auto;padding:0 22px 36px;color:var(--muted);font-size:.9rem}
+.toplink{display:inline-block;margin-top:10px;font-size:.9rem}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.toc{position:relative;top:auto;max-height:none}.grid2{grid-template-columns:1fr}.hero{padding:44px 22px}article{padding:24px}}
+@media print{body{background:white}.hero{padding:25px;background:#333!important}.layout{display:block;margin:0;max-width:none}.toc{display:none}article{box-shadow:none;border:0;padding:0}.diagram{break-inside:avoid}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:inherit}}
+</style>
+</head>
+<body>
+<header class="hero" id="top">
+ <div class="hero-inner">
+  <div class="eyebrow">Practical AI Engineering Notes</div>
+  <h1>LLM Streaming with LangGraph &amp; Streamlit</h1>
+  <p>From delayed, all-at-once responses to token-by-token output — concepts, architecture, implementation patterns, and debugging notes for a conversational AI app.</p>
+  <div class="meta"><span class="pill">LangGraph</span><span class="pill">Python</span><span class="pill">Streamlit</span><span class="pill">Study notes + code</span></div>
+ </div>
+</header>
+<div class="layout">
+<nav class="toc" aria-label="Table of contents">
+ <h2>On this page</h2>
+ <a href="#overview">1. Overview &amp; plan</a>
+ <a href="#problem">2. The problem</a>
+ <a href="#definition">3. What is streaming?</a>
+ <a href="#benefits">4. Why streaming matters</a>
+ <a href="#architecture">5. Request flow</a>
+ <a href="#langgraph">6. Stream from LangGraph</a>
+ <a href="#streamlit">7. Display in Streamlit</a>
+ <a href="#complete">8. Combined example</a>
+ <a href="#modes">9. LangGraph stream modes</a>
+ <a href="#debugging">10. Debugging checklist</a>
+ <a href="#summary">11. Summary &amp; glossary</a>
+</nav>
+<main>
+<article>
+<section id="overview">
+ <div class="kicker">01 · Overview</div>
+ <h2>What this tutorial builds</h2>
+ <p class="lead">The tutorial continues an existing chatbot project and adds streaming so the user can see the assistant's answer as it is generated instead of waiting for the complete answer to appear.</p>
+ <p>The project is developed incrementally: first a basic LLM chatbot, then short-term conversation memory, then a user interface, and now streaming output. The implementation discussed here uses a LangGraph graph on the backend and Streamlit for the frontend.</p>
+ <h3>Plan of action</h3>
+ <ol>
+  <li>Understand the user-experience problem caused by waiting for a complete response.</li>
+  <li>Define LLM streaming and identify its main benefits.</li>
+  <li>Replace a one-shot graph call such as <code>graph.invoke(...)</code> with a streaming call such as <code>graph.stream(...)</code> when appropriate.</li>
+  <li>Read the stream's message chunks and extract their text content.</li>
+  <li>Use Streamlit's <code>st.write_stream()</code> to display generated text progressively.</li>
+  <li>Save the completed assistant answer in session state so it remains visible on later reruns.</li>
+ </ol>
+ <div class="callout green"><strong>Core idea:</strong> streaming changes how output is delivered to the interface. It does not, by itself, make the model reason better or guarantee that the total generation takes less time.</div>
+</section>
+
+<section id="problem">
+ <div class="kicker">02 · The problem</div>
+ <h2>Why all-at-once responses feel slow</h2>
+ <p>Imagine asking a chatbot to write a 500-word blog post. In a non-streaming flow, the model generates the answer and the app waits for the completed result before displaying it. During that interval, the chat area can appear blank or frozen.</p>
+ <div class="grid2">
+  <div class="mini"><h3>Without streaming</h3><p>The user sees little or nothing while the model works. The full answer appears only after generation completes.</p></div>
+  <div class="mini"><h3>With streaming</h3><p>Partial output appears as it becomes available. The user can start reading while the rest of the answer is still being generated.</p></div>
+ </div>
+ <figure class="diagram">
+ <svg viewBox="0 0 800 300" role="img" aria-label="Comparison of non-streaming and streaming response timelines">
+  <text x="24" y="34" class="flowtext">Non-streaming</text>
+  <line x1="35" y1="78" x2="760" y2="78" class="flowline"/>
+  <rect x="45" y="56" width="400" height="44" rx="9" fill="#fef3c7" stroke="#eab308"/>
+  <text x="245" y="83" text-anchor="middle" class="flowtext">Wait while full answer is generated</text>
+  <rect x="458" y="56" width="292" height="44" rx="9" class="flowbox2"/>
+  <text x="604" y="83" text-anchor="middle" class="flowtext">Complete answer appears</text>
+  <text x="24" y="154" class="flowtext">Streaming</text>
+  <line x1="35" y1="205" x2="760" y2="205" class="flowline"/>
+  <rect x="45" y="183" width="115" height="44" rx="8" class="flowbox"/>
+  <rect x="170" y="183" width="115" height="44" rx="8" class="flowbox"/>
+  <rect x="295" y="183" width="115" height="44" rx="8" class="flowbox"/>
+  <rect x="420" y="183" width="115" height="44" rx="8" class="flowbox"/>
+  <rect x="545" y="183" width="205" height="44" rx="8" class="flowbox2"/>
+  <text x="102" y="210" text-anchor="middle" class="flowtext">Chunk 1</text>
+  <text x="227" y="210" text-anchor="middle" class="flowtext">Chunk 2</text>
+  <text x="352" y="210" text-anchor="middle" class="flowtext">Chunk 3</text>
+  <text x="477" y="210" text-anchor="middle" class="flowtext">Chunk 4</text>
+  <text x="647" y="210" text-anchor="middle" class="flowtext">More chunks…</text>
+  <text x="400" y="270" text-anchor="middle" style="font:14px system-ui;fill:#64748b">The user receives useful partial output earlier.</text>
+ </svg>
+ <figcaption>Conceptual timeline: streaming improves time-to-first-visible-output, even when total generation time is similar.</figcaption>
+ </figure>
+ <p>There are two practical issues with the all-at-once approach:</p>
+ <ul>
+  <li><strong>Perceived delay:</strong> a long generation can take several seconds, leaving the user unsure whether the app is working.</li>
+  <li><strong>Readability:</strong> a large block of text or code arrives all at once rather than unfolding progressively.</li>
+ </ul>
+</section>
+
+<section id="definition">
+ <div class="kicker">03 · Concept</div>
+ <h2>What is LLM streaming?</h2>
+ <p><strong>LLM streaming</strong> means sending parts of a model's response to the application as those parts become available, instead of waiting for the entire response before returning anything.</p>
+ <p>These parts are often called <em>chunks</em>. A chunk may contain one or more tokens; it is not guaranteed to be exactly one word or one character. Tokenization is a model-level representation and a token may be a word, part of a word, punctuation, or another text unit.</p>
+ <table>
+  <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+  <tbody>
+   <tr><td>Token</td><td>A unit used by the model to represent input or output text.</td></tr>
+   <tr><td>Chunk</td><td>A piece of streamed output delivered to the application; it can contain multiple tokens.</td></tr>
+   <tr><td>Generator / iterator</td><td>A Python object that yields values progressively as it is iterated.</td></tr>
+   <tr><td>Time to first token (TTFT)</td><td>The time from sending a request until the first generated content is available. In a UI, transport and rendering also affect when it becomes visible.</td></tr>
+   <tr><td>Final response</td><td>The assembled answer after all relevant chunks have been received.</td></tr>
+  </tbody>
+ </table>
+ <div class="callout"><strong>Important distinction:</strong> a typewriter animation can imitate streaming by revealing already-generated text slowly. True model streaming delivers partial output while generation is still in progress. Streamlit's <code>st.write_stream()</code> can render an iterable or generator progressively; the upstream source must itself yield incrementally for genuine end-to-end streaming.</div>
+</section>
+
+<section id="benefits">
+ <div class="kicker">04 · Benefits</div>
+ <h2>Why streaming matters</h2>
+ <h3>1. Faster perceived response</h3>
+ <p>The model may still need time to complete a long answer, but the user sees the first useful content earlier. This reduces the impression that the app has frozen and can help users understand that work is underway.</p>
+ <h3>2. More natural conversation</h3>
+ <p>Progressive output makes the interaction feel more responsive and keeps the user engaged. It resembles the turn-taking rhythm of a live conversation more closely than a long silent pause followed by a complete answer.</p>
+ <h3>3. Better long-form text and code experience</h3>
+ <p>When an answer includes a long explanation or a large code sample, progressive rendering lets the user begin reading earlier. It can make the output easier to follow, although the interface should avoid repeatedly re-rendering expensive components for every tiny chunk.</p>
+ <h3>4. Supports multimodal and voice interfaces</h3>
+ <p>Voice assistants can begin speaking before the entire response is complete. More generally, streaming patterns can deliver incremental text, status events, or other outputs to a responsive interface.</p>
+ <h3>5. Ability to stop work early</h3>
+ <p>If an application supports cancellation and propagates it to the model/provider, the user may stop an unwanted generation before it finishes. This can reduce unnecessary work and potentially token cost. Merely hiding the output in the UI does not guarantee that generation has stopped.</p>
+ <h3>6. Progress updates for agent workflows</h3>
+ <p>An agent may need to search, call tools, inspect results, and then answer. Streaming can communicate intermediate status such as “Searching for sources” or “Processing results.” These status updates are different from the assistant's final answer text.</p>
+ <figure class="diagram">
+ <svg viewBox="0 0 800 240" role="img" aria-label="An agent workflow emitting status updates before a final answer">
+  <rect x="20" y="30" width="155" height="55" rx="10" class="flowbox"/>
+  <rect x="220" y="30" width="155" height="55" rx="10" class="flowbox"/>
+  <rect x="420" y="30" width="155" height="55" rx="10" class="flowbox"/>
+  <rect x="620" y="30" width="155" height="55" rx="10" class="flowbox2"/>
+  <text x="97" y="53" text-anchor="middle" class="flowtext">Receive request</text><text x="97" y="71" text-anchor="middle" style="font:12px system-ui;fill:#475569">User asks</text>
+  <text x="297" y="53" text-anchor="middle" class="flowtext">Search / tool call</text><text x="297" y="71" text-anchor="middle" style="font:12px system-ui;fill:#475569">Status update</text>
+  <text x="497" y="53" text-anchor="middle" class="flowtext">Process results</text><text x="497" y="71" text-anchor="middle" style="font:12px system-ui;fill:#475569">Status update</text>
+  <text x="697" y="53" text-anchor="middle" class="flowtext">Final response</text><text x="697" y="71" text-anchor="middle" style="font:12px system-ui;fill:#475569">Answer to user</text>
+  <path d="M175 57 H215 M375 57 H415 M575 57 H615" class="flowline"/>
+  <path d="M297 90 V126 H497 V90" class="flowline" stroke-dasharray="5 5"/>
+  <rect x="180" y="145" width="440" height="54" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="400" y="168" text-anchor="middle" class="flowtext">Stream progress events while work is happening</text>
+  <text x="400" y="187" text-anchor="middle" style="font:12px system-ui;fill:#64748b">Do not confuse status events with final answer text.</text>
+ </svg>
+ <figcaption>Agentic applications can stream progress as well as user-facing text.</figcaption>
+ </figure>
+</section>
+
+<section id="architecture">
+ <div class="kicker">05 · Architecture</div>
+ <h2>How the pieces fit together</h2>
+ <p>The LangGraph backend is responsible for executing the graph and yielding stream events. The Streamlit frontend consumes the yielded text and renders it in the chat message area.</p>
+ <figure class="diagram">
+ <svg viewBox="0 0 800 340" role="img" aria-label="Architecture from user input through Streamlit, LangGraph, LLM chunks and saved chat history">
+  <rect x="255" y="10" width="290" height="48" rx="10" class="flowbox"/>
+  <text x="400" y="39" text-anchor="middle" class="flowtext">User enters a prompt</text>
+  <path d="M400 58 V83" class="flowline"/><path d="M394 77 L400 84 L406 77" class="flowline"/>
+  <rect x="255" y="85" width="290" height="48" rx="10" class="flowbox"/>
+  <text x="400" y="114" text-anchor="middle" class="flowtext">Streamlit frontend</text>
+  <path d="M400 133 V158" class="flowline"/><path d="M394 152 L400 159 L406 152" class="flowline"/>
+  <rect x="255" y="160" width="290" height="48" rx="10" class="flowbox"/>
+  <text x="400" y="189" text-anchor="middle" class="flowtext">LangGraph graph.stream(...)</text>
+  <path d="M400 208 V233" class="flowline"/><path d="M394 227 L400 234 L406 227" class="flowline"/>
+  <rect x="255" y="235" width="290" height="48" rx="10" class="flowbox2"/>
+  <text x="400" y="264" text-anchor="middle" class="flowtext">Message chunks arrive incrementally</text>
+  <path d="M255 259 H115 V303 H250" class="flowline"/><path d="M244 297 L251 303 L244 309" class="flowline"/>
+  <rect x="250" y="286" width="300" height="43" rx="9" fill="#f3e8ff" stroke="#c084fc"/>
+  <text x="400" y="312" text-anchor="middle" class="flowtext">st.write_stream() renders text</text>
+  <path d="M550 307 H685 V108 H550" class="flowline" stroke-dasharray="5 5"/>
+  <text x="692" y="205" transform="rotate(-90 692 205)" text-anchor="middle" style="font:12px system-ui;fill:#64748b">Completed answer saved in session state</text>
+ </svg>
+ <figcaption>High-level data flow. Exact event shapes depend on the chosen LangGraph stream mode and installed library version.</figcaption>
+ </figure>
+ <ol>
+  <li>Collect the user's message.</li>
+  <li>Pass the correct state and configuration to the graph.</li>
+  <li>Iterate over the graph's stream events.</li>
+  <li>Extract only the content intended for the visible answer.</li>
+  <li>Yield that content to Streamlit's streaming renderer.</li>
+  <li>Save the completed assistant response in the conversation history.</li>
+ </ol>
+</section>
+
+<section id="langgraph">
+ <div class="kicker">06 · Backend</div>
+ <h2>Streaming from LangGraph</h2>
+ <p>The central change in the tutorial is to use a streaming API instead of waiting for a single completed result. A normal graph invocation returns the graph's final result; a stream call returns an iterable of events/chunks that can be consumed as they arrive.</p>
+ <div class="code-label"><span>Non-streaming pattern</span><span>Python</span></div>
+ <pre><code># Typical one-shot pattern
+result = chatbot.invoke(
+    {"messages": [HumanMessage(content=user_input)]},
+    config=config,
+)
+
+# The UI usually waits for result to be ready
+answer = result["messages"][-1].content</code></pre>
+ <div class="code-label"><span>Streaming pattern — message chunks</span><span>Python</span></div>
+ <pre><code>from langchain_core.messages import HumanMessage
+
+config = {"configurable": {"thread_id": "conversation-1"}}
+input_state = {
+    "messages": [HumanMessage(content="What is the recipe for pasta?")]
+}
+
+for message_chunk, metadata in chatbot.stream(
+    input_state,
+    config=config,
+    stream_mode="messages",
+):
+    if message_chunk.content:
+        print(message_chunk.content, end="", flush=True)</code></pre>
+ <p>This follows the message-stream pattern demonstrated in the source transcript: supply the initial state, a configuration (including a thread ID where the graph uses checkpointed conversation state), and a stream mode. Iterate through the yielded pair and read the message chunk's content.</p>
+ <div class="callout warn"><strong>Version note:</strong> LangGraph/LangChain streaming APIs and event formats can vary by version. In the documented message-stream pattern, <code>stream_mode="messages"</code> yields a message chunk and metadata pair. Check the documentation for the exact version installed in your project, especially when combining multiple stream modes or using async execution.</div>
+ <h3>Why does the loop matter?</h3>
+ <p>Calling <code>chatbot.stream(...)</code> gives the application an iterable stream. The loop requests each next event and handles it. Printing each content fragment with <code>end=""</code> avoids inserting a newline after every chunk; <code>flush=True</code> asks Python to flush the output buffer so terminal output is visible promptly.</p>
+ <h3>What is a Python generator?</h3>
+ <p>A generator is an iterator that produces values as needed, commonly using <code>yield</code>. Rather than building a complete list in memory and returning it all at once, a generator can supply one value, pause, and continue later.</p>
+ <pre><code>def number_stream():
+    yield "First "
+    yield "second "
+    yield "third."
+
+for part in number_stream():
+    print(part, end="", flush=True)</code></pre>
+ <p class="small">Output: <code>First second third.</code></p>
+ <p>Do not assume every stream is a plain generator internally; the important interface property is that it can be iterated incrementally.</p>
+</section>
+
+<section id="streamlit">
+ <div class="kicker">07 · Frontend</div>
+ <h2>Render the stream in Streamlit</h2>
+ <p>Streamlit provides <code>st.write_stream()</code> to consume a generator or iterable and display the content progressively with a typewriter-style effect. This keeps the UI code compact: the app prepares an iterator that yields text fragments, and Streamlit handles the progressive rendering.</p>
+ <div class="code-label"><span>Minimal text generator</span><span>Python</span></div>
+ <pre><code>def answer_text_stream():
+    for message_chunk, metadata in chatbot.stream(
+        input_state,
+        config=config,
+        stream_mode="messages",
+    ):
+        if message_chunk.content:
+            yield message_chunk.content</code></pre>
+ <div class="code-label"><span>Use it inside an assistant chat bubble</span><span>Python</span></div>
+ <pre><code>with st.chat_message("assistant"):
+    final_answer = st.write_stream(answer_text_stream())
+
+# Keep the final response for chat history / reruns
+st.session_state.messages.append({
+    "role": "assistant",
+    "content": final_answer,
+})</code></pre>
+ <p><code>st.write_stream()</code> returns the completed content it has written (for a text-only generator, this is the assembled text). Saving that returned value means the app can render the conversation again after Streamlit reruns the script.</p>
+ <h3>Session state pattern</h3>
+ <pre><code>import streamlit as st
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+user_input = st.chat_input("Ask something")
+
+if user_input:
+    st.session_state.messages.append({
+        "role": "user",
+        "content": user_input,
+    })
+    with st.chat_message("user"):
+        st.markdown(user_input)
+
+    # Generate and display the assistant response here.
+    # Append the completed response to session_state afterwards.</code></pre>
+ <div class="callout green"><strong>Key integration lesson from the transcript:</strong> the backend graph does not necessarily need to be redesigned. Much of the UI change happens where the app previously called <code>invoke()</code> and then displayed the completed assistant message. The frontend now consumes a stream and stores the assembled final text.</div>
+</section>
+
+<section id="complete">
+ <div class="kicker">08 · Put it together</div>
+ <h2>Illustrative end-to-end Streamlit pattern</h2>
+ <p>The following is a reusable pattern, not a drop-in replacement for every project. It assumes <code>chatbot</code> is an already-compiled LangGraph graph that accepts a <code>messages</code> state, and that the graph/provider supports message streaming. Adapt the state schema, model setup, imports, and checkpoint configuration to your existing application.</p>
+ <pre><code>import streamlit as st
+from langchain_core.messages import HumanMessage
+
+# Assumption: `chatbot` is your compiled LangGraph graph.
+# Its state schema must accept {"messages": [...]}.
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Render previous conversation turns
+for item in st.session_state.messages:
+    with st.chat_message(item["role"]):
+        st.markdown(item["content"])
+
+user_input = st.chat_input("Send a message")
+
+if user_input:
+    # Record and display the user message
+    st.session_state.messages.append({
+        "role": "user",
+        "content": user_input,
+    })
+    with st.chat_message("user"):
+        st.markdown(user_input)
+
+    # Use a stable thread ID if the graph uses a checkpointer.
+    # In a real multi-user app, scope this ID safely per conversation/user.
+    config = {
+        "configurable": {
+            "thread_id": "streamlit-chat-session"
+        }
+    }
+    input_state = {
+        "messages": [HumanMessage(content=user_input)]
+    }
+
+    def text_chunks():
+        for message_chunk, metadata in chatbot.stream(
+            input_state,
+            config=config,
+            stream_mode="messages",
+        ):
+            # Some graph streams can include tool/model messages.
+            # Add filters here if only a specific node's output should be shown.
+            content = message_chunk.content
+            if isinstance(content, str) and content:
+                yield content
+            # Some integrations can return structured content blocks.
+            # Handle those explicitly if your model uses multimodal output.
+
+    with st.chat_message("assistant"):
+        final_answer = st.write_stream(text_chunks())
+
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": final_answer,
+    })</code></pre>
+ <div class="callout warn"><strong>Important:</strong> this example is intentionally focused on the streaming boundary. If your graph uses a different state schema, a tool-calling flow, multiple model nodes, or a different stream API version, adapt the input and filtering logic. Avoid showing internal tool-call payloads as if they were user-facing prose.</div>
+ <h3>Practical implementation notes</h3>
+ <ul>
+  <li>Use the user's actual prompt in <code>input_state</code>; do not leave a test prompt hard-coded in production code.</li>
+  <li>Keep a stable conversation/thread ID when checkpointed memory is required. Use an appropriately scoped ID rather than sharing one ID across unrelated users.</li>
+  <li>Choose a stream mode that matches the data you need. Message chunks are useful for incremental LLM text; update events are useful for state/progress changes.</li>
+  <li>Store the completed answer, not the generator object, in chat history.</li>
+  <li>Consider exceptions and display a useful error message if generation fails partway through.</li>
+ </ul>
+</section>
+
+<section id="modes">
+ <div class="kicker">09 · Stream modes</div>
+ <h2>Choosing a LangGraph stream mode</h2>
+ <p>The transcript introduces four modes: <code>updates</code>, <code>values</code>, <code>custom</code>, and <code>messages</code>. They serve different purposes; they are not interchangeable.</p>
+ <table>
+  <thead><tr><th>Mode</th><th>Use it for</th><th>Typical purpose</th></tr></thead>
+  <tbody>
+   <tr><td><code>messages</code></td><td>LLM message chunks plus metadata</td><td>Display generated text progressively as it is produced.</td></tr>
+   <tr><td><code>updates</code></td><td>State updates from graph nodes</td><td>Observe which node updated the graph and inspect incremental state changes.</td></tr>
+   <tr><td><code>values</code></td><td>Full graph state snapshots</td><td>Observe the graph's state after steps, useful for debugging or state-aware UIs.</td></tr>
+   <tr><td><code>custom</code></td><td>Application-defined stream data</td><td>Emit custom progress messages or events from graph code.</td></tr>
+  </tbody>
+ </table>
+ <p class="small">Exact payload shapes depend on LangGraph version and whether one or multiple stream modes are requested. Inspect and test the actual events before writing production parsing logic.</p>
+</section>
+
+<section id="debugging">
+ <div class="kicker">10 · Debugging</div>
+ <h2>Common mistakes and how to check them</h2>
+ <h3>1. The answer is still hard-coded</h3>
+ <p>In the transcript, the first UI test kept returning a pasta recipe even when the user asked about cricket. The reason was that the backend input still contained a hard-coded pasta question. Replace it with the current UI value, such as <code>user_input</code>.</p>
+ <pre><code># Incorrect for a real chat UI: fixed prompt
+input_state = {
+    "messages": [HumanMessage(content="What is the recipe to make pasta?")]
+}
+
+# Better: pass the prompt submitted by the user
+input_state = {
+    "messages": [HumanMessage(content=user_input)]
+}</code></pre>
+ <h3>2. The stream appears as one final block</h3>
+ <ul>
+  <li>Check whether the model/provider supports streaming.</li>
+  <li>Confirm the graph call is a streaming call, not a one-shot invocation.</li>
+  <li>Make sure the frontend consumes the iterator progressively.</li>
+  <li>Check whether an intermediate layer buffers output before forwarding it.</li>
+ </ul>
+ <h3>3. The UI displays unexpected messages</h3>
+ <p>Message streams may contain chunks from different graph nodes, including tool-calling or intermediate model steps. Inspect the metadata and filter by the appropriate node/model when only the final assistant response should be visible. Do not assume every yielded message chunk belongs in the chat bubble.</p>
+ <h3>4. Previous answers disappear after a rerun</h3>
+ <p>Streamlit reruns the script after interactions. Store the completed user and assistant messages in <code>st.session_state</code>, and render saved messages at the beginning of the script.</p>
+ <h3>5. Memory seems inconsistent</h3>
+ <p>When using a checkpointer, confirm that the graph receives the intended thread ID and that the graph state schema handles messages correctly. A Streamlit session history and LangGraph checkpointed memory are related but separate mechanisms: saving text in the UI does not automatically persist graph state, and graph checkpoints do not automatically populate the UI history.</p>
+ <h3>6. Errors happen after partial output</h3>
+ <p>Wrap the generation step in error handling and communicate that generation failed. If the user can cancel a response, ensure cancellation is propagated upstream where supported; simply stopping the display may leave model work running.</p>
+ <h3>Pre-run checklist</h3>
+ <ul class="checklist">
+  <li>The graph has been compiled and the backend is available to the frontend.</li>
+  <li>The user's prompt is passed dynamically, not hard-coded.</li>
+  <li>The graph input matches its state schema.</li>
+  <li>The selected stream mode matches the expected event structure.</li>
+  <li>The text generator yields only the intended content.</li>
+  <li><code>st.write_stream()</code> receives an iterable/generator.</li>
+  <li>The final assembled answer is saved to session state.</li>
+  <li>Thread IDs are stable for the intended conversation and safely scoped.</li>
+  <li>Errors and empty chunks are handled gracefully.</li>
+ </ul>
+</section>
+
+<section id="summary">
+ <div class="kicker">11 · Recap</div>
+ <h2>Key takeaways</h2>
+ <ol>
+  <li><strong>Streaming delivers partial output incrementally.</strong> The UI can show content before the full answer is complete.</li>
+  <li><strong>Streaming improves perceived responsiveness.</strong> It is especially useful for long text, code, voice interfaces, and agent progress updates.</li>
+  <li><strong>LangGraph:</strong> use a streaming API and iterate over the events/chunks it yields. For token-level LLM message output, the transcript demonstrates <code>stream_mode="messages"</code>.</li>
+  <li><strong>Streamlit:</strong> pass a text-yielding generator to <code>st.write_stream()</code> to render the answer progressively.</li>
+  <li><strong>Persist the final text.</strong> Store the completed assistant response in <code>st.session_state</code> so it remains in the chat history after reruns.</li>
+  <li><strong>Debug the whole pipeline.</strong> Verify the prompt, graph state, stream event shape, UI renderer, and conversation persistence.</li>
+ </ol>
+ <h3>Quick glossary</h3>
+ <table>
+  <tbody>
+   <tr><th>LLM</th><td>Large language model, used to generate or interpret language.</td></tr>
+   <tr><th>LangGraph</th><td>A framework for building stateful, graph-based LLM and agent workflows.</td></tr>
+   <tr><th>Streamlit</th><td>A Python framework for building interactive data and AI applications.</td></tr>
+   <tr><th>Generator</th><td>A Python iterator that can yield values over time.</td></tr>
+   <tr><th>Stream mode</th><td>The kind of events or data a graph exposes while running.</td></tr>
+   <tr><th>Session state</th><td>Streamlit's mechanism for retaining values across script reruns within a session.</td></tr>
+   <tr><th>Thread ID</th><td>A conversation identifier commonly used by graph checkpointing to associate state with a conversation.</td></tr>
+  </tbody>
+ </table>
+ <div class="callout green"><strong>Final mental model:</strong> LangGraph produces a stream → your code selects the text chunks → Streamlit renders them as they arrive → the assembled answer is saved for future display.</div>
+ <p class="small">These notes are based on the supplied tutorial transcript. Code is illustrative and may require adaptation for the exact versions, model integration, graph state schema, and memory/checkpoint setup used in your project.</p>
+ <a class="toplink" href="#top">↑ Back to top</a>
+</section>
+</article>
+</main>
+</div>
+<footer>
+ <p>Study notes: LLM Streaming with LangGraph and Streamlit · Designed as a standalone, responsive HTML reading page. You can open it in a browser or print it to PDF.</p>
+</footer>
+</body>
+</html>
