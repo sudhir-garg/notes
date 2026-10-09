@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build a LangGraph Chatbot UI with Streamlit — Complete Notes</title>
+<style>
+:root{--bg:#f5f7fb;--paper:#fff;--ink:#172033;--muted:#586579;--accent:#5b5bd6;--accent2:#0e9384;--line:#e2e8f0;--code:#101827;--soft:#eef2ff;--gold:#fff7df}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+.hero{background:radial-gradient(circle at 80% 10%,#4545a9,transparent 32%),linear-gradient(135deg,#111b35,#242b5c);color:white;padding:64px 22px 54px}
+.hero-inner,.layout{max-width:1120px;margin:auto}.eyebrow{text-transform:uppercase;letter-spacing:.13em;font-size:.78rem;font-weight:800;color:#b9c3ff}
+h1{font-size:clamp(2rem,5vw,3.45rem);line-height:1.12;max-width:850px;margin:12px 0 18px}.hero p{max-width:760px;color:#e0e5ff;font-size:1.08rem}
+.pills{display:flex;flex-wrap:wrap;gap:9px;margin-top:24px}.pill{border:1px solid #ffffff45;border-radius:999px;padding:5px 12px;font-size:.85rem;color:#f0f2ff}
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:28px;padding:30px 18px 70px}.toc{position:sticky;top:18px;align-self:start;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:20px;max-height:calc(100vh - 36px);overflow:auto}.toc strong{display:block;margin-bottom:10px}.toc a{display:block;color:var(--muted);text-decoration:none;font-size:.91rem;padding:5px 0}.toc a:hover{color:var(--accent)}
+article{min-width:0}.section{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:clamp(20px,4vw,38px);margin-bottom:22px;box-shadow:0 8px 24px #19264a08}
+h2{font-size:1.65rem;line-height:1.25;margin:0 0 16px}h3{font-size:1.17rem;margin:25px 0 8px}p{margin:10px 0 14px}ul,ol{padding-left:24px}li{margin:6px 0}.muted{color:var(--muted)}.callout{border-left:4px solid var(--accent);background:var(--soft);padding:14px 17px;border-radius:8px;margin:18px 0}.warning{border-left-color:#d79a16;background:var(--gold)}.success{border-left-color:var(--accent2);background:#e8fbf7}
+.diagram{margin:20px 0;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fbfcff;overflow-x:auto}.diagram svg{display:block;width:100%;min-width:530px;height:auto}.caption{text-align:center;color:var(--muted);font-size:.88rem;margin-top:8px}
+pre{background:var(--code);color:#e8edf8;padding:18px;border-radius:12px;overflow:auto;font: .89rem/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;margin:12px 0 18px;tab-size:4}code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}p code,li code,td code{background:#edf0f7;padding:2px 5px;border-radius:5px;color:#353e70;font-size:.92em}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:.94rem}th,td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#f1f4fa}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.mini{border:1px solid var(--line);border-radius:12px;padding:16px;background:#fcfdff}.mini h3{margin-top:0}.step{display:inline-grid;place-items:center;background:var(--accent);color:white;width:28px;height:28px;border-radius:50%;font-weight:800;margin-right:8px}
+footer{text-align:center;color:var(--muted);padding:0 18px 36px;font-size:.9rem}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.toc{position:static;max-height:none}.grid2{grid-template-columns:1fr}.hero{padding-top:44px}}
+</style>
+</head>
+<body>
+<header class="hero"><div class="hero-inner">
+<div class="eyebrow">Practical engineering notes · Python · Agentic AI</div>
+<h1>Build a LangGraph Chatbot UI with Streamlit</h1>
+<p>A complete, blog-style guide to separating a chatbot into a LangGraph backend and a Streamlit frontend, preserving conversation history with session state, and connecting user messages to the graph.</p>
+<div class="pills"><span class="pill">Beginner-friendly</span><span class="pill">Architecture + code</span><span class="pill">Short-term memory</span><span class="pill">Runnable project outline</span></div>
+</div></header>
+<div class="layout">
+<nav class="toc"><strong>On this page</strong>
+<a href="#overview">1. Overview</a><a href="#architecture">2. Application architecture</a><a href="#setup">3. Project setup</a><a href="#components">4. Streamlit chat components</a><a href="#state">5. Preserve chat history</a><a href="#backend">6. LangGraph backend</a><a href="#frontend">7. Connect frontend + backend</a><a href="#run">8. Run the app</a><a href="#debug">9. Troubleshooting</a><a href="#takeaways">10. Key takeaways</a>
+</nav>
+<article>
+<section class="section" id="overview"><h2>1. Overview: what are we building?</h2>
+<p>The starting point is a working LangGraph chatbot that accepts messages in a notebook or terminal. The missing piece is a user interface. We will place a clean web chat UI in front of the existing graph using <strong>Streamlit</strong>.</p>
+<p>The interface displays user and assistant messages with distinct roles, provides a chat input at the bottom, scrolls as the conversation grows, and keeps earlier messages visible. The backend remains responsible for AI responses and graph execution.</p>
+<div class="callout success"><strong>Goal:</strong> a user types a message in the browser → Streamlit sends it to LangGraph → LangGraph returns an assistant response → Streamlit displays and stores that response.</div>
+<h3>Prerequisites</h3><ul><li>Basic Python: functions, lists, dictionaries, imports.</li><li>Basic Streamlit: running a Python app and displaying components.</li><li>Basic LangGraph: graph state, nodes, compilation, and invocation.</li><li>An API key for the model provider used by your backend.</li></ul>
+</section>
+<section class="section" id="architecture"><h2>2. Application architecture</h2>
+<p>Separate the application into two modules. This keeps UI code out of the graph logic and makes the backend easier to test or reuse in another interface.</p>
+<div class="diagram"><svg viewBox="0 0 760 300" role="img" aria-label="Architecture diagram showing user, Streamlit frontend, LangGraph backend, and language model">
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#5965cf"/></marker></defs>
+<rect x="20" y="100" width="130" height="74" rx="14" fill="#e9edff" stroke="#8a93e8"/><text x="85" y="130" text-anchor="middle" font-size="16" font-weight="700" fill="#272d74">User</text><text x="85" y="151" text-anchor="middle" font-size="12" fill="#414a8a">types message</text>
+<rect x="215" y="75" width="190" height="125" rx="14" fill="#e7faf5" stroke="#4fb7a6"/><text x="310" y="108" text-anchor="middle" font-size="16" font-weight="700" fill="#075d51">Streamlit UI</text><text x="310" y="132" text-anchor="middle" font-size="13" fill="#176f64">chat_input()</text><text x="310" y="152" text-anchor="middle" font-size="13" fill="#176f64">chat_message()</text><text x="310" y="174" text-anchor="middle" font-size="12" fill="#176f64">session_state</text>
+<rect x="475" y="75" width="245" height="125" rx="14" fill="#fff3df" stroke="#e2ad54"/><text x="597" y="108" text-anchor="middle" font-size="16" font-weight="700" fill="#80500b">LangGraph backend</text><text x="597" y="132" text-anchor="middle" font-size="13" fill="#80500b">State + nodes + edges</text><text x="597" y="152" text-anchor="middle" font-size="13" fill="#80500b">checkpointer / invoke</text><text x="597" y="174" text-anchor="middle" font-size="12" fill="#80500b">returns messages</text>
+<path d="M150 124 H210" stroke="#5965cf" stroke-width="2.5" marker-end="url(#arrow)"/><path d="M405 124 H470" stroke="#5965cf" stroke-width="2.5" marker-end="url(#arrow)"/>
+<path d="M470 164 H410" stroke="#5965cf" stroke-width="2.5" marker-end="url(#arrow)"/><path d="M210 164 H155" stroke="#5965cf" stroke-width="2.5" marker-end="url(#arrow)"/>
+<text x="180" y="112" text-anchor="middle" font-size="11" fill="#5965cf">input</text><text x="438" y="112" text-anchor="middle" font-size="11" fill="#5965cf">invoke</text><text x="438" y="184" text-anchor="middle" font-size="11" fill="#5965cf">response</text><text x="180" y="184" text-anchor="middle" font-size="11" fill="#5965cf">render</text>
+<text x="380" y="252" text-anchor="middle" font-size="13" fill="#586579">Frontend handles presentation · Backend handles conversation logic</text>
+</svg><div class="caption">Figure 1. Request and response flow between the UI and the graph.</div></div>
+<table><thead><tr><th>File</th><th>Responsibility</th></tr></thead><tbody><tr><td><code>langgraph_backend.py</code></td><td>Defines state, nodes, graph edges, checkpointer, and compiled chatbot object.</td></tr><tr><td><code>streamlit_frontend.py</code></td><td>Renders messages, accepts input, invokes the backend, and manages the UI session.</td></tr><tr><td><code>.env</code></td><td>Stores API credentials locally; must not be committed to source control.</td></tr></tbody></table>
+</section>
+<section class="section" id="setup"><h2>3. Project setup</h2>
+<p>One possible folder layout:</p><pre><code>langgraph-chat-ui/
+├── langgraph_backend.py
+├── streamlit_frontend.py
+├── .env
+├── .gitignore
+└── requirements.txt</code></pre>
+<p>Create and activate a virtual environment, then install the libraries used by your project. Exact LangChain package requirements depend on the model provider and backend implementation.</p>
+<pre><code>python -m venv .venv
+
+# macOS / Linux
+source .venv/bin/activate
+
+# Windows PowerShell
+# .venv\\Scripts\\Activate.ps1
+
+pip install streamlit langgraph langchain-core langchain-openai python-dotenv</code></pre>
+<p>Example <code>.env</code> (use the key expected by your selected provider):</p><pre><code>OPENAI_API_KEY=replace_with_your_api_key</code></pre>
+<p>Example <code>.gitignore</code>:</p><pre><code>.venv/
+__pycache__/
+.env
+.streamlit/secrets.toml</code></pre>
+<div class="callout warning"><strong>Security note:</strong> do not hard-code API keys in Python, place them in a public repository, or display them in the UI. If a key has been exposed, revoke it and create a replacement.</div>
+</section>
+<section class="section" id="components"><h2>4. The two core Streamlit chat components</h2>
+<div class="grid2"><div class="mini"><h3><code>st.chat_message()</code></h3><p>Creates a message container styled for a role such as <code>"user"</code> or <code>"assistant"</code>. Put text, Markdown, tables, or other Streamlit elements inside it.</p><pre><code>with st.chat_message("user"):
+    st.write("Hi!")
+
+with st.chat_message("assistant"):
+    st.write("Hello! How can I help?")</code></pre></div>
+<div class="mini"><h3><code>st.chat_input()</code></h3><p>Creates a chat-oriented input box. When the user submits text, the returned value contains that text; otherwise it is usually <code>None</code>.</p><pre><code>user_input = st.chat_input("Type here...")
+
+if user_input:
+    with st.chat_message("user"):
+        st.write(user_input)</code></pre></div></div>
+<p>The <code>role</code> controls the message identity and default avatar. The content is what appears inside the message bubble. You can customize avatars with the <code>avatar</code> parameter if desired.</p>
+<h3>Why the simple echo demo is useful</h3><p>Before connecting an LLM, echoing the user's input back as the assistant is a good way to test the UI and conversation-history logic independently from model or API issues.</p>
+</section>
+<section class="section" id="state"><h2>5. Preserve conversation history with Session State</h2>
+<p>Streamlit reruns the script from top to bottom after many interactions, including submitting chat input. A normal variable such as <code>message_history = []</code> is recreated on each rerun, so older messages disappear.</p>
+<div class="diagram"><svg viewBox="0 0 760 230" role="img" aria-label="Diagram comparing a normal list that resets on rerun with Streamlit session state that persists across reruns">
+<rect x="20" y="25" width="335" height="175" rx="14" fill="#fff0ef" stroke="#e6a19a"/><text x="187" y="53" text-anchor="middle" font-size="16" font-weight="700" fill="#9b3027">Ordinary variable</text><rect x="55" y="76" width="265" height="40" rx="8" fill="#fff" stroke="#e6a19a"/><text x="187" y="101" text-anchor="middle" font-size="13" fill="#7c2923">Run 1: [Hi, Hello]</text><path d="M187 118 V140" stroke="#b94a40" stroke-width="2"/><path d="M178 133 L187 143 L196 133" fill="none" stroke="#b94a40" stroke-width="2"/><rect x="55" y="148" width="265" height="32" rx="8" fill="#fff" stroke="#e6a19a"/><text x="187" y="169" text-anchor="middle" font-size="13" fill="#7c2923">Run 2: reset → [Hey]</text>
+<rect x="405" y="25" width="335" height="175" rx="14" fill="#e9faf4" stroke="#69c6ad"/><text x="572" y="53" text-anchor="middle" font-size="16" font-weight="700" fill="#086454">st.session_state</text><rect x="440" y="76" width="265" height="40" rx="8" fill="#fff" stroke="#69c6ad"/><text x="572" y="101" text-anchor="middle" font-size="13" fill="#086454">Run 1: [Hi, Hello]</text><path d="M572 118 V140" stroke="#138b76" stroke-width="2"/><path d="M563 133 L572 143 L581 133" fill="none" stroke="#138b76" stroke-width="2"/><rect x="440" y="148" width="265" height="32" rx="8" fill="#fff" stroke="#69c6ad"/><text x="572" y="169" text-anchor="middle" font-size="13" fill="#086454">Run 2: [Hi, Hello, Hey]</text>
+</svg><div class="caption">Figure 2. Session State keeps UI data between reruns in the same user session.</div></div>
+<p>Initialize the history only if the key does not already exist:</p>
+<pre><code>import streamlit as st
+
+if "message_history" not in st.session_state:
+    st.session_state.message_history = []</code></pre>
+<p>Each history item is a dictionary with a role and content. The list preserves message order.</p>
+<pre><code>{
+    "role": "user",
+    "content": "What is the capital of India?"
+}</code></pre>
+<p>Render the saved history first, then collect the next input:</p>
+<pre><code>for message in st.session_state.message_history:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
+
+user_input = st.chat_input("Ask me anything...")
+
+if user_input:
+    st.session_state.message_history.append({
+        "role": "user",
+        "content": user_input
+    })
+
+    # In an echo-only demo, the assistant repeats the input.
+    assistant_response = user_input
+
+    st.session_state.message_history.append({
+        "role": "assistant",
+        "content": assistant_response
+    })
+
+    st.rerun()</code></pre>
+<div class="callout"><strong>Important distinction:</strong> Streamlit Session State is UI-session memory. It is not automatically the same as LangGraph's checkpointed conversation memory. Session State typically lasts for a browser session and can be lost on a full reload or new session. LangGraph persistence is managed separately by the graph checkpointer and thread ID.</div>
+</section>
+<section class="section" id="backend"><h2>6. LangGraph backend: a clean, reusable module</h2>
+<p>The backend from the earlier chatbot lesson can be reused. The key idea is to compile the graph once and expose the compiled object for the frontend to import. Below is a representative example; adapt the model and graph details to match your existing implementation.</p>
+<pre><code># langgraph_backend.py
+from typing import Annotated, TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langgraph.checkpoint.memory import MemorySaver
+from langchain_openai import ChatOpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
+
+class ChatState(TypedDict):
+    messages: Annotated[list, add_messages]
+
+llm = ChatOpenAI(model="gpt-4o-mini")
+
+def chat_node(state: ChatState):
+    response = llm.invoke(state["messages"])
+    return {"messages": [response]}
+
+builder = StateGraph(ChatState)
+builder.add_node("chat", chat_node)
+builder.add_edge(START, "chat")
+builder.add_edge("chat", END)
+
+# In-memory checkpointing is useful for development.
+checkpointer = MemorySaver()
+chatbot = builder.compile(checkpointer=checkpointer)</code></pre>
+<p>This example uses LangGraph's message reducer so new messages are appended/merged into the state correctly. If you already have a backend from an earlier lesson, keep your existing state and nodes rather than duplicating them unnecessarily.</p>
+<h3>What each backend part does</h3><ul><li><strong>State:</strong> defines the data moving through the graph, here a list of messages.</li><li><strong>Node:</strong> calls the language model and returns its response as a new message.</li><li><strong>Edges:</strong> define the execution path from <code>START</code> through the chat node to <code>END</code>.</li><li><strong>Checkpointer:</strong> saves graph state per thread so follow-up turns can reuse earlier context.</li><li><strong>Compiled graph:</strong> the <code>chatbot</code> object imported by the frontend.</li></ul>
+<div class="callout warning"><strong>Model compatibility:</strong> the code above is a reference implementation, not a guarantee that every pre-existing backend has the same state schema. The frontend's input payload must match the backend's expected state keys and message format.</div>
+</section>
+<section class="section" id="frontend"><h2>7. Connect Streamlit to LangGraph</h2>
+<p>The frontend has five responsibilities: import the compiled graph, initialize session state, render existing messages, accept the new user input, invoke the graph with a stable thread ID, and save/render the assistant response.</p>
+<pre><code># streamlit_frontend.py
+import streamlit as st
+from langchain_core.messages import HumanMessage
+from langgraph_backend import chatbot
+
+st.set_page_config(page_title="LangGraph Chatbot", page_icon="💬")
+st.title("💬 My LangGraph Chatbot")
+
+# UI-level history
+if "message_history" not in st.session_state:
+    st.session_state.message_history = []
+
+# Graph-level conversation identity
+if "thread_id" not in st.session_state:
+    st.session_state.thread_id = "thread-1"
+
+config = {
+    "configurable": {
+        "thread_id": st.session_state.thread_id
+    }
+}
+
+# 1. Render earlier turns
+for message in st.session_state.message_history:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# 2. Get new user input
+user_input = st.chat_input("Type your message...")
+
+if user_input:
+    # 3. Store and show user message
+    st.session_state.message_history.append({
+        "role": "user",
+        "content": user_input
+    })
+    with st.chat_message("user"):
+        st.markdown(user_input)
+
+    # 4. Invoke LangGraph with a HumanMessage and thread config
+    result = chatbot.invoke(
+        {"messages": [HumanMessage(content=user_input)]},
+        config=config
+    )
+
+    # 5. Extract and store the latest assistant message
+    assistant_message = result["messages"][-1]
+    assistant_text = assistant_message.content
+
+    st.session_state.message_history.append({
+        "role": "assistant",
+        "content": assistant_text
+    })
+    with st.chat_message("assistant"):
+        st.markdown(assistant_text)</code></pre>
+<h3>Why pass a thread ID?</h3><p>If the graph has a checkpointer, the thread ID tells it which saved conversation to resume. Use the same ID for turns belonging to one conversation. Use a different ID for a new conversation or a different user. A hard-coded ID is suitable only for a local demonstration; real applications should create and isolate IDs per user/session.</p>
+<h3>Message flow</h3><ol><li>Streamlit receives a plain string from <code>st.chat_input()</code>.</li><li>The frontend wraps it in <code>HumanMessage(content=user_input)</code>.</li><li><code>chatbot.invoke(..., config=config)</code> executes or resumes the graph.</li><li>The frontend reads the latest message returned by the graph.</li><li>The response is saved to UI history and rendered in an assistant message container.</li></ol>
+<div class="callout warning"><strong>Do not mix memory systems accidentally.</strong> The sample keeps a display history in Streamlit and conversation context in LangGraph. If you store the full history in Session State and also send all of it to a checkpointed graph on every turn, you may duplicate messages. With a checkpointer, commonly send only the new user message and reuse the same thread ID. Match the approach to your backend's state design.</div>
+</section>
+<section class="section" id="run"><h2>8. Run the app</h2>
+<ol><li>Save both Python files in the same project folder.</li><li>Activate the virtual environment.</li><li>Confirm the provider API key is available in the environment or loaded from <code>.env</code>.</li><li>Start Streamlit from the project directory:</li></ol>
+<pre><code>streamlit run streamlit_frontend.py</code></pre>
+<p>Streamlit normally opens the app in your browser. Test a few turns:</p><ul><li>Say “Hi” and check that both roles render correctly.</li><li>Tell the bot your name, then ask “What is my name?” to test contextual memory.</li><li>Ask a factual question and a longer question to test response rendering.</li><li>Check that earlier turns remain visible after each submission.</li></ul>
+</section>
+<section class="section" id="debug"><h2>9. Troubleshooting checklist</h2>
+<table><thead><tr><th>Symptom</th><th>Likely cause</th><th>What to check</th></tr></thead><tbody>
+<tr><td>Old messages disappear</td><td>History stored in a normal Python list.</td><td>Initialize and append to <code>st.session_state.message_history</code>.</td></tr>
+<tr><td>Assistant repeats the user's input</td><td>The echo-demo logic is still in place.</td><td>Replace the echo assignment with a backend invocation and extract the model response.</td></tr>
+<tr><td>Graph forgets earlier turns</td><td>Thread ID changes or checkpointing is not configured.</td><td>Use a stable thread ID and a checkpointer; verify the graph state schema.</td></tr>
+<tr><td>Missing configurable thread ID</td><td>The compiled graph expects a checkpoint configuration.</td><td>Pass <code>{"configurable": {"thread_id": "..."}}</code> to <code>invoke</code>.</td></tr>
+<tr><td>Key or authentication error</td><td>Environment variable is missing or invalid.</td><td>Check <code>.env</code>, provider variable name, and key validity; never print the secret.</td></tr>
+<tr><td>Import error</td><td>Package not installed or file/module name mismatch.</td><td>Install required dependencies in the active environment and verify filenames.</td></tr>
+<tr><td>Duplicate messages in context</td><td>Full history is resent while the graph also restores history from its checkpointer.</td><td>Choose one consistent state-management strategy.</td></tr>
+</tbody></table>
+<h3>Practical improvements for production</h3><ul><li>Use a unique, authorized thread ID for each conversation.</li><li>Add error handling around model invocation and show a friendly error message.</li><li>Consider streaming tokens for a more responsive UI.</li><li>Use durable checkpoint storage if conversations must survive process restarts.</li><li>Keep secrets outside source control and validate user input where appropriate.</li><li>Define a clear retention policy for conversation data.</li></ul>
+</section>
+<section class="section" id="takeaways"><h2>10. Key takeaways</h2><ul><li><strong>Separation of concerns:</strong> LangGraph is the backend; Streamlit is the frontend.</li><li><strong><code>st.chat_message()</code>:</strong> displays a user or assistant message.</li><li><strong><code>st.chat_input()</code>:</strong> captures the next user message.</li><li><strong><code>st.session_state</code>:</strong> preserves UI variables across Streamlit reruns within a session.</li><li><strong>Checkpointer + thread ID:</strong> preserves graph state across turns when configured correctly.</li><li><strong><code>chatbot.invoke()</code>:</strong> sends the new message into the graph and returns the updated state.</li></ul>
+<div class="callout success"><strong>Final mental model:</strong> render saved UI messages → read new input → save/show the user turn → invoke LangGraph with the right thread configuration → save/show the assistant turn.</div>
+<p class="muted">These notes expand the supplied lesson transcript into a standalone reference. The code examples are illustrative and may need small adjustments to match the exact state schema and model setup in your existing LangGraph project.</p>
+</section>
+</article></div>
+<footer>Study notes · LangGraph + Streamlit · Built as a self-contained HTML page with inline diagrams and code examples.</footer>
+</body></html>
