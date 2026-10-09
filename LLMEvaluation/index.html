@@ -6,264 +6,90 @@
     <title>LLM Evaluation Notes</title>
     <style>
       :root {
-        --bg: #f4f7fb;
-        --panel: rgba(255, 255, 255, 0.8);
-        --panel-strong: #ffffff;
+        --bg: #f8fafc;
+        --page: #ffffff;
         --text: #1f2937;
         --muted: #6b7280;
         --accent: #2563eb;
-        --accent-dark: #1d4ed8;
-        --border: rgba(148, 163, 184, 0.28);
-        --shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+        --border: #e5e7eb;
+        --hover: #eff6ff;
       }
 
       * { box-sizing: border-box; }
 
       body {
         margin: 0;
-        min-height: 100vh;
-        font-family: Inter, "Segoe UI", Arial, sans-serif;
-        background: linear-gradient(135deg, #eef6ff 0%, #f8fafc 35%, #f5f3ff 100%);
+        font-family: Arial, sans-serif;
+        background: var(--bg);
         color: var(--text);
-        padding: 48px 20px;
+        padding: 40px 20px;
       }
 
       .container {
-        max-width: 1000px;
+        max-width: 900px;
         margin: 0 auto;
-      }
-
-      .header {
-        background: rgba(255,255,255,0.72);
-        backdrop-filter: blur(10px);
+        background: var(--page);
         border: 1px solid var(--border);
-        border-radius: 22px;
-        box-shadow: var(--shadow);
-        padding: 28px 32px;
-        margin-bottom: 28px;
-      }
-
-      .eyebrow {
-        display: inline-block;
-        padding: 6px 10px;
-        border-radius: 999px;
-        font-size: 12px;
-        background: #dbeafe;
-        color: var(--accent-dark);
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        border-radius: 12px;
+        padding: 28px 24px;
       }
 
       h1 {
-        margin: 18px 0 10px;
-        font-size: clamp(2rem, 4vw, 3rem);
-        line-height: 1.15;
+        margin: 0 0 20px;
+        font-size: 2rem;
       }
 
-      .subtitle {
+      ul {
+        list-style: none;
         margin: 0;
-        color: var(--muted);
-        font-size: 1.05rem;
+        padding: 0;
       }
 
-      .notes-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        gap: 18px;
+      li {
+        border-left: 3px solid var(--accent);
+        margin: 0 0 10px;
+        padding: 10px 12px 10px 14px;
+        background: #fff;
       }
 
-      .note-card {
-        background: var(--panel);
-        border: 1px solid var(--border);
-        border-radius: 18px;
-        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
-        padding: 18px 18px 16px;
-        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      li:hover {
+        background: var(--hover);
       }
 
-      .note-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 16px 30px rgba(15, 23, 42, 0.11);
-        border-color: rgba(37, 99, 235, 0.34);
-      }
-
-      .note-number {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 38px;
-        height: 38px;
-        border-radius: 12px;
-        background: linear-gradient(135deg, #dbeafe, #e0e7ff);
-        color: var(--accent-dark);
-        font-weight: 800;
-        margin-bottom: 12px;
-      }
-
-      a.note-link {
-        display: block;
-        color: var(--text);
-        text-decoration: none;
-        font-size: 1rem;
-        font-weight: 600;
-        line-height: 1.5;
-      }
-
-      a.note-link:hover {
+      a {
         color: var(--accent);
         text-decoration: none;
+        font-size: 1rem;
       }
 
-      .note-meta {
-        margin-top: 14px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: var(--muted);
-        font-size: 0.82rem;
-      }
-
-      .dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: #10b981;
-        display: inline-block;
-      }
-
-      @media (max-width: 620px) {
-        body {
-          padding: 28px 12px;
-        }
-
-        .header {
-          padding: 22px 18px;
-        }
-
-        .note-card {
-          padding: 16px;
-        }
+      a:hover {
+        text-decoration: underline;
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <header class="header">
-        <span class="eyebrow">AI Learning Path</span>
-        <h1>LLM Evaluation Notes</h1>
-        <p class="subtitle">A curated collection of notes covering evaluation strategies, benchmarks, RAG testing, and AI app assessment.</p>
-      </header>
-
-      <main class="notes-grid">
-        <article class="note-card">
-          <div class="note-number">02</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/02.%20Introduction%20to%20LLM%20Evaluation.md">Introduction to LLM Evaluation</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-
-        <article class="note-card">
-          <div class="note-number">03</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/03.%20How%20to%20Evaluate.md">How to Evaluate</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-
-        <article class="note-card">
-          <div class="note-number">04</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/04.%20Why%20Your%20AI%20Application%20Needs%20Multiple%20Eval%20Pipelines.md">Why Your AI Application Needs Multiple Eval Pipelines</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-
-        <article class="note-card">
-          <div class="note-number">05</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/05.%20LLM%20Eval%20Methods%20%7C%20LLM-as-a-Judge%20%7C%20Reference%20Based%20Evals%20Vs%20Reference%20Free%20Evals.md">LLM Eval Methods | LLM-as-a-Judge | Reference Based Evals Vs Reference Free Evals</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-
-        <article class="note-card">
-          <div class="note-number">06</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/06.%20Offline%20Evals%20Vs%20Online%20Evals.md">Offline Evals Vs Online Evals</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-
-        <article class="note-card">
-          <div class="note-number">07</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/07.%20Benchmarking,%20Custom%20Evals%20and%20Core%20LLM%20Capabilities.md">Benchmarking, Custom Evals and Core LLM Capabilities</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-
-        <article class="note-card">
-          <div class="note-number">08</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/08.%20LLMBenchmarking:%20Benchmark%20Saturation%20vs%20Contamination.md">LLMBenchmarking: Benchmark Saturation vs Contamination</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-
-        <article class="note-card">
-          <div class="note-number">09</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/09.%20LLM%20Benchmarks:%20The%20Evolution%20of%20AI%20Knowledge%20Benchmarks.md">LLM Benchmarks: The Evolution of AI Knowledge Benchmarks</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-
-        <article class="note-card">
-          <div class="note-number">10</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/10.%20LLM%20LeaderBoards.md">LLM LeaderBoards</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-
-        <article class="note-card">
-          <div class="note-number">11</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/11.%20Selecting%20the%20Right%20LLM%20for%20Your%20AI%20App:%20Running%20Custom%20Model%20Evals.md">Selecting the Right LLM for Your AI App: Running Custom Model Evals</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-
-        <article class="note-card">
-          <div class="note-number">12</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/12.%20%20How%20to%20Answer%20%22How%20Do%20You%20Evaluate%20Your%20RAG%20App%3F%22%20in%20GenAI%20Interviews.md">How to Answer "How Do You Evaluate Your RAG App?" in GenAI Interviews</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-
-        <article class="note-card">
-          <div class="note-number">13</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/13.%20Evaluating%20RAG:%20How%20to%20Test%20RAG%20Retrievers(Hands-On).md">Evaluating RAG: How to Test RAG Retrievers (Hands-On)</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-
-        <article class="note-card">
-          <div class="note-number">14</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/14.%20%20Evaluating%20RAG:%20Testing%20the%20Generator%20%26%20Full%20Pipeline%20with%20the%20RAG%20Triad.md">Evaluating RAG: Testing the Generator &amp; Full Pipeline with the RAG Triad</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-
-        <article class="note-card">
-          <div class="note-number">15</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/15.%20Mastering%20G-Eval:%20The%20Deterministic%20LLM-as-a-Judge%20Framework%20Explained.md">Mastering G-Eval: The Deterministic LLM-as-a-Judge Framework Explained</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-
-        <article class="note-card">
-          <div class="note-number">16</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/16.%20%20Securing%20Your%20RAG%20Application:%20Testing%20for%20Toxicity,%20Leakage%20%26%20Scope%20Drift.md">Securing Your RAG Application: Testing for Toxicity, Leakage &amp; Scope Drift</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-
-        <article class="note-card">
-          <div class="note-number">17</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/17.%20RAG%20Operational%20Evals:%20Building%20Faster%20%26%20Cheaper%20RAG%20Systems.md">RAG Operational Evals: Building Faster &amp; Cheaper RAG Systems</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-
-        <article class="note-card">
-          <div class="note-number">18</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/18.%20%20RAG%20Regression%20Testing%20Explained:%20How%20to%20Prevent%20Silent%20AI%20Failures.md">RAG Regression Testing Explained: How to Prevent Silent AI Failures</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-
-        <article class="note-card">
-          <div class="note-number">19</div>
-          <a class="note-link" href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/19.%20%20Online%20RAG%20Evaluation:%20Monitoring%20Production%20LLMs%20with%20LangSmith.md">Online RAG Evaluation: Monitoring Production LLMs with LangSmith</a>
-          <div class="note-meta"><span class="dot"></span> Read note</div>
-        </article>
-      </main>
+      <h1>LLM Evaluation Notes</h1>
+      <ul>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/02.%20Introduction%20to%20LLM%20Evaluation.md">02. Introduction to LLM Evaluation.md</a></li>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/03.%20How%20to%20Evaluate.md">03. How to Evaluate.md</a></li>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/04.%20Why%20Your%20AI%20Application%20Needs%20Multiple%20Eval%20Pipelines.md">04. Why Your AI Application Needs Multiple Eval Pipelines.md</a></li>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/05.%20LLM%20Eval%20Methods%20%7C%20LLM-as-a-Judge%20%7C%20Reference%20Based%20Evals%20Vs%20Reference%20Free%20Evals.md">05. LLM Eval Methods | LLM-as-a-Judge | Reference Based Evals Vs Reference Free Evals.md</a></li>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/06.%20Offline%20Evals%20Vs%20Online%20Evals.md">06. Offline Evals Vs Online Evals.md</a></li>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/07.%20Benchmarking,%20Custom%20Evals%20and%20Core%20LLM%20Capabilities.md">07. Benchmarking, Custom Evals and Core LLM Capabilities.md</a></li>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/08.%20LLMBenchmarking:%20Benchmark%20Saturation%20vs%20Contamination.md">08. LLMBenchmarking: Benchmark Saturation vs Contamination.md</a></li>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/09.%20LLM%20Benchmarks:%20The%20Evolution%20of%20AI%20Knowledge%20Benchmarks.md">09. LLM Benchmarks: The Evolution of AI Knowledge Benchmarks.md</a></li>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/10.%20LLM%20LeaderBoards.md">10. LLM LeaderBoards.md</a></li>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/11.%20Selecting%20the%20Right%20LLM%20for%20Your%20AI%20App:%20Running%20Custom%20Model%20Evals.md">11. Selecting the Right LLM for Your AI App: Running Custom Model Evals.md</a></li>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/12.%20%20How%20to%20Answer%20%22How%20Do%20You%20Evaluate%20Your%20RAG%20App%3F%22%20in%20GenAI%20Interviews.md">12. How to Answer "How Do You Evaluate Your RAG App?" in GenAI Interviews.md</a></li>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/13.%20Evaluating%20RAG:%20How%20to%20Test%20RAG%20Retrievers(Hands-On).md">13. Evaluating RAG: How to Test RAG Retrievers(Hands-On).md</a></li>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/14.%20%20Evaluating%20RAG:%20Testing%20the%20Generator%20%26%20Full%20Pipeline%20with%20the%20RAG%20Triad.md">14. Evaluating RAG: Testing the Generator &amp; Full Pipeline with the RAG Triad.md</a></li>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/15.%20Mastering%20G-Eval:%20The%20Deterministic%20LLM-as-a-Judge%20Framework%20Explained.md">15. Mastering G-Eval: The Deterministic LLM-as-a-Judge Framework Explained.md</a></li>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/16.%20%20Securing%20Your%20RAG%20Application:%20Testing%20for%20Toxicity,%20Leakage%20%26%20Scope%20Drift.md">16. Securing Your RAG Application: Testing for Toxicity, Leakage &amp; Scope Drift.md</a></li>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/17.%20RAG%20Operational%20Evals:%20Building%20Faster%20%26%20Cheaper%20RAG%20Systems.md">17. RAG Operational Evals: Building Faster &amp; Cheaper RAG Systems.md</a></li>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/18.%20%20RAG%20Regression%20Testing%20Explained:%20How%20to%20Prevent%20Silent%20AI%20Failures.md">18. RAG Regression Testing Explained: How to Prevent Silent AI Failures.md</a></li>
+        <li><a href="https://github.com/sudhir-garg/notes/blob/main/LLMEvaluation/19.%20%20Online%20RAG%20Evaluation:%20Monitoring%20Production%20LLMs%20with%20LangSmith.md">19. Online RAG Evaluation: Monitoring Production LLMs with LangSmith.md</a></li>
+      </ul>
     </div>
   </body>
 </html>
