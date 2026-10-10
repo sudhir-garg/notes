@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LangSmith: Observability, Tracing, Evaluation & LLMOps — Study Notes</title>
+<style>
+:root{--ink:#182230;--muted:#596579;--line:#dce4ee;--paper:#fff;--bg:#f4f7fb;--blue:#2457c5;--blue2:#eaf1ff;--teal:#087f8c;--tealbg:#e7f7f7;--amber:#8b5b00;--amberbg:#fff5dc;--red:#a12d37;--redbg:#fff0f1;--code:#101827;--codeink:#e8eef8;--shadow:0 10px 28px rgba(22,38,67,.08)}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:22px}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.72 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.hero{background:linear-gradient(125deg,#101d3a,#193b78 62%,#087f8c);color:#fff;padding:62px 24px 52px}.hero-inner{max-width:1180px;margin:auto}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:.76rem;font-weight:800;color:#a9d9ff}.hero h1{font-size:clamp(2.25rem,5vw,4.2rem);line-height:1.08;max-width:900px;margin:12px 0 18px}.hero p{max-width:800px;color:#e2ebff;font-size:1.12rem;margin:0}.pills{display:flex;flex-wrap:wrap;gap:9px;margin-top:24px}.pill{border:1px solid #ffffff50;background:#ffffff12;padding:5px 11px;border-radius:999px;font-size:.84rem}
+.layout{max-width:1320px;margin:30px auto;padding:0 22px;display:grid;grid-template-columns:260px minmax(0,1fr);gap:28px}.toc{align-self:start;position:sticky;top:18px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow);max-height:calc(100vh - 36px);overflow:auto}.toc strong{display:block;margin-bottom:10px;font-size:.92rem}.toc a{display:block;text-decoration:none;color:#46536a;font-size:.88rem;padding:5px 8px;border-radius:7px;line-height:1.4}.toc a:hover{background:var(--blue2);color:var(--blue)}main{min-width:0}.intro-card,.section{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:clamp(20px,3vw,36px);margin-bottom:22px;box-shadow:var(--shadow)}h2{font-size:1.8rem;line-height:1.25;margin:0 0 14px;letter-spacing:-.025em}h3{font-size:1.2rem;line-height:1.35;margin:26px 0 9px}h4{font-size:1rem;margin:18px 0 6px}p{margin:9px 0 14px}ul,ol{padding-left:1.35rem}li{margin:5px 0}.muted{color:var(--muted)}.lead{font-size:1.08rem;color:#3f4c61}.callout{border-left:4px solid var(--blue);background:var(--blue2);padding:14px 17px;border-radius:0 10px 10px 0;margin:18px 0}.callout.tip{border-color:var(--teal);background:var(--tealbg)}.callout.warn{border-color:#d49a22;background:var(--amberbg)}.callout.danger{border-color:var(--red);background:var(--redbg)}.callout strong{display:block;margin-bottom:3px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:18px 0}.mini{border:1px solid var(--line);border-radius:13px;padding:16px;background:#fbfcfe}.mini h3{margin:0 0 7px;font-size:1.04rem}.mini p{font-size:.93rem;margin:0;color:#4d5b70}.table-wrap{overflow:auto;margin:18px 0}table{border-collapse:collapse;width:100%;font-size:.94rem}th,td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#f0f4fa;color:#263750}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.9em;background:#eef2f8;border-radius:4px;padding:.12em .35em}pre{white-space:pre;overflow:auto;background:var(--code);color:var(--codeink);padding:18px;border-radius:12px;font-size:.88rem;line-height:1.58;border:1px solid #263348}pre code{background:none;padding:0;color:inherit}.diagram{margin:22px 0;padding:14px;background:#fbfdff;border:1px solid var(--line);border-radius:14px;overflow:auto}.diagram svg{display:block;width:100%;height:auto;min-width:620px}.caption{font-size:.86rem;color:var(--muted);margin-top:8px}.step{display:flex;gap:12px;margin:14px 0}.num{flex:0 0 32px;height:32px;border-radius:10px;background:var(--blue);color:#fff;font-weight:800;display:grid;place-items:center}.step-body{flex:1}.kpi{font-size:1.7rem;font-weight:800;color:var(--blue);line-height:1.2}.small{font-size:.9rem}.footer{max-width:1180px;margin:0 auto;padding:10px 24px 50px;color:var(--muted);font-size:.9rem}.tag{display:inline-block;background:#edf2f9;color:#3d4d66;border-radius:6px;padding:2px 7px;font-size:.78rem;font-weight:700}.checklist li{list-style:"☐  ";padding-left:5px}.backtop{float:right;font-size:.82rem;text-decoration:none;color:var(--blue)}@media(max-width:900px){.layout{grid-template-columns:1fr}.toc{position:relative;top:auto;max-height:none}.grid{grid-template-columns:1fr 1fr}}@media(max-width:580px){.grid{grid-template-columns:1fr}.hero{padding:42px 20px}.layout{padding:0 12px;margin:16px auto}.section,.intro-card{padding:20px}}
+@media print{body{background:white}.toc{position:static;max-height:none;box-shadow:none}.layout{display:block}.hero{background:#193b78!important;print-color-adjust:exact}.section,.intro-card{box-shadow:none;break-inside:avoid}.diagram{break-inside:avoid}a{color:inherit}}
+</style>
+</head>
+<body>
+<header class="hero" id="top"><div class="hero-inner">
+<div class="eyebrow">Engineering Study Notes · LangChain · LangGraph · LLMOps</div>
+<h1>LangSmith: Observability, Tracing, Evaluation & LLMOps</h1>
+<p>A practical, end-to-end guide to understanding what happens inside an LLM application—from prompt and model calls to RAG retrieval, agent tool loops, LangGraph nodes, evaluation, and production monitoring.</p>
+<div class="pills"><span class="pill">Trace-first debugging</span><span class="pill">LangChain + LangGraph</span><span class="pill">RAG + Agents</span><span class="pill">Evaluation & Monitoring</span></div>
+</div></header>
+<div class="layout">
+<nav class="toc" aria-label="Table of contents"><strong>On this page</strong>
+<a href="#overview">1. Learning objectives</a><a href="#why">2. Why LangSmith?</a><a href="#observability">3. Observability</a><a href="#concepts">4. Project, trace & run</a><a href="#setup">5. Setup & configuration</a><a href="#chain">6. Trace a LangChain chain</a><a href="#rag">7. Trace a RAG application</a><a href="#agent">8. Trace an agent</a><a href="#graph">9. LangGraph integration</a><a href="#features">10. LangSmith features</a><a href="#monitoring">11. Monitoring vs observability</a><a href="#evaluation">12. Evaluation</a><a href="#prompts">13. Prompt experiments</a><a href="#datasets">14. Datasets & annotation</a><a href="#feedback">15. User feedback & collaboration</a><a href="#llmops">16. LLMOps</a><a href="#checklist">17. Production checklist</a><a href="#glossary">18. Glossary</a>
+</nav>
+<main>
+<section class="intro-card" id="overview">
+<h2>What you will learn</h2>
+<p class="lead">LangSmith is introduced in the source lesson as a unified observability and evaluation platform for AI applications. The central idea is to make a complex LLM workflow inspectable, so developers can understand <em>why</em> a result, delay, cost spike, or failure occurred—not merely observe the final answer.</p>
+<div class="grid">
+<div class="mini"><h3>Observe</h3><p>Inspect inputs, outputs, intermediate steps, latency, token usage, errors, tags, and metadata.</p></div>
+<div class="mini"><h3>Debug</h3><p>Locate which component—retriever, prompt, model, tool, or graph node—is responsible for a problem.</p></div>
+<div class="mini"><h3>Improve</h3><p>Evaluate versions, compare prompts, label examples, capture feedback, and monitor trends.</p></div>
+</div>
+<div class="callout"><strong>Prerequisites</strong>The lesson assumes familiarity with LangChain and the LangGraph concepts covered earlier in the course. The examples are educational patterns; adapt package names and APIs to the versions installed in your own project.</div>
+</section>
+
+<section class="section" id="why">
+<a class="backtop" href="#top">↑ Back to top</a><h2>1. Why do we need LangSmith?</h2>
+<p>Traditional application debugging often starts with logs, exceptions, and the final output. An LLM application, however, may be a multi-stage workflow containing retrieval, several model calls, tool calls, parsing, retries, and conditional branches. Seeing only the user's input and the final response hides the reason a system behaved poorly.</p>
+<div class="grid">
+<div class="mini"><div class="tag">Scenario A · Latency</div><h3>Response time grows</h3><p>A cover-letter workflow normally takes about two minutes, then suddenly takes seven to ten. Without per-step timing, it is unclear whether document retrieval, profile scanning, matching, generation, or proofreading caused the delay.</p></div>
+<div class="mini"><div class="tag">Scenario B · Cost</div><h3>Agent cost spikes</h3><p>A research agent normally costs roughly ₹0.50 per report, but some reports cost ₹2. A prompt change may cause the agent to repeat its research-and-review loop for certain topics.</p></div>
+<div class="mini"><div class="tag">Scenario C · Quality</div><h3>RAG hallucination</h3><p>An HR policy chatbot gives an incorrect leave-policy answer. The fault may be poor retrieval, insufficient context, a weak prompt, or the generator itself.</p></div>
+</div>
+<h3>The debugging question</h3>
+<p>For each scenario, the real question is not only “What output did we get?” but also:</p>
+<ul><li>Which component ran, and in what order?</li><li>What input did each component receive, and what did it return?</li><li>How long did each step take? How many tokens and how much cost did it consume?</li><li>Which documents, prompt, model, tool calls, and intermediate states influenced the final answer?</li></ul>
+<div class="diagram">
+<svg viewBox="0 0 920 245" role="img" aria-label="Black box debugging transformed into a traceable workflow">
+<defs><marker id="arr1" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#52709d"/></marker></defs>
+<rect x="15" y="30" width="250" height="175" rx="16" fill="#fff0f1" stroke="#d88a91" stroke-width="2"/>
+<text x="140" y="62" font-size="18" font-weight="700" text-anchor="middle" fill="#8e2932">Black-box view</text>
+<rect x="42" y="86" width="196" height="45" rx="9" fill="#fff" stroke="#d88a91"/><text x="140" y="114" text-anchor="middle" font-size="15" fill="#26354a">Input → LLM app → Output</text>
+<text x="140" y="158" text-anchor="middle" font-size="13" fill="#8e2932">Only total time / final answer</text><text x="140" y="179" text-anchor="middle" font-size="13" fill="#8e2932">Root cause remains hidden</text>
+<path d="M278 118 H332" stroke="#52709d" stroke-width="3" marker-end="url(#arr1)"/>
+<rect x="350" y="30" width="555" height="175" rx="16" fill="#eaf1ff" stroke="#8ba9ec" stroke-width="2"/>
+<text x="627" y="62" font-size="18" font-weight="700" text-anchor="middle" fill="#214ba8">Traceable / inspectable view</text>
+<g font-size="13" text-anchor="middle" fill="#203451"><rect x="373" y="88" width="94" height="48" rx="8" fill="#fff" stroke="#8ba9ec"/><text x="420" y="108">Retrieve</text><text x="420" y="124">documents</text><rect x="490" y="88" width="94" height="48" rx="8" fill="#fff" stroke="#8ba9ec"/><text x="537" y="108">Build</text><text x="537" y="124">prompt</text><rect x="607" y="88" width="94" height="48" rx="8" fill="#fff" stroke="#8ba9ec"/><text x="654" y="108">Call</text><text x="654" y="124">model</text><rect x="724" y="88" width="94" height="48" rx="8" fill="#fff" stroke="#8ba9ec"/><text x="771" y="108">Parse /</text><text x="771" y="124">validate</text></g>
+<g stroke="#52709d" stroke-width="2" marker-end="url(#arr1)"><path d="M467 112 H487"/><path d="M584 112 H604"/><path d="M701 112 H721"/></g>
+<text x="627" y="166" text-anchor="middle" font-size="13" fill="#214ba8">Inputs · outputs · timings · tokens · errors · metadata</text>
+<text x="627" y="185" text-anchor="middle" font-size="13" fill="#214ba8">Find the component responsible for the symptom</text>
+</svg><div class="caption">Conceptual illustration: tracing exposes the sequence of component-level operations that a final answer alone cannot reveal.</div>
+</div>
+</section>
+
+<section class="section" id="observability">
+<a class="backtop" href="#top">↑ Back to top</a><h2>2. Observability for LLM applications</h2>
+<p><strong>Observability</strong> is the ability to understand a system's internal state by examining its external outputs, such as logs, metrics, and traces. It helps answer why something happened—even when the exact failure was not anticipated.</p>
+<h3>Three useful signals</h3>
+<div class="table-wrap"><table><thead><tr><th>Signal</th><th>What it tells you</th><th>LLM application example</th></tr></thead><tbody>
+<tr><td><strong>Logs</strong></td><td>Events and details about what happened.</td><td>Tool failed, request timed out, parser raised an exception.</td></tr>
+<tr><td><strong>Metrics</strong></td><td>Numeric measurements aggregated over time.</td><td>p95 latency, error rate, token consumption, cost per request.</td></tr>
+<tr><td><strong>Traces</strong></td><td>The end-to-end path of a single execution, including nested operations.</td><td>Question → retrieval → prompt construction → model → parser.</td></tr>
+</tbody></table></div>
+<p>LLM systems are often non-deterministic: similar or identical inputs may produce different outputs. They also combine opaque model behavior with multi-step workflows. That makes component-level traces particularly valuable when debugging production behavior.</p>
+<div class="callout tip"><strong>Remember</strong>Observability is not just collecting data. The goal is to connect execution evidence to a diagnosis: for example, “the extra latency came from rebuilding the vector index” or “the wrong answer followed retrieval of irrelevant chunks.”</div>
+</section>
+
+<section class="section" id="concepts">
+<a class="backtop" href="#top">↑ Back to top</a><h2>3. The three core concepts: Project, Trace, Run</h2>
+<div class="diagram">
+<svg viewBox="0 0 900 315" role="img" aria-label="Project contains traces; each trace contains runs">
+<defs><marker id="arr2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#6c7d98"/></marker></defs>
+<rect x="18" y="18" width="864" height="278" rx="18" fill="#f0f5ff" stroke="#9eb5e9" stroke-width="2"/>
+<text x="44" y="51" font-size="20" font-weight="700" fill="#244ca7">Project · your application / workspace grouping</text>
+<rect x="45" y="75" width="390" height="190" rx="14" fill="#fff" stroke="#8da9e8" stroke-width="2"/>
+<text x="65" y="105" font-size="17" font-weight="700" fill="#244ca7">Trace A · one full execution</text>
+<rect x="65" y="125" width="105" height="62" rx="9" fill="#e7f7f7" stroke="#5cb9bc"/><text x="117" y="151" text-anchor="middle" font-size="13" fill="#14565d">Prompt</text><text x="117" y="169" text-anchor="middle" font-size="12" fill="#14565d">run</text>
+<rect x="185" y="125" width="105" height="62" rx="9" fill="#eaf1ff" stroke="#8da9e8"/><text x="237" y="151" text-anchor="middle" font-size="13" fill="#244ca7">Model</text><text x="237" y="169" text-anchor="middle" font-size="12" fill="#244ca7">run</text>
+<rect x="305" y="125" width="105" height="62" rx="9" fill="#fff5dc" stroke="#e0b657"/><text x="357" y="151" text-anchor="middle" font-size="13" fill="#805600">Parser</text><text x="357" y="169" text-anchor="middle" font-size="12" fill="#805600">run</text>
+<g stroke="#6c7d98" stroke-width="2" marker-end="url(#arr2)"><path d="M170 156 H182"/><path d="M290 156 H302"/></g>
+<text x="65" y="225" font-size="12" fill="#52617a">One user request; full path to final output</text>
+<rect x="465" y="75" width="390" height="190" rx="14" fill="#fff" stroke="#8da9e8" stroke-width="2"/>
+<text x="485" y="105" font-size="17" font-weight="700" fill="#244ca7">Trace B · another execution</text>
+<rect x="485" y="125" width="105" height="62" rx="9" fill="#e7f7f7" stroke="#5cb9bc"/><text x="537" y="151" text-anchor="middle" font-size="13" fill="#14565d">Prompt</text><text x="537" y="169" text-anchor="middle" font-size="12" fill="#14565d">run</text>
+<rect x="605" y="125" width="105" height="62" rx="9" fill="#eaf1ff" stroke="#8da9e8"/><text x="657" y="151" text-anchor="middle" font-size="13" fill="#244ca7">Model</text><text x="657" y="169" text-anchor="middle" font-size="12" fill="#244ca7">run</text>
+<rect x="725" y="125" width="105" height="62" rx="9" fill="#fff5dc" stroke="#e0b657"/><text x="777" y="151" text-anchor="middle" font-size="13" fill="#805600">Parser</text><text x="777" y="169" text-anchor="middle" font-size="12" fill="#805600">run</text>
+<g stroke="#6c7d98" stroke-width="2" marker-end="url(#arr2)"><path d="M590 156 H602"/><path d="M710 156 H722"/></g>
+<text x="485" y="225" font-size="12" fill="#52617a">A separate user request / execution</text>
+</svg><div class="caption">A project groups executions; each trace represents one end-to-end execution; each run represents an individual component operation.</div>
+</div>
+<div class="table-wrap"><table><thead><tr><th>Concept</th><th>Meaning</th><th>Example</th></tr></thead><tbody>
+<tr><td><strong>Project</strong></td><td>A named grouping for traces from an application or workflow.</td><td><code>job-assistant</code>, <code>rag-demo</code>, or <code>langgraph-evals</code>.</td></tr>
+<tr><td><strong>Trace</strong></td><td>One end-to-end execution of the application.</td><td>One user asks, “What is the capital of Peru?” and receives an answer.</td></tr>
+<tr><td><strong>Run</strong></td><td>One operation/component inside the trace.</td><td>Prompt template, model call, parser, retriever, tool, or graph node.</td></tr>
+</tbody></table></div>
+<p>For a simple chain with a prompt template, chat model, and string output parser, one trace typically contains at least those three component runs. In a larger RAG or agent workflow, the trace can contain many more nested runs.</p>
+</section>
+
+<section class="section" id="setup">
+<a class="backtop" href="#top">↑ Back to top</a><h2>4. Development setup and configuration</h2>
+<p>The lesson demonstrates cloning a course repository, creating a virtual environment, installing dependencies, creating a LangSmith account/API key, and configuring environment variables so supported LangChain calls are traced automatically.</p>
+<div class="step"><div class="num">1</div><div class="step-body"><strong>Get the project code</strong><pre><code>git clone &lt;COURSE_REPOSITORY_URL&gt;
+cd &lt;PROJECT_DIRECTORY&gt;</code></pre><span class="muted small">Replace placeholders with the actual repository URL and directory from your course materials.</span></div></div>
+<div class="step"><div class="num">2</div><div class="step-body"><strong>Create and activate a virtual environment</strong><pre><code>python -m venv .venv
+
+# macOS / Linux
+source .venv/bin/activate
+
+# Windows PowerShell
+.venv\\Scripts\\Activate.ps1</code></pre></div></div>
+<div class="step"><div class="num">3</div><div class="step-body"><strong>Install dependencies</strong><pre><code>pip install -r requirements.txt</code></pre></div></div>
+<div class="step"><div class="num">4</div><div class="step-body"><strong>Create a LangSmith API key</strong><p>In the LangSmith UI, open settings and create an API key/access token appropriate to your account. Copy it once and store it securely.</p></div></div>
+<div class="step"><div class="num">5</div><div class="step-body"><strong>Configure environment variables</strong><pre><code># .env — example structure; fill in secrets locally
+OPENAI_API_KEY=your_openai_api_key
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=your_langsmith_api_key
+LANGSMITH_PROJECT=langsmith-demo
+# Set only if required by your LangSmith deployment:
+LANGSMITH_ENDPOINT=https://api.smith.langchain.com</code></pre></div></div>
+<div class="callout danger"><strong>Secret-handling rule</strong>Never commit <code>.env</code> to Git, paste real API keys into public notebooks, or include keys in screenshots. Add <code>.env</code> to <code>.gitignore</code>, rotate any exposed key immediately, and use your organization's secret manager in production.</div>
+<p>With supported LangChain integrations, setting the tracing environment variables can be enough to capture executions without changing the chain's business logic. Exact variable names and SDK behavior can vary by LangSmith/LangChain version, so check the documentation for the versions pinned in your project.</p>
+</section>
+
+<section class="section" id="chain">
+<a class="backtop" href="#top">↑ Back to top</a><h2>5. Tracing a basic LangChain chain</h2>
+<p>The lesson starts with a simple question-answer chain. Its components are a prompt template, a chat model, and a string output parser. When tracing is enabled, the execution can be inspected in the LangSmith project UI.</p>
+<div class="diagram">
+<svg viewBox="0 0 900 170" role="img" aria-label="Simple LangChain pipeline">
+<defs><marker id="arr3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#607694"/></marker></defs>
+<g font-size="15" text-anchor="middle"><rect x="12" y="42" width="135" height="70" rx="12" fill="#f0f5ff" stroke="#8da9e8"/><text x="79" y="70" fill="#214ba8" font-weight="700">User input</text><text x="79" y="91" fill="#52617a" font-size="12">question</text><rect x="190" y="42" width="155" height="70" rx="12" fill="#e7f7f7" stroke="#5cb9bc"/><text x="267" y="70" fill="#14565d" font-weight="700">PromptTemplate</text><text x="267" y="91" fill="#52617a" font-size="12">format messages</text><rect x="390" y="42" width="145" height="70" rx="12" fill="#fff5dc" stroke="#e0b657"/><text x="462" y="70" fill="#805600" font-weight="700">Chat model</text><text x="462" y="91" fill="#52617a" font-size="12">generate answer</text><rect x="580" y="42" width="145" height="70" rx="12" fill="#f4edff" stroke="#b69cde"/><text x="652" y="70" fill="#65439b" font-weight="700">Output parser</text><text x="652" y="91" fill="#52617a" font-size="12">extract string</text><rect x="770" y="42" width="118" height="70" rx="12" fill="#eef7ef" stroke="#87bd8e"/><text x="829" y="70" fill="#286b32" font-weight="700">Answer</text><text x="829" y="91" fill="#52617a" font-size="12">to user</text></g>
+<g stroke="#607694" stroke-width="2" marker-end="url(#arr3)"><path d="M147 77 H187"/><path d="M345 77 H387"/><path d="M535 77 H577"/><path d="M725 77 H767"/></g>
+<text x="450" y="145" text-anchor="middle" font-size="13" fill="#596579">One trace contains the runs for the operations above, with inputs, outputs, timing and available model metadata.</text>
+</svg>
+</div>
+<h3>Illustrative code</h3>
+<pre><code>import os
+from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
+load_dotenv()  # loads local .env variables
+
+prompt = ChatPromptTemplate.from_template(
+    "Answer the question clearly and concisely: {question}"
+)
+model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+parser = StrOutputParser()
+
+chain = prompt | model | parser
+
+answer = chain.invoke({
+    "question": "What is the capital of Peru?"
+})
+print(answer)</code></pre>
+<p class="muted small">This is a teaching example, not a claim that the original lesson used these exact package versions or model defaults. Install compatible packages and configure your API keys first.</p>
+<h3>What to inspect in the trace UI</h3>
+<ul><li><strong>Trace overview:</strong> top-level input, final output, status/error, start time, duration, and model/token/cost information where available.</li><li><strong>Run tree:</strong> prompt template → chat model → output parser.</li><li><strong>Run details:</strong> component input and output, execution duration, model metadata, and errors.</li></ul>
+<p>Change the question and invoke the chain again. A second invocation creates another trace in the same project, allowing you to compare executions.</p>
+<h3>Sequential chains and metadata</h3>
+<p>The lesson then expands from a single call to a sequential workflow with multiple prompt/model stages. This is where tracing becomes more useful: you can see which stage generated each intermediate result and attach names, tags, and metadata to make runs easier to filter.</p>
+<pre><code># Illustrative configuration pattern for a named, tagged execution
+config = {
+    "run_name": "summary-workflow",
+    "tags": ["tutorial", "text-summarization"],
+    "metadata": {
+        "workflow_version": "v1",
+        "environment": "development"
+    }
+}
+
+# Many Runnable-based LangChain components accept config:
+# result = chain.invoke({"question": "..."}, config=config)</code></pre>
+<div class="callout warn"><strong>Do not confuse metadata with model output</strong>Tags and metadata help organize and filter traces. They do not improve answer quality by themselves; they make experiments and debugging easier to analyze.</div>
+</section>
+
+<section class="section" id="rag">
+<a class="backtop" href="#top">↑ Back to top</a><h2>6. Tracing a RAG application</h2>
+<p>A RAG application retrieves relevant documents for a user's question, combines the question and retrieved context in a prompt, and asks an LLM to answer. A correct-looking final answer is not enough to prove that retrieval and generation both worked correctly.</p>
+<div class="diagram">
+<svg viewBox="0 0 920 260" role="img" aria-label="RAG pipeline and observability checkpoints">
+<defs><marker id="arr4" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#647895"/></marker></defs>
+<g font-size="14" text-anchor="middle"><rect x="15" y="25" width="145" height="58" rx="10" fill="#f0f5ff" stroke="#8da9e8"/><text x="87" y="49" fill="#214ba8" font-weight="700">User question</text><text x="87" y="68" fill="#52617a" font-size="12">input</text><rect x="205" y="25" width="150" height="58" rx="10" fill="#e7f7f7" stroke="#5cb9bc"/><text x="280" y="49" fill="#14565d" font-weight="700">Retriever</text><text x="280" y="68" fill="#52617a" font-size="12">top-k chunks</text><rect x="400" y="25" width="150" height="58" rx="10" fill="#fff5dc" stroke="#e0b657"/><text x="475" y="49" fill="#805600" font-weight="700">Prompt assembly</text><text x="475" y="68" fill="#52617a" font-size="12">question + context</text><rect x="595" y="25" width="130" height="58" rx="10" fill="#f4edff" stroke="#b69cde"/><text x="660" y="49" fill="#65439b" font-weight="700">LLM</text><text x="660" y="68" fill="#52617a" font-size="12">generation</text><rect x="770" y="25" width="135" height="58" rx="10" fill="#eef7ef" stroke="#87bd8e"/><text x="837" y="49" fill="#286b32" font-weight="700">Answer</text><text x="837" y="68" fill="#52617a" font-size="12">to user</text></g>
+<g stroke="#647895" stroke-width="2" marker-end="url(#arr4)"><path d="M160 54 H202"/><path d="M355 54 H397"/><path d="M550 54 H592"/><path d="M725 54 H767"/></g>
+<g fill="#26364d" font-size="13"><text x="280" y="115" text-anchor="middle">Inspect retrieved documents</text><text x="475" y="139" text-anchor="middle">Inspect exact prompt + context</text><text x="660" y="115" text-anchor="middle">Inspect model output</text></g>
+<g stroke="#9aaac0" stroke-dasharray="4 4" stroke-width="1.5"><path d="M280 85 V123"/><path d="M475 85 V147"/><path d="M660 85 V123"/></g>
+<rect x="140" y="174" width="640" height="58" rx="12" fill="#eaf1ff" stroke="#8da9e8"/><text x="460" y="198" text-anchor="middle" font-size="15" font-weight="700" fill="#214ba8">Trace evidence for diagnosis</text><text x="460" y="218" text-anchor="middle" font-size="13" fill="#344a6d">retrieved chunks · prompt · model response · latency · tokens · errors</text>
+</svg><div class="caption">RAG debugging separates retrieval failures from generation failures by inspecting the evidence passed between stages.</div>
+</div>
+<h3>Two major failure areas</h3>
+<div class="grid">
+<div class="mini"><h3>1. Retrieval failure</h3><p>The retriever returns irrelevant or incomplete chunks. Example: a notice-period question retrieves company-history content, or <code>k=1</code> provides too little context for a multi-document answer.</p></div>
+<div class="mini"><h3>2. Generation failure</h3><p>The retriever finds good context, but the model ignores it, misinterprets it, or invents details. Causes may include a weak model, prompt changes, or ambiguous instructions.</p></div>
+</div>
+<h3>RAG tracing checklist</h3>
+<ol><li>Inspect the user's original question.</li><li>Inspect the retrieved documents/chunks and their metadata.</li><li>Inspect the exact prompt sent to the model, including the context.</li><li>Inspect the model's raw response and parsed answer.</li><li>Compare duration and errors for retrieval, prompt construction, model call, and parsing.</li></ol>
+<h3>Trace preprocessing and indexing too</h3>
+<p>The lesson highlights a common blind spot: by default, framework tracing may capture the chain's runnable components but not every custom preprocessing operation. PDF loading, chunking, embedding, and index construction may happen outside the traced chain. If those operations are slow or failing, the visible trace can be incomplete.</p>
+<p>One approach shown in the lesson is to wrap custom functions with a tracing decorator and give each operation a meaningful run name. The exact import path and decorator options depend on the installed SDK version; treat this as a pattern:</p>
+<pre><code># Pattern only: verify imports/options for your installed LangSmith SDK.
+from langsmith import traceable
+
+@traceable(name="load-and-index-pdf")
+def load_and_index_pdf(pdf_path: str):
+    documents = load_pdf(pdf_path)       # your loader function
+    chunks = split_documents(documents)  # your splitter function
+    index = build_or_load_index(chunks)  # your vector-store logic
+    return index
+
+@traceable(name="rag-question")
+def answer_question(question: str):
+    retriever = get_retriever()
+    docs = retriever.invoke(question)
+    return rag_chain.invoke({
+        "question": question,
+        "context": format_documents(docs)
+    })</code></pre>
+<div class="callout tip"><strong>Index caching matters</strong>The transcript demonstrates a large latency reduction by reusing an existing vector index instead of reloading the PDF, splitting it, embedding every chunk, and rebuilding the index for every query. Rebuild only when the source documents, chunking strategy, embedding model, or index configuration requires it.</div>
+<h3>Separate setup from query-time work</h3>
+<div class="table-wrap"><table><thead><tr><th>Operation</th><th>Typical timing</th><th>Trace it?</th></tr></thead><tbody><tr><td>Load PDF / parse pages</td><td>Index build or refresh</td><td>Yes, especially during ingestion and refreshes</td></tr><tr><td>Split into chunks and embed</td><td>Index build or refresh</td><td>Yes, to find ingestion bottlenecks</td></tr><tr><td>Retrieve top-k chunks</td><td>Each query</td><td>Yes, part of query-time latency and answer quality</td></tr><tr><td>Generate answer and parse output</td><td>Each query</td><td>Yes, to inspect quality, latency, tokens, and errors</td></tr></tbody></table></div>
+</section>
+
+<section class="section" id="agent">
+<a class="backtop" href="#top">↑ Back to top</a><h2>7. Tracing an agent</h2>
+<p>An agent is given a goal and can decide which actions to take, inspect tool observations, and continue until it determines that the task is complete. This loop makes agent behavior less predictable than a fixed chain.</p>
+<div class="diagram">
+<svg viewBox="0 0 820 230" role="img" aria-label="Agent reasoning action observation loop">
+<defs><marker id="arr5" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#647895"/></marker></defs>
+<rect x="285" y="12" width="250" height="48" rx="12" fill="#eaf1ff" stroke="#8da9e8"/><text x="410" y="41" text-anchor="middle" font-size="15" font-weight="700" fill="#214ba8">User goal / task</text>
+<rect x="285" y="88" width="250" height="48" rx="12" fill="#f4edff" stroke="#b69cde"/><text x="410" y="117" text-anchor="middle" font-size="15" font-weight="700" fill="#65439b">Agent selects an action</text>
+<rect x="285" y="164" width="250" height="48" rx="12" fill="#e7f7f7" stroke="#5cb9bc"/><text x="410" y="193" text-anchor="middle" font-size="15" font-weight="700" fill="#14565d">Tool runs → observation</text>
+<g stroke="#647895" stroke-width="2" marker-end="url(#arr5)"><path d="M410 60 V85"/><path d="M410 136 V161"/><path d="M535 188 C660 188 660 112 540 112"/></g>
+<text x="674" y="145" font-size="13" fill="#52617a">Repeat if needed</text><text x="410" y="224" text-anchor="middle" font-size="12" fill="#596579">Trace each model decision, tool input/output, loop, and final response.</text>
+</svg>
+</div>
+<p>In the lesson's research-agent example, the agent searches for academic papers, extracts key points, summarizes them into a report, and may then answer questions about that report. If a prompt change encourages it to keep improving the report until it is “perfect,” it may repeat expensive work for some topics while behaving normally for others.</p>
+<h3>What the trace should reveal</h3>
+<ul><li>Each model decision and the selected tool/action.</li><li>Tool input (for example, a search query) and tool output/observation.</li><li>How many times the agent loop repeats.</li><li>Which calls consume the most latency and tokens.</li><li>Where errors occur and whether retries or repeated tool calls explain cost growth.</li></ul>
+<div class="callout warn"><strong>Operational lesson</strong>Agent prompts and stopping conditions are production controls. Add explicit iteration limits, timeouts, and budgets where appropriate; monitor token/cost per task and test prompt changes against representative cases.</div>
+</section>
+
+<section class="section" id="graph">
+<a class="backtop" href="#top">↑ Back to top</a><h2>8. LangGraph + LangSmith integration</h2>
+<p>LangGraph represents a workflow as nodes and edges. Nodes perform operations; edges define possible transitions. Conditional edges can route execution along different paths, and cycles can support iterative workflows. In a non-trivial graph, a trace helps reveal which path actually ran.</p>
+<div class="diagram">
+<svg viewBox="0 0 880 245" role="img" aria-label="Example graph with conditional path">
+<defs><marker id="arr6" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#647895"/></marker></defs>
+<g font-size="14" text-anchor="middle"><rect x="20" y="82" width="130" height="58" rx="11" fill="#eaf1ff" stroke="#8da9e8"/><text x="85" y="116" fill="#214ba8" font-weight="700">Input node</text><rect x="210" y="82" width="145" height="58" rx="11" fill="#e7f7f7" stroke="#5cb9bc"/><text x="282" y="116" fill="#14565d" font-weight="700">Analysis node</text><rect x="430" y="25" width="145" height="58" rx="11" fill="#fff5dc" stroke="#e0b657"/><text x="502" y="59" fill="#805600" font-weight="700">Research node</text><rect x="430" y="150" width="145" height="58" rx="11" fill="#f4edff" stroke="#b69cde"/><text x="502" y="184" fill="#65439b" font-weight="700">Direct-answer node</text><rect x="650" y="82" width="190" height="58" rx="11" fill="#eef7ef" stroke="#87bd8e"/><text x="745" y="116" fill="#286b32" font-weight="700">Final evaluation / output</text></g>
+<g stroke="#647895" stroke-width="2" marker-end="url(#arr6)" fill="none"><path d="M150 111 H207"/><path d="M355 100 C385 100 395 54 427 54"/><path d="M355 123 C385 123 395 179 427 179"/><path d="M575 54 C620 54 620 97 647 97"/><path d="M575 179 C620 179 620 125 647 125"/></g>
+<text x="383" y="36" font-size="12" fill="#596579">condition A</text><text x="383" y="202" font-size="12" fill="#596579">condition B</text>
+<text x="440" y="235" text-anchor="middle" font-size="12" fill="#596579">Illustrative graph only; the actual path depends on graph state and routing logic.</text>
+</svg>
+</div>
+<p>LangSmith tracing can help inspect node-level inputs and outputs, node execution times, and the path taken through the graph. This is particularly useful when conditional branches or loops make the workflow difficult to reason about from source code alone.</p>
+<h3>Evaluator graph from the lesson</h3>
+<p>The transcript also describes a graph-based evaluation workflow with separate nodes that score dimensions such as analysis quality and clarity, followed by a final node that combines the dimension-level feedback into an overall evaluation. Structured model output is used to return scores and feedback in a predictable schema.</p>
+<pre><code># Conceptual schema for structured evaluation output
+from pydantic import BaseModel, Field
+
+class DimensionScore(BaseModel):
+    score: float = Field(ge=0, le=1)
+    feedback: str
+
+class EvaluationResult(BaseModel):
+    analysis: DimensionScore
+    clarity: DimensionScore
+    overall_score: float = Field(ge=0, le=1)
+    overall_feedback: str</code></pre>
+<p class="muted small">The schema above illustrates the structured-output idea described in the lesson; it is not a verbatim reproduction of the course repository's graph code.</p>
+</section>
+
+<section class="section" id="features">
+<a class="backtop" href="#top">↑ Back to top</a><h2>9. What LangSmith can help teams do</h2>
+<p>The lesson concentrates on observability, then introduces other capabilities as part of the broader LLM application lifecycle.</p>
+<div class="grid">
+<div class="mini"><h3>Tracing & debugging</h3><p>Explore a trace from the project overview, drill into individual runs, and compare component inputs/outputs and timing.</p></div>
+<div class="mini"><h3>Monitoring & alerts</h3><p>Track trends in latency, error rates, token usage, cost, and other metrics; configure alerts for abnormal behavior.</p></div>
+<div class="mini"><h3>Evaluation</h3><p>Run repeatable tests on datasets to assess quality and compare prompts, models, or application versions.</p></div>
+<div class="mini"><h3>Prompt experiments</h3><p>Version prompts and compare alternatives on the same examples rather than judging from a few anecdotal outputs.</p></div>
+<div class="mini"><h3>Datasets & annotation</h3><p>Create reusable test datasets from examples and annotate expected or observed behavior for evaluation.</p></div>
+<div class="mini"><h3>Feedback & collaboration</h3><p>Associate user ratings with traces, share trace links with teammates, and collaborate on prompts and dashboards.</p></div>
+</div>
+</section>
+
+<section class="section" id="monitoring">
+<a class="backtop" href="#top">↑ Back to top</a><h2>10. Observability vs monitoring</h2>
+<div class="table-wrap"><table><thead><tr><th>Dimension</th><th>Observability</th><th>Monitoring</th></tr></thead><tbody>
+<tr><td>Primary focus</td><td>Understand one execution in detail.</td><td>Understand system health and trends across many executions.</td></tr>
+<tr><td>Typical unit</td><td>A trace and its component runs.</td><td>A time window, metric series, dashboard, or alert.</td></tr>
+<tr><td>Questions answered</td><td>Why did this request take 10 seconds? Which retrieval result was used?</td><td>Has p95 latency risen over the last hour? Did error rate cross a threshold?</td></tr>
+<tr><td>Useful data</td><td>Inputs, outputs, intermediate state, run timing, errors.</td><td>Aggregated latency, cost, tokens, failure rate, user ratings.</td></tr>
+</tbody></table></div>
+<p>They complement each other. Monitoring can alert a team that latency has increased; tracing helps identify the exact stage causing the increase. A single slow request may be an outlier, while a sustained trend can indicate a systemic issue.</p>
+</section>
+
+<section class="section" id="evaluation">
+<a class="backtop" href="#top">↑ Back to top</a><h2>11. Evaluation: measure quality repeatably</h2>
+<p>LLM output varies, so manually checking a handful of examples is not a reliable way to compare versions. Evaluation provides a repeatable procedure for running a dataset through a system and scoring the results against defined criteria.</p>
+<h3>Common evaluation approaches mentioned</h3>
+<div class="table-wrap"><table><thead><tr><th>Evaluator</th><th>How it works</th><th>Good fit</th><th>Limitations to consider</th></tr></thead><tbody>
+<tr><td>Code / rule-based</td><td>Exact match, schema checks, string rules, deterministic metrics.</td><td>Structured outputs, format constraints, known answers.</td><td>May miss semantic correctness or nuanced quality.</td></tr>
+<tr><td>Human annotation</td><td>A person labels or rates model outputs.</td><td>High-stakes quality judgments, creating trusted labels.</td><td>Costs time; guidelines and reviewer agreement matter.</td></tr>
+<tr><td>LLM-as-a-judge</td><td>A separate model scores a response using a rubric.</td><td>Semantic relevance, helpfulness, faithfulness, style.</td><td>Can be biased or inconsistent; validate against human judgments.</td></tr>
+<tr><td>Similarity / semantic metric</td><td>Compare output with a reference using lexical or embedding-based similarity.</td><td>Large-scale approximate comparisons.</td><td>Similarity alone does not guarantee factual correctness.</td></tr>
+</tbody></table></div>
+<h3>Offline and online evaluation</h3>
+<div class="grid">
+<div class="mini"><h3>Offline evaluation</h3><p>Run a fixed dataset before release or during CI. Useful for regression tests, prompt/model comparisons, and release gates.</p></div>
+<div class="mini"><h3>Online evaluation</h3><p>Evaluate sampled production traffic or live interactions. Useful for detecting real-world failures, distribution shifts, and quality changes not represented in the test set.</p></div>
+<div class="mini"><h3>Evaluation dataset</h3><p>Store representative inputs, expected outputs or labels, and relevant metadata. Keep a stable test set for fair comparisons.</p></div>
+</div>
+<h3>Evaluation workflow</h3>
+<ol><li>Define the task and success criteria (for example, groundedness, relevance, factuality, or schema validity).</li><li>Build a representative dataset, including common cases and difficult edge cases.</li><li>Choose an evaluator and specify its rubric or scoring logic.</li><li>Run the current version and record scores plus individual examples.</li><li>Change one variable—prompt, model, retriever, or graph logic—and rerun.</li><li>Inspect regressions and trade-offs before release.</li></ol>
+<div class="callout"><strong>RAG-specific evaluation</strong>Separate retrieval quality from answer quality. A response can be poor because the right evidence was never retrieved, or because the model failed to use evidence that was retrieved. Component-level metrics and trace inspection help distinguish these cases.</div>
+</section>
+
+<section class="section" id="prompts">
+<a class="backtop" href="#top">↑ Back to top</a><h2>12. Prompt experimentation</h2>
+<p>Prompt wording can change model behavior, token usage, latency, and cost. A seemingly small instruction such as “keep improving the report until it is perfect” may increase agent iterations for only some inputs. Prompt experimentation helps compare alternatives systematically.</p>
+<h3>Controlled comparison</h3>
+<ol><li>Create two prompt versions, A and B.</li><li>Run both against the same evaluation dataset and, where possible, comparable model settings.</li><li>Compare quality scores alongside latency, token usage, and cost.</li><li>Inspect examples where the results differ.</li><li>Promote the better prompt only after checking both improvements and regressions.</li></ol>
+<pre><code># Example experiment record — keep the dataset and scoring rubric fixed
+experiment = {
+    "dataset": "support-qa-v1",
+    "candidates": ["prompt-A", "prompt-B"],
+    "metrics": [
+        "groundedness",
+        "answer_relevance",
+        "latency_ms",
+        "total_tokens",
+        "estimated_cost"
+    ]
+}</code></pre>
+<div class="callout tip"><strong>Fair test principle</strong>Change one major factor at a time when diagnosing a regression. If the prompt, model, retriever configuration, and dataset all change together, it becomes difficult to identify what caused the outcome.</div>
+</section>
+
+<section class="section" id="datasets">
+<a class="backtop" href="#top">↑ Back to top</a><h2>13. Datasets and manual annotation</h2>
+<p>Datasets turn one-off observations into repeatable tests. The lesson describes creating datasets from examples and using manual annotation to label outputs. Traces can be a useful source of realistic examples, especially when users encounter edge cases in production.</p>
+<h3>A useful evaluation example record</h3>
+<pre><code>{
+  "inputs": {
+    "question": "What is the notice period?"
+  },
+  "reference": {
+    "answer": "Use the current company policy document."
+  },
+  "metadata": {
+    "category": "HR-policy",
+    "difficulty": "normal",
+    "source_version": "policy-2026-09"
+  }
+}</code></pre>
+<p>The JSON above is an illustrative record shape, not a required LangSmith schema. Use the dataset format supported by the SDK/UI version you have installed.</p>
+<h3>Annotation guidelines</h3>
+<ul><li>Write clear criteria before labeling: factuality, groundedness, relevance, completeness, tone, or format.</li><li>Distinguish “incorrect answer” from “insufficient context” and “correct refusal.”</li><li>Record the source policy/document version when facts can change over time.</li><li>Use representative examples; do not build a dataset only from easy successes.</li><li>Review disagreement between annotators and refine ambiguous guidelines.</li></ul>
+<p>A reusable dataset can be used to compare future prompt or model versions, detect regressions, and measure whether a change improves the system beyond a few cherry-picked examples.</p>
+</section>
+
+<section class="section" id="feedback">
+<a class="backtop" href="#top">↑ Back to top</a><h2>14. User feedback and collaboration</h2>
+<h3>Capture feedback alongside traces</h3>
+<p>The lesson discusses attaching feedback such as thumbs-up/down ratings or structured feedback to the trace for the corresponding interaction. This makes it possible to study user sentiment alongside the exact prompt, model, and execution state that produced the answer.</p>
+<ul><li>Capture a rating or a structured feedback label where appropriate.</li><li>Associate it with the relevant trace or response.</li><li>Aggregate feedback across traces to identify patterns.</li><li>Investigate low-rated examples using the trace details and add valuable cases to an evaluation dataset.</li></ul>
+<h3>Team collaboration</h3>
+<p>Instead of sending screenshots and manually describing a failure, a developer can share a trace link with a teammate, who can inspect the same execution. The lesson also mentions collaboration around prompt versions and shared dashboards.</p>
+<div class="callout warn"><strong>Privacy note</strong>Traces can contain user prompts, retrieved documents, tool inputs, and model outputs. Decide what may be logged, redact sensitive fields where needed, restrict access, and set retention policies before enabling production tracing broadly.</div>
+</section>
+
+<section class="section" id="llmops">
+<a class="backtop" href="#top">↑ Back to top</a><h2>15. The bigger picture: LLMOps</h2>
+<p>The lesson groups observability, monitoring, evaluation, prompt experimentation, dataset creation, annotation, feedback, and collaboration under the broader idea of <strong>LLMOps</strong>—the practices and tooling required to build, evaluate, deploy, monitor, and continuously improve LLM-powered applications.</p>
+<div class="diagram">
+<svg viewBox="0 0 900 290" role="img" aria-label="LLMOps continuous improvement lifecycle">
+<defs><marker id="arr7" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#647895"/></marker></defs>
+<g font-size="14" text-anchor="middle"><rect x="25" y="35" width="170" height="65" rx="12" fill="#eaf1ff" stroke="#8da9e8"/><text x="110" y="62" font-weight="700" fill="#214ba8">Build</text><text x="110" y="82" fill="#52617a" font-size="12">chain / RAG / agent</text><rect x="260" y="35" width="170" height="65" rx="12" fill="#e7f7f7" stroke="#5cb9bc"/><text x="345" y="62" font-weight="700" fill="#14565d">Evaluate</text><text x="345" y="82" fill="#52617a" font-size="12">datasets + rubrics</text><rect x="495" y="35" width="170" height="65" rx="12" fill="#fff5dc" stroke="#e0b657"/><text x="580" y="62" font-weight="700" fill="#805600">Deploy</text><text x="580" y="82" fill="#52617a" font-size="12">release with checks</text><rect x="730" y="35" width="145" height="65" rx="12" fill="#f4edff" stroke="#b69cde"/><text x="802" y="62" font-weight="700" fill="#65439b">Observe</text><text x="802" y="82" fill="#52617a" font-size="12">traces + metrics</text></g>
+<g stroke="#647895" stroke-width="2" marker-end="url(#arr7)"><path d="M195 67 H257"/><path d="M430 67 H492"/><path d="M665 67 H727"/><path d="M802 100 V158 H580 V190"/><path d="M495 222 H430"/><path d="M260 222 H110 V103"/></g>
+<rect x="260" y="190" width="170" height="65" rx="12" fill="#eef7ef" stroke="#87bd8e"/><text x="345" y="217" text-anchor="middle" font-size="14" font-weight="700" fill="#286b32">Learn & improve</text><text x="345" y="237" text-anchor="middle" font-size="12" fill="#52617a">feedback + experiments</text>
+<rect x="495" y="190" width="170" height="65" rx="12" fill="#fff0f1" stroke="#d88a91"/><text x="580" y="217" text-anchor="middle" font-size="14" font-weight="700" fill="#8e2932">Monitor & alert</text><text x="580" y="237" text-anchor="middle" font-size="12" fill="#52617a">quality / cost / latency</text>
+<text x="450" y="280" text-anchor="middle" font-size="12" fill="#596579">A continuous loop: production evidence feeds evaluation and the next improvement cycle.</text>
+</svg>
+</div>
+<p>Building a model-powered feature is only one part of the work. Operating it reliably requires feedback loops, regression tests, monitoring, debugging tools, and team practices that keep quality and cost under control.</p>
+</section>
+
+<section class="section" id="checklist">
+<a class="backtop" href="#top">↑ Back to top</a><h2>16. Practical production checklist</h2>
+<ul class="checklist">
+<li>Enable tracing in development and confirm a test invocation appears in the expected project.</li>
+<li>Give projects, runs, tags, and metadata meaningful names.</li>
+<li>Verify that custom preprocessing, ingestion, tool calls, and graph nodes are included where needed.</li>
+<li>Inspect inputs and outputs at component boundaries, especially retrieved context and final prompts.</li>
+<li>Measure latency, tokens, and cost at both trace and component levels where available.</li>
+<li>Set explicit agent iteration limits, timeouts, and cost budgets.</li>
+<li>Cache/reuse vector indexes; avoid rebuilding an index on every query unless necessary.</li>
+<li>Maintain a representative evaluation dataset and rerun it after prompt, model, retriever, or code changes.</li>
+<li>Use production monitoring and alerts for sustained changes in latency, errors, cost, or feedback.</li>
+<li>Protect API keys; exclude secret files from version control and rotate exposed credentials.</li>
+<li>Review privacy, redaction, access control, and retention for logged prompts/documents.</li>
+<li>Share trace links and record the context needed for teammates to reproduce and investigate issues.</li>
+</ul>
+</section>
+
+<section class="section" id="glossary">
+<a class="backtop" href="#top">↑ Back to top</a><h2>17. Quick glossary</h2>
+<div class="table-wrap"><table><thead><tr><th>Term</th><th>Plain-English meaning</th></tr></thead><tbody>
+<tr><td>Observability</td><td>Ability to investigate a system's internal behavior from its emitted evidence.</td></tr>
+<tr><td>Trace</td><td>The recorded end-to-end path of one application execution.</td></tr>
+<tr><td>Run</td><td>One operation within a trace, such as a model call or retriever call.</td></tr>
+<tr><td>Project</td><td>A named group of related traces.</td></tr>
+<tr><td>RAG</td><td>Retrieval-Augmented Generation: retrieve evidence and supply it to a model before generating an answer.</td></tr>
+<tr><td>Retriever</td><td>Component that finds relevant documents/chunks for a query.</td></tr>
+<tr><td>Generator</td><td>The model/prompt stage that produces the answer from the question and context.</td></tr>
+<tr><td>Agent</td><td>A goal-directed system that chooses actions/tools and may repeat a reasoning-action-observation loop.</td></tr>
+<tr><td>LangGraph</td><td>A framework for defining stateful workflows as nodes and edges, including conditional routes and cycles.</td></tr>
+<tr><td>LLM-as-a-judge</td><td>Using one model to assess another model's output against a rubric.</td></tr>
+<tr><td>Offline evaluation</td><td>Repeatable testing on a fixed dataset, commonly before release.</td></tr>
+<tr><td>Online evaluation</td><td>Evaluation of live or sampled production interactions.</td></tr>
+<tr><td>LLMOps</td><td>Operational practices for evaluating, deploying, monitoring, and improving LLM applications.</td></tr>
+</tbody></table></div>
+</section>
+
+<section class="section">
+<h2>Final takeaway</h2>
+<p class="lead">Use LangSmith not just to see that an LLM application failed, slowed down, or became expensive, but to understand which step caused the behavior. Start with a traceable baseline, instrument custom steps, keep reusable evaluation datasets, compare changes systematically, and monitor the system after deployment.</p>
+<p class="muted small">Notes are based on the supplied lesson transcript. Code and diagrams are explanatory additions for learning; they are not claimed to be verbatim course code. API details can change between LangChain, LangGraph, and LangSmith versions.</p>
+</section>
+</main></div>
+<footer class="footer">LangSmith Study Notes · Self-contained HTML page · Use your browser’s Print command to save a PDF if needed.</footer>
+</body></html>
