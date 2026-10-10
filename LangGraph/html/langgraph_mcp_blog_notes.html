@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building MCP Clients with LangGraph — Complete Notes</title>
+<style>
+:root{--ink:#172033;--muted:#5d6880;--line:#e4e9f2;--paper:#fff;--wash:#f5f7fb;--blue:#2859d8;--cyan:#eaf5ff;--green:#eaf8f0;--amber:#fff5df;--purple:#f3edff;--shadow:0 12px 36px rgba(25,42,78,.08)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--wash);color:var(--ink);font:16px/1.75 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:radial-gradient(circle at 85% 10%,#557de9 0,transparent 28%),linear-gradient(130deg,#101b38,#172d63 60%,#214f9f);color:#fff;padding:68px 22px 56px}
+.hero{max-width:1100px;margin:auto}.eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:.78rem;font-weight:800;color:#b9d1ff}.hero h1{font-size:clamp(2.2rem,5vw,4rem);line-height:1.08;max-width:850px;margin:14px 0}.hero p{font-size:1.13rem;max-width:780px;color:#e0e9ff}.chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:24px}.chips span{border:1px solid #ffffff42;border-radius:999px;padding:5px 12px;font-size:.85rem;background:#ffffff12}
+.layout{max-width:1100px;margin:30px auto;padding:0 18px;display:grid;grid-template-columns:255px minmax(0,1fr);gap:26px;align-items:start}
+nav{position:sticky;top:18px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow);max-height:calc(100vh - 36px);overflow:auto}nav h3{margin:0 0 10px;font-size:.95rem}nav a{display:block;text-decoration:none;color:#4e5b75;padding:5px 0;font-size:.9rem;line-height:1.4}nav a:hover{color:var(--blue)}
+main{min-width:0}.card{background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:clamp(20px,3.4vw,38px);margin-bottom:22px;box-shadow:var(--shadow)}h2{font-size:1.8rem;line-height:1.25;margin:0 0 16px;letter-spacing:-.025em}h3{font-size:1.22rem;margin:28px 0 8px}h4{margin:20px 0 7px}p{margin:10px 0 15px}a{color:var(--blue)}.lead{font-size:1.08rem;color:#39465e}.muted{color:var(--muted)}.callout{padding:16px 18px;border-radius:13px;margin:18px 0;border-left:4px solid var(--blue);background:var(--cyan)}.callout.good{background:var(--green);border-color:#20965a}.callout.warn{background:var(--amber);border-color:#d49316}.callout.purple{background:var(--purple);border-color:#8057d8}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.mini{padding:17px;border:1px solid var(--line);border-radius:14px;background:#fbfcff}.mini strong{display:block;margin-bottom:5px}.diagram{background:linear-gradient(180deg,#fbfdff,#f1f5fb);border:1px solid var(--line);border-radius:16px;padding:15px;margin:20px 0;overflow:hidden}.diagram svg{display:block;width:100%;height:auto;max-height:390px}.diagram figcaption{font-size:.88rem;color:var(--muted);text-align:center;margin-top:9px}
+pre{background:#101827;color:#e5edf9;border-radius:14px;padding:18px;overflow:auto;font: .88rem/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;margin:14px 0 20px;tab-size:4}code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}p code,li code,td code{background:#eef2f8;border:1px solid #e0e6ef;border-radius:5px;padding:2px 5px;font-size:.9em}.tag{display:inline-block;background:#edf2ff;color:#284db4;border-radius:7px;padding:2px 8px;font-size:.8rem;font-weight:750}
+table{border-collapse:collapse;width:100%;margin:16px 0;font-size:.94rem}th,td{border:1px solid var(--line);padding:11px 12px;text-align:left;vertical-align:top}th{background:#f1f5fc}ul,ol{padding-left:1.35rem}li{margin:6px 0}.step{display:flex;gap:13px;margin:15px 0;align-items:flex-start}.num{flex:0 0 34px;height:34px;border-radius:11px;background:#e8efff;color:#234dc4;display:grid;place-items:center;font-weight:850}.step div:last-child{flex:1}.footer{text-align:center;color:var(--muted);padding:20px 0 55px;font-size:.9rem}.small{font-size:.9rem;color:var(--muted)}.pillrow{display:flex;gap:8px;flex-wrap:wrap}.pillrow span{padding:5px 10px;background:#f1f4fa;border-radius:9px;font-size:.88rem}
+@media(max-width:850px){.layout{grid-template-columns:1fr}nav{position:relative;top:auto;max-height:none}.grid2{grid-template-columns:1fr}.card{padding:22px}header{padding:48px 20px}}
+@media print{body{background:#fff}.layout{display:block;margin:0;max-width:none}nav{display:none}.card{box-shadow:none;break-inside:avoid}header{padding:30px}.diagram{break-inside:avoid}a{color:inherit;text-decoration:none}}
+</style>
+</head>
+<body>
+<header><div class="hero">
+<div class="eyebrow">Engineering notes · LangGraph · MCP</div>
+<h1>Building MCP Clients with LangGraph</h1>
+<p>A practical, blog-style guide to replacing hand-written tool integrations with Model Context Protocol (MCP), converting a LangGraph chatbot to async execution, connecting local and remote MCP servers, and combining MCP tools with existing tools.</p>
+<div class="chips"><span>Concepts + architecture</span><span>Python examples</span><span>Async programming</span><span>Local + remote servers</span></div>
+</div></header>
+<div class="layout">
+<nav aria-label="Table of contents"><h3>On this page</h3>
+<a href="#overview">1. Overview & recap</a><a href="#problem">2. Why direct tools become brittle</a><a href="#mcp">3. MCP architecture</a><a href="#async">4. Why async is needed</a><a href="#convert">5. Convert LangGraph to async</a><a href="#client">6. Build an MCP client</a><a href="#local">7. Connect a local math server</a><a href="#remote">8. Add a remote expense server</a><a href="#integration">9. Integrate into the chatbot</a><a href="#production">10. Production considerations</a><a href="#checklist">11. Checklist & key takeaways</a>
+</nav>
+<main>
+<section class="card" id="overview"><h2>1. Overview and playlist recap</h2>
+<p class="lead">The lesson resumes an Agentic AI with LangGraph series and introduces MCP as a standardized way for an LLM application to discover and use capabilities hosted by external servers.</p>
+<p>The previous chatbot had grown incrementally. The series had covered general Agentic AI concepts, LangGraph fundamentals, different workflow patterns, and a chatbot project with a UI, streaming, resumable chat, database persistence, observability through LangSmith, and tools.</p>
+<div class="grid2">
+<div class="mini"><strong>Existing capabilities</strong><ul><li>Web search</li><li>Calculator</li><li>Stock-price lookup</li><li>Streaming and chat history</li><li>Database-backed persistence</li><li>Observability</li></ul></div>
+<div class="mini"><strong>New capability</strong><p>Connect the chatbot to MCP servers so it can use tools such as mathematical operations and expense tracking without implementing each server-side capability inside the chatbot.</p></div>
+</div>
+<div class="callout"><strong>Scope of this lesson:</strong> build an MCP <em>client</em> in LangGraph and connect it to existing MCP servers. The lesson does not build an MCP server from scratch; it mentions a dedicated server framework such as FastMCP for that task.</div>
+</section>
+
+<section class="card" id="problem"><h2>2. Why direct tool integrations become brittle</h2>
+<p>In a direct integration, the chatbot contains code for calling a service API, authenticating, building requests, parsing the response, and exposing the result to the model as a tool.</p>
+<h3>Example: a custom GitHub pull-request tool</h3>
+<p>A sample tool might accept a repository owner, repository name or URL, pull-request state (open or closed), and a result limit. It then calls the GitHub API, parses the JSON response, and displays fields such as PR number, title, author, state, and URL.</p>
+<figure class="diagram"><svg viewBox="0 0 760 230" role="img" aria-label="Direct tool integration flow">
+<defs><marker id="arrowA" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#59708f"/></marker></defs>
+<rect x="20" y="62" width="170" height="88" rx="14" fill="#e7efff" stroke="#7e9be8"/><text x="105" y="96" text-anchor="middle" font-size="16" font-weight="700" fill="#193a8a">Chatbot / LLM</text><text x="105" y="119" text-anchor="middle" font-size="12" fill="#36517d">Chooses a tool</text>
+<path d="M190 106 H286" stroke="#59708f" stroke-width="2.5" marker-end="url(#arrowA)"/>
+<rect x="294" y="48" width="185" height="116" rx="14" fill="#fff2d8" stroke="#dfb35c"/><text x="386" y="82" text-anchor="middle" font-size="16" font-weight="700" fill="#76500a">Custom tool code</text><text x="386" y="105" text-anchor="middle" font-size="12" fill="#76500a">Auth · HTTP request</text><text x="386" y="124" text-anchor="middle" font-size="12" fill="#76500a">Parse API response</text><text x="386" y="143" text-anchor="middle" font-size="12" fill="#76500a">Map fields</text>
+<path d="M479 106 H575" stroke="#59708f" stroke-width="2.5" marker-end="url(#arrowA)"/>
+<rect x="583" y="62" width="155" height="88" rx="14" fill="#e8f8ef" stroke="#70c394"/><text x="660" y="96" text-anchor="middle" font-size="16" font-weight="700" fill="#17643b">GitHub API</text><text x="660" y="119" text-anchor="middle" font-size="12" fill="#17643b">Service endpoint</text>
+<text x="380" y="205" text-anchor="middle" font-size="13" fill="#5d6880">The client and service details are tightly coupled.</text></svg><figcaption>Direct integration places API-specific details inside the application’s own tool implementation.</figcaption></figure>
+<h3>What happens when an API changes?</h3>
+<p>If an API version changes its endpoint or response schema—for example, a field is renamed—the tool may fail until the application code is updated. The video uses a hypothetical API v1-to-v2 change to illustrate this maintenance risk.</p>
+<ul><li>One service may require several custom tools for different operations.</li><li>Several chatbots may duplicate similar integration code.</li><li>Adding more services multiplies the places where changes may be needed.</li></ul>
+<div class="callout warn"><strong>Maintenance pattern:</strong> with <em>n</em> tools and <em>m</em> chatbot applications, duplicated integrations can create an <strong>n × m</strong> maintenance burden. This is an illustrative model, not a universal complexity formula.</div>
+</section>
+
+<section class="card" id="mcp"><h2>3. MCP: a standardized connection layer</h2>
+<p>Model Context Protocol (MCP) provides a standard interface for applications to connect to servers that expose tools and other capabilities. In the lesson’s simplified framing, the chatbot is the <strong>client</strong>, and the system that exposes the tools is the <strong>server</strong>.</p>
+<figure class="diagram"><svg viewBox="0 0 760 290" role="img" aria-label="MCP client and server architecture">
+<defs><marker id="arrowB" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#58708f"/></marker></defs>
+<rect x="20" y="58" width="210" height="170" rx="16" fill="#e7efff" stroke="#7e9be8" stroke-width="1.5"/><text x="125" y="88" text-anchor="middle" font-size="18" font-weight="700" fill="#193a8a">Host application</text><text x="125" y="111" text-anchor="middle" font-size="13" fill="#36517d">LangGraph chatbot</text><rect x="48" y="135" width="154" height="66" rx="10" fill="#fff" stroke="#a8b9e9"/><text x="125" y="161" text-anchor="middle" font-size="14" font-weight="700" fill="#193a8a">MCP client</text><text x="125" y="181" text-anchor="middle" font-size="11" fill="#36517d">Connection config</text>
+<path d="M230 143 H307" stroke="#58708f" stroke-width="2.5" marker-end="url(#arrowB)"/><path d="M307 160 H230" stroke="#58708f" stroke-width="2.5" marker-end="url(#arrowB)"/><text x="269" y="125" text-anchor="middle" font-size="12" fill="#5d6880">MCP</text>
+<rect x="315" y="58" width="190" height="170" rx="16" fill="#f2edff" stroke="#b29be8" stroke-width="1.5"/><text x="410" y="91" text-anchor="middle" font-size="18" font-weight="700" fill="#5732a0">MCP server</text><text x="410" y="115" text-anchor="middle" font-size="12" fill="#684ca7">Protocol + tool definitions</text><rect x="337" y="137" width="146" height="31" rx="8" fill="#fff" stroke="#c7b5f0"/><text x="410" y="157" text-anchor="middle" font-size="12" fill="#5732a0">Tool: add()</text><rect x="337" y="177" width="146" height="31" rx="8" fill="#fff" stroke="#c7b5f0"/><text x="410" y="197" text-anchor="middle" font-size="12" fill="#5732a0">Tool: summarize()</text>
+<path d="M505 143 H570" stroke="#58708f" stroke-width="2.5" marker-end="url(#arrowB)"/><path d="M570 160 H505" stroke="#58708f" stroke-width="2.5" marker-end="url(#arrowB)"/>
+<rect x="578" y="78" width="162" height="130" rx="16" fill="#e8f8ef" stroke="#70c394" stroke-width="1.5"/><text x="659" y="111" text-anchor="middle" font-size="16" font-weight="700" fill="#17643b">External system</text><text x="659" y="138" text-anchor="middle" font-size="12" fill="#17643b">GitHub / database</text><text x="659" y="157" text-anchor="middle" font-size="12" fill="#17643b">Expense service</text><text x="659" y="176" text-anchor="middle" font-size="12" fill="#17643b">Other APIs</text>
+<text x="380" y="265" text-anchor="middle" font-size="13" fill="#5d6880">The application discovers server-provided tools through a standard interface.</text></svg><figcaption>Conceptual architecture: the server owns service-specific tool implementation; the host application connects through an MCP client.</figcaption></figure>
+<div class="grid2">
+<div class="mini"><strong>Client responsibilities</strong><ul><li>Configure server connections</li><li>Connect using a suitable transport</li><li>Discover available tools</li><li>Make tools available to the LLM</li></ul></div>
+<div class="mini"><strong>Server responsibilities</strong><ul><li>Implement tools and their schemas</li><li>Handle service-specific logic</li><li>Communicate with the underlying API or data source</li><li>Expose available capabilities over MCP</li></ul></div>
+</div>
+<div class="callout good"><strong>Core benefit:</strong> the chatbot can often keep the same connection configuration while server-side tool implementations evolve, provided the server endpoint and protocol contract remain compatible.</div>
+<p class="small">Important nuance: MCP does not magically eliminate all maintenance. Breaking changes to server addresses, transport, authentication, protocol compatibility, or tool contracts can still require client-side updates.</p>
+</section>
+
+<section class="card" id="async"><h2>4. Why asynchronous programming enters the picture</h2>
+<p>The lesson’s MCP client library is used in async mode. The original chatbot was synchronous, so the first migration step is to convert the relevant LangGraph execution path to asynchronous code.</p>
+<table><thead><tr><th>Concept</th><th>Synchronous style</th><th>Asynchronous style</th></tr></thead><tbody>
+<tr><td>Function</td><td><code>def node(...):</code></td><td><code>async def node(...):</code></td></tr>
+<tr><td>LLM call</td><td><code>llm.invoke(...)</code></td><td><code>await llm.ainvoke(...)</code></td></tr>
+<tr><td>Graph execution</td><td><code>graph.invoke(...)</code></td><td><code>await graph.ainvoke(...)</code></td></tr>
+<tr><td>Entry point</td><td>Normal function call</td><td><code>asyncio.run(main())</code></td></tr>
+</tbody></table>
+<figure class="diagram"><svg viewBox="0 0 760 225" role="img" aria-label="Sequential versus asynchronous task execution">
+<text x="24" y="29" font-size="15" font-weight="700" fill="#172033">Sequential blocking example</text><text x="24" y="51" font-size="12" fill="#5d6880">Weather request finishes before score request starts</text>
+<rect x="24" y="66" width="300" height="26" rx="7" fill="#dbe7ff"/><text x="174" y="84" text-anchor="middle" font-size="12" fill="#2449a6">Weather API</text><rect x="324" y="66" width="300" height="26" rx="7" fill="#fce7c4"/><text x="474" y="84" text-anchor="middle" font-size="12" fill="#805600">Cricket score API</text>
+<line x1="24" y1="104" x2="650" y2="104" stroke="#d5dce8"/>
+<text x="24" y="130" font-size="15" font-weight="700" fill="#172033">Concurrent async example</text><text x="24" y="152" font-size="12" fill="#5d6880">Independent I/O tasks can overlap while waiting</text>
+<rect x="24" y="168" width="300" height="26" rx="7" fill="#dbe7ff"/><text x="174" y="186" text-anchor="middle" font-size="12" fill="#2449a6">Weather API</text><rect x="24" y="198" width="300" height="18" rx="6" fill="#dbe7ff" opacity=".25"/>
+<rect x="24" y="198" width="300" height="18" rx="6" fill="#fce7c4" transform="translate(300,-30)"/><text x="474" y="181" text-anchor="middle" font-size="12" fill="#805600">Cricket score API</text>
+<text x="680" y="113" text-anchor="middle" font-size="11" fill="#5d6880">Time →</text></svg><figcaption>Async is especially useful for I/O-bound operations. It enables overlap; it does not automatically make every task parallel or faster.</figcaption></figure>
+<h3>Async concepts to remember</h3>
+<ul><li><code>async def</code> defines a coroutine function.</li><li><code>await</code> yields control while awaiting an async operation.</li><li>Use async-compatible methods such as <code>ainvoke</code> when available.</li><li>For independent I/O tasks, concurrency can be coordinated with tools such as <code>asyncio.gather</code>.</li></ul>
+<div class="callout warn"><strong>Do not overgeneralize:</strong> async is not synonymous with CPU parallelism. It mainly helps applications handle waiting efficiently. The lesson converts to async because the MCP client path requires it, not because every chatbot must always be async.</div>
+</section>
+
+<section class="card" id="convert"><h2>5. Converting the LangGraph chatbot to async</h2>
+<p>The lesson keeps the existing graph structure—state, chat node, tool node, edges, and conditional routing—but changes the custom node and invocation path to async.</p>
+<h3>Illustrative conversion pattern</h3>
+<pre><code>import asyncio
+from typing import TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.prebuilt import ToolNode
+
+class State(TypedDict):
+    messages: list
+
+async def chat_node(state: State):
+    # Use the async LLM method
+    response = await llm_with_tools.ainvoke(state["messages"])
+    return {"messages": [response]}
+
+def build_graph():
+    builder = StateGraph(State)
+    builder.add_node("chat", chat_node)
+    builder.add_node("tools", ToolNode(tools))
+
+    builder.add_edge(START, "chat")
+    builder.add_conditional_edges("chat", route_after_chat)
+    builder.add_edge("tools", "chat")
+    return builder.compile()
+
+async def main():
+    graph = build_graph()
+    result = await graph.ainvoke({
+        "messages": [{"role": "user", "content": "Calculate 17 % 5"}]
+    })
+    print(result)
+
+if __name__ == "__main__":
+    asyncio.run(main())</code></pre>
+<p class="small">This is a teaching template, not a copy of the complete original project. The exact message types, routing function, imports, and tool binding depend on the project’s LangChain/LangGraph versions.</p>
+<h3>What changed?</h3>
+<ol><li>The custom chat node becomes <code>async def</code>.</li><li>The LLM call changes from <code>invoke</code> to <code>await ...ainvoke(...)</code>.</li><li>The graph is invoked with <code>await graph.ainvoke(...)</code>.</li><li>The async entry point is started using <code>asyncio.run(main())</code>.</li></ol>
+<p>The lesson notes that LangGraph’s prebuilt tool node already supports asynchronous execution, so the custom chat node is the main node requiring an explicit conversion in this example.</p>
+</section>
+
+<section class="card" id="client"><h2>6. Building an MCP client in LangGraph</h2>
+<p>The lesson uses <code>MultiServerMCPClient</code> from <code>langchain-mcp-adapters</code>. It can connect to one or more MCP servers and return their tools so they can be bound to the LLM.</p>
+<h3>Install the adapter</h3>
+<pre><code># pip
+pip install langchain-mcp-adapters
+
+# or, when using uv
+uv add langchain-mcp-adapters</code></pre>
+<h3>Basic client configuration</h3>
+<pre><code>from langchain_mcp_adapters.client import MultiServerMCPClient
+
+client = MultiServerMCPClient({
+    "math": {
+        "command": "python",
+        "args": ["/absolute/path/to/math_server.py"],
+        "transport": "stdio",
+    }
+})</code></pre>
+<p>Here, <code>math</code> is a local server configuration name. The process command and arguments tell the client how to launch the server. For a local process, the lesson uses the <code>stdio</code> transport.</p>
+<h3>Discover tools and bind them to the model</h3>
+<pre><code>async def build_graph():
+    # Ask the MCP client for the tools exposed by configured servers
+    mcp_tools = await client.get_tools()
+
+    # Existing tools can be retained and combined with MCP tools
+    all_tools = [*existing_tools, *mcp_tools]
+    llm_with_tools = llm.bind_tools(all_tools)
+
+    # Build and compile the LangGraph workflow using all_tools
+    # ...
+    return graph</code></pre>
+<div class="callout"><strong>Key idea:</strong> the model sees tool descriptions and schemas returned by the server. The chatbot does not need to reimplement every server operation as a separate local Python function.</div>
+<p class="small">API details can vary by package version. Check the installed version’s documentation for client lifecycle, transport configuration, and whether context-manager handling is recommended for your use case.</p>
+</section>
+
+<section class="card" id="local"><h2>7. Example A — connect a local math MCP server</h2>
+<p>The demo server exposes several mathematical operations as separate tools: addition, subtraction, multiplication, division, power, and modulus. The server is located on the developer’s own machine and is launched as a subprocess, so <code>stdio</code> is used.</p>
+<figure class="diagram"><svg viewBox="0 0 760 205" role="img" aria-label="Local MCP server process flow">
+<defs><marker id="arrowC" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#58708f"/></marker></defs>
+<rect x="18" y="50" width="190" height="96" rx="14" fill="#e7efff" stroke="#7e9be8"/><text x="113" y="82" text-anchor="middle" font-size="16" font-weight="700" fill="#193a8a">LangGraph app</text><text x="113" y="105" text-anchor="middle" font-size="12" fill="#36517d">MCP client</text><text x="113" y="124" text-anchor="middle" font-size="12" fill="#36517d">Requests tool list</text>
+<path d="M208 98 H278" stroke="#58708f" stroke-width="2.5" marker-end="url(#arrowC)"/><text x="243" y="82" text-anchor="middle" font-size="11" fill="#5d6880">stdio</text>
+<rect x="286" y="35" width="218" height="126" rx="14" fill="#f2edff" stroke="#b29be8"/><text x="395" y="64" text-anchor="middle" font-size="16" font-weight="700" fill="#5732a0">Local MCP process</text><text x="395" y="88" text-anchor="middle" font-size="12" fill="#684ca7">math_server.py</text><rect x="308" y="105" width="174" height="36" rx="8" fill="#fff" stroke="#c7b5f0"/><text x="395" y="127" text-anchor="middle" font-size="12" fill="#5732a0">add · divide · modulus…</text>
+<path d="M504 98 H574" stroke="#58708f" stroke-width="2.5" marker-end="url(#arrowC)"/>
+<rect x="582" y="50" width="160" height="96" rx="14" fill="#e8f8ef" stroke="#70c394"/><text x="662" y="82" text-anchor="middle" font-size="16" font-weight="700" fill="#17643b">Tool result</text><text x="662" y="105" text-anchor="middle" font-size="12" fill="#17643b">Returned to model</text><text x="662" y="124" text-anchor="middle" font-size="12" fill="#17643b">for final response</text>
+<text x="380" y="188" text-anchor="middle" font-size="12" fill="#5d6880">The client discovers tools rather than hard-coding each math function.</text></svg><figcaption>Local MCP process: the client starts the configured Python server and requests its tool definitions.</figcaption></figure>
+<p>After discovery, the returned math tools are included in the list bound to the LLM. The chatbot can then answer a request such as “calculate the remainder of 29 divided by 7” by selecting the modulus tool and presenting the result.</p>
+<h3>Configuration checklist</h3>
+<ul><li>Use the correct Python executable or environment.</li><li>Use an absolute server file path where practical.</li><li>Make sure the server process starts successfully and writes protocol traffic correctly over standard I/O.</li><li>Inspect the discovered tool list during development.</li></ul>
+</section>
+
+<section class="card" id="remote"><h2>8. Example B — add a remote expense-tracker MCP server</h2>
+<p>The second example is a deployed, remote MCP server called an expense tracker. It exposes three capabilities:</p>
+<div class="grid2"><div class="mini"><strong><span class="tag">add_expense</span></strong>Record an expense with an amount, date, description, or category.</div><div class="mini"><strong><span class="tag">list_expenses</span></strong>Retrieve recorded expenses for a selected period.</div><div class="mini"><strong><span class="tag">summarize</span></strong>Summarize spending over a time window or category.</div><div class="mini"><strong><span class="tag">Client-side impact</span></strong>Once configured, the chatbot can use these server-provided tools without adding expense-specific business logic to the client.</div></div>
+<h3>Remote server configuration pattern</h3>
+<pre><code>client = MultiServerMCPClient({
+    "math": {
+        "command": "python",
+        "args": ["/absolute/path/to/math_server.py"],
+        "transport": "stdio",
+    },
+    "expenses": {
+        "url": "https://your-mcp-service.example/mcp",
+        "transport": "streamable_http",
+    },
+})
+
+tools = await client.get_tools()</code></pre>
+<p class="small">The URL above is a placeholder, not the real endpoint from the video. Remote transport names and configuration fields should be checked against the version of the adapter and server being used.</p>
+<h3>Illustrative interaction</h3>
+<pre><code>User: "Add an expense of ₹500 for an online course on 10 November."
+Assistant: selects the expense-creation tool exposed by the MCP server.
+Server: validates and stores the expense.
+Assistant: reports the result returned by the server.
+
+User: "List my expenses from 1 November to 30 November."
+Assistant: selects the list or summary tool.
+Server: returns matching records and totals.
+Assistant: presents the results in natural language.</code></pre>
+<p>The lesson’s demo reports that the expense was added and then retrieved for the requested November date range. It emphasizes that the chatbot code did not contain new expense-tracking functions; the MCP server supplied those capabilities.</p>
+<div class="callout good"><strong>Why this matters:</strong> adding another compatible MCP server can expand the chatbot’s capabilities mainly through configuration and tool discovery rather than duplicating API integration code inside the client.</div>
+</section>
+
+<section class="card" id="integration"><h2>9. Integrating MCP into the existing chatbot</h2>
+<p>The final demo combines MCP tools with existing non-MCP tools. MCP does not require an all-or-nothing migration.</p>
+<figure class="diagram"><svg viewBox="0 0 760 310" role="img" aria-label="Hybrid chatbot tools architecture">
+<defs><marker id="arrowD" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#58708f"/></marker></defs>
+<rect x="245" y="16" width="270" height="66" rx="14" fill="#e7efff" stroke="#7e9be8"/><text x="380" y="43" text-anchor="middle" font-size="17" font-weight="700" fill="#193a8a">LLM + LangGraph</text><text x="380" y="64" text-anchor="middle" font-size="12" fill="#36517d">Selects from combined tools</text>
+<path d="M315 82 V118 H130 V145" fill="none" stroke="#58708f" stroke-width="2.2" marker-end="url(#arrowD)"/><path d="M445 82 V118 H380 V145" fill="none" stroke="#58708f" stroke-width="2.2" marker-end="url(#arrowD)"/><path d="M445 118 H630 V145" fill="none" stroke="#58708f" stroke-width="2.2" marker-end="url(#arrowD)"/>
+<rect x="24" y="153" width="212" height="92" rx="13" fill="#fff2d8" stroke="#dfb35c"/><text x="130" y="181" text-anchor="middle" font-size="15" font-weight="700" fill="#76500a">Existing tools</text><text x="130" y="204" text-anchor="middle" font-size="12" fill="#76500a">Search · stock price</text><text x="130" y="223" text-anchor="middle" font-size="12" fill="#76500a">Local implementations</text>
+<rect x="274" y="153" width="212" height="92" rx="13" fill="#f2edff" stroke="#b29be8"/><text x="380" y="181" text-anchor="middle" font-size="15" font-weight="700" fill="#5732a0">Math MCP server</text><text x="380" y="204" text-anchor="middle" font-size="12" fill="#684ca7">Add · divide · modulus</text><text x="380" y="223" text-anchor="middle" font-size="12" fill="#684ca7">Local stdio</text>
+<rect x="524" y="153" width="212" height="92" rx="13" fill="#e8f8ef" stroke="#70c394"/><text x="630" y="181" text-anchor="middle" font-size="15" font-weight="700" fill="#17643b">Expense MCP server</text><text x="630" y="204" text-anchor="middle" font-size="12" fill="#17643b">Add · list · summarize</text><text x="630" y="223" text-anchor="middle" font-size="12" fill="#17643b">Remote HTTP</text>
+<path d="M130 245 V271 H630 V245" fill="none" stroke="#9aa8bd" stroke-dasharray="5 5"/><text x="380" y="295" text-anchor="middle" font-size="12" fill="#5d6880">Tools are merged before being bound to the LLM.</text></svg><figcaption>A hybrid design can keep existing custom tools and add MCP-provided tools to the same model.</figcaption></figure>
+<h3>High-level integration steps</h3>
+<ol><li>Keep the existing search and stock-price tools.</li><li>Create one MCP client configuration for the local math server.</li><li>Create another configuration for the remote expense server.</li><li>Fetch the tools from the configured MCP servers asynchronously.</li><li>Merge MCP tools with existing tools and bind the combined list to the LLM.</li><li>Keep the LangGraph tool-routing pattern, ensuring the graph’s tool node receives the combined list.</li></ol>
+<h3>Async changes in the demo application</h3>
+<p>The video describes four major components: LangGraph, the MCP client, Streamlit, and SQLite. The MCP client path is asynchronous; LangGraph supports sync and async execution; SQLite and Streamlit were treated as synchronous in the described setup.</p>
+<table><thead><tr><th>Component</th><th>Change described in the lesson</th><th>Reason</th></tr></thead><tbody>
+<tr><td>LangGraph backend</td><td>Use async nodes and async graph calls</td><td>Allow async LLM/MCP operations</td></tr>
+<tr><td>MCP client</td><td>Fetch server tools asynchronously</td><td>Client library uses async execution</td></tr>
+<tr><td>Database</td><td>Replace synchronous SQLite access with <code>aiosqlite</code> in the demo</td><td>Avoid blocking the async path</td></tr>
+<tr><td>Streamlit frontend</td><td>Use an async streaming path in the demo</td><td>Adapt the interface to async backend behavior</td></tr>
+</tbody></table>
+<div class="callout warn"><strong>Frontend caveat from the lesson:</strong> Streamlit is fundamentally synchronous in the described setup, and making it cooperate with async code required workarounds. The presenter suggests a production architecture using FastAPI to expose an API and a React or Next.js frontend for a more natural async interaction model.</div>
+</section>
+
+<section class="card" id="production"><h2>10. Production considerations and practical cautions</h2>
+<h3>Do not assume every server is trustworthy</h3>
+<ul><li>Only connect to MCP servers you trust and understand.</li><li>Protect credentials and tokens; use environment-based secrets or a secret manager rather than hard-coding them.</li><li>Review what each tool can read or modify, especially tools that write data or trigger external actions.</li><li>Apply authorization, validation, timeouts, error handling, and logging at the appropriate boundaries.</li></ul>
+<h3>Tool discovery is not the same as permission</h3>
+<p>A tool appearing in the discovered tool list does not mean every user should be authorized to invoke it. Enforce permissions in the server or service boundary and design confirmation steps for consequential actions.</p>
+<h3>Be explicit about local versus remote transport</h3>
+<table><thead><tr><th>Server type in this lesson</th><th>Transport shown</th><th>Configuration idea</th></tr></thead><tbody>
+<tr><td>Local process</td><td><code>stdio</code></td><td>Launch a command with arguments and communicate through standard input/output.</td></tr>
+<tr><td>Remote service</td><td>Streamable HTTP</td><td>Connect to the deployed server URL using the supported HTTP transport.</td></tr>
+</tbody></table>
+<h3>Keep the abstraction boundary healthy</h3>
+<p>MCP reduces duplicated client-side integration code, but it does not remove the need to version APIs, monitor server health, manage authentication, or test tool schemas. Prefer stable server endpoints and backward-compatible tool changes when possible.</p>
+</section>
+
+<section class="card" id="checklist"><h2>11. Checklist and key takeaways</h2>
+<div class="step"><div class="num">1</div><div><strong>Understand the maintenance problem.</strong><br>Hand-written integrations couple application code to service endpoints and response schemas.</div></div>
+<div class="step"><div class="num">2</div><div><strong>Separate client and server responsibilities.</strong><br>The server implements capabilities; the client connects and discovers the available tools.</div></div>
+<div class="step"><div class="num">3</div><div><strong>Convert the required execution path to async.</strong><br>Use async nodes, async LLM calls, and async graph invocation when the chosen client requires them.</div></div>
+<div class="step"><div class="num">4</div><div><strong>Discover MCP tools dynamically.</strong><br>Fetch the tools from configured servers and bind them to the LLM.</div></div>
+<div class="step"><div class="num">5</div><div><strong>Support multiple servers.</strong><br>A single multi-server client can be configured for a local math server and a remote expense server.</div></div>
+<div class="step"><div class="num">6</div><div><strong>Use a hybrid tool strategy when useful.</strong><br>Existing custom tools and MCP tools can coexist in the same LangGraph application.</div></div>
+<div class="step"><div class="num">7</div><div><strong>Plan for production behavior.</strong><br>Handle authentication, permissions, async database access, frontend compatibility, failures, and monitoring.</div></div>
+<div class="callout good"><strong>One-sentence summary:</strong> MCP lets a LangGraph application consume capabilities exposed by separate servers through a standard client interface, reducing duplicated tool-integration code and making it easier to extend a chatbot with new tools.</div>
+<h3>Quick self-test</h3>
+<ol><li>What is the main maintenance weakness of writing every service integration directly inside each chatbot?</li><li>What is the difference between an MCP client and an MCP server?</li><li>Why did the lesson convert the chatbot to asynchronous execution before adding MCP?</li><li>Which transport was used for the local math server, and which was shown for the remote expense server?</li><li>Can a chatbot use ordinary tools and MCP-provided tools together?</li></ol>
+<details><summary><strong>Show answers</strong></summary><ol><li>API-specific logic can be duplicated across tools and applications, so service changes can require many code updates.</li><li>The client connects to servers and discovers/uses their capabilities; the server implements and exposes those capabilities.</li><li>The MCP client library in the lesson uses async execution, so the relevant LangGraph path needed async-compatible calls.</li><li><code>stdio</code> for the local process; Streamable HTTP for the remote server in the example.</li><li>Yes. The lesson explicitly demonstrates a hybrid approach.</li></ol></details>
+</section>
+<div class="footer">Prepared from the supplied lesson transcript. Code snippets are educational templates; verify exact APIs against your installed library versions.</div>
+</main></div>
+</body></html>
