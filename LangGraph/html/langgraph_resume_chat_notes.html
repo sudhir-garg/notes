@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Practical notes for adding new chats, conversation history, and resume-chat behavior to a Streamlit and LangGraph chatbot.">
+<title>Building a Resume Chat Feature with LangGraph & Streamlit</title>
+<style>
+:root{--ink:#172033;--muted:#596579;--paper:#fff;--wash:#f4f7fb;--line:#dfe6ef;--accent:#5367d9;--accent2:#0f766e;--code:#111827;--soft:#eef2ff;--warn:#fff7e6}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--wash);color:var(--ink);font:16px/1.75 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}.wrap{max-width:1120px;margin:auto;padding:24px}
+.hero{background:linear-gradient(135deg,#18213b,#293d72 60%,#5367d9);color:white;border-radius:24px;padding:clamp(28px,6vw,64px);position:relative;overflow:hidden}
+.eyebrow{font-size:.78rem;letter-spacing:.13em;text-transform:uppercase;font-weight:800;opacity:.8}.hero h1{font-size:clamp(2rem,5vw,3.65rem);line-height:1.1;max-width:850px;margin:.45em 0}.hero p{max-width:760px;color:#e3e9ff;font-size:1.08rem}.pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}.pill{border:1px solid #ffffff55;border-radius:999px;padding:5px 12px;font-size:.83rem;background:#ffffff12}
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:28px;margin-top:28px;align-items:start}.toc{position:sticky;top:18px;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:18px}.toc h2{font-size:1rem;margin:0 0 10px}.toc a{display:block;color:#45516a;padding:5px 0;font-size:.9rem;line-height:1.4}.article{min-width:0}.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:clamp(20px,3.5vw,36px);margin-bottom:22px;box-shadow:0 5px 18px #16244708}.card h2{font-size:1.65rem;line-height:1.25;margin:.15em 0 .65em}.card h3{font-size:1.18rem;margin:1.5em 0 .35em}.card p{margin:.65em 0}.muted{color:var(--muted)}.lead{font-size:1.08rem;color:#344057}.callout{padding:15px 18px;border-left:4px solid var(--accent);background:var(--soft);border-radius:0 12px 12px 0;margin:18px 0}.callout.warn{background:var(--warn);border-color:#d99a22}.steps{counter-reset:step;list-style:none;padding:0}.steps li{counter-increment:step;position:relative;padding:0 0 18px 48px}.steps li:before{content:counter(step);position:absolute;left:0;top:0;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--soft);color:var(--accent);font-weight:800}
+pre{background:var(--code);color:#e5e7eb;padding:18px;border-radius:13px;overflow:auto;font:13px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;tab-size:4}code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}p code,li code,td code{background:#eef1f6;color:#26324a;border-radius:5px;padding:2px 5px;font-size:.9em}.code-label{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:.8rem;color:var(--muted);font-weight:700;margin:16px 0 6px}.diagram{border:1px solid var(--line);border-radius:14px;background:#fbfcff;padding:14px;margin:18px 0}.diagram svg{width:100%;height:auto;display:block}.caption{font-size:.86rem;color:var(--muted);text-align:center;margin-top:8px}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.94rem}th,td{text-align:left;padding:11px;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f5f7fb}.checklist{padding-left:1.2em}.checklist li{margin:.45em 0}.footer{text-align:center;color:var(--muted);font-size:.9rem;padding:24px}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.toc{position:static}.toc nav{columns:2;column-gap:22px}.toc a{break-inside:avoid}}@media(max-width:520px){.wrap{padding:12px}.hero{border-radius:18px}.toc nav{columns:1}.card{border-radius:14px;padding:20px}pre{padding:13px;font-size:12px}}
+@media print{body{background:white}.wrap{max-width:none;padding:0}.hero{background:#25345d!important;print-color-adjust:exact}.layout{display:block}.toc{display:none}.card{box-shadow:none;break-inside:avoid;border:1px solid #ccc}.hero{border-radius:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+  <div class="eyebrow">Agentic AI · LangGraph · Streamlit</div>
+  <h1>Building a Resume Chat Feature</h1>
+  <p>Study notes for turning a basic streaming chatbot into a multi-conversation app: create new threads, keep their IDs, display a conversation list, and reload the messages when a thread is selected.</p>
+  <div class="pills"><span class="pill">Beginner-friendly notes</span><span class="pill">Python examples</span><span class="pill">Single-page HTML blog</span></div>
+</header>
+
+<div class="layout">
+<aside class="toc">
+  <h2>On this page</h2>
+  <nav>
+    <a href="#overview">1. Overview</a><a href="#architecture">2. Architecture</a><a href="#plan">3. Plan of action</a>
+    <a href="#sidebar">4. Sidebar UI</a><a href="#thread-id">5. Dynamic thread IDs</a><a href="#new-chat">6. New chat</a>
+    <a href="#thread-list">7. Keep all threads</a><a href="#resume">8. Resume a chat</a><a href="#flow">9. End-to-end flow</a>
+    <a href="#persistence">10. Persistence limitation</a><a href="#testing">11. Testing checklist</a><a href="#homework">12. Homework</a>
+  </nav>
+</aside>
+
+<main class="article">
+<section class="card" id="overview">
+<h2>1. Overview: what are we building?</h2>
+<p class="lead">The lesson extends an existing chatbot that already has a Streamlit user interface and streamed responses. The new feature lets a user start a separate conversation and return to an earlier one without mixing their messages.</p>
+<p>Think of each conversation as an independent thread. A user might discuss a Python factorial function in one thread, write a blog post in another, and then switch back to the first thread. Each thread must retain its own identifier so LangGraph can retrieve the matching state.</p>
+<div class="diagram">
+<svg viewBox="0 0 900 280" role="img" aria-label="Chat application layout with a sidebar conversation list and main chat panel">
+<rect x="18" y="18" width="864" height="244" rx="18" fill="#ffffff" stroke="#dce3ef" stroke-width="2"/>
+<rect x="32" y="32" width="220" height="216" rx="12" fill="#f0f3ff" stroke="#d9e0fb"/>
+<text x="50" y="62" font-size="16" font-weight="700" fill="#26345b">LangGraph Chatbot</text>
+<rect x="49" y="78" width="185" height="35" rx="8" fill="#5367d9"/><text x="141" y="100" text-anchor="middle" font-size="14" fill="white" font-weight="700">+ New chat</text>
+<text x="50" y="139" font-size="13" fill="#596579" font-weight="700">MY CONVERSATIONS</text>
+<rect x="49" y="150" width="185" height="28" rx="6" fill="#dce3ff"/><text x="60" y="168" font-size="12" fill="#26345b">Thread • factorial</text>
+<rect x="49" y="185" width="185" height="28" rx="6" fill="#ffffff" stroke="#dce3ef"/><text x="60" y="203" font-size="12" fill="#596579">Thread • AI job crisis</text>
+<rect x="272" y="32" width="594" height="216" rx="12" fill="#fbfcff" stroke="#e3e8f1"/>
+<text x="296" y="60" font-size="16" font-weight="700" fill="#26345b">Current conversation</text>
+<rect x="296" y="78" width="290" height="42" rx="10" fill="#edf0f8"/><text x="311" y="96" font-size="12" fill="#344057">User: Write factorial code in Python</text><text x="311" y="111" font-size="11" fill="#596579">Thread A</text>
+<rect x="475" y="134" width="365" height="56" rx="10" fill="#e5f5f2"/><text x="490" y="153" font-size="12" fill="#115e59">Assistant: Here is a function that computes</text><text x="490" y="170" font-size="12" fill="#115e59">the factorial using a loop...</text>
+<rect x="296" y="207" width="544" height="25" rx="8" fill="#ffffff" stroke="#dce3ef"/><text x="310" y="224" font-size="12" fill="#8a94a6">Type a message...</text>
+</svg>
+<div class="caption">Illustration: the sidebar manages threads; the main panel renders the selected thread.</div>
+</div>
+<h3>What “resume chat” means</h3>
+<ul>
+<li>Every new conversation receives a unique thread ID.</li>
+<li>The app remembers the thread IDs during the current Streamlit session.</li>
+<li>Clicking a thread loads its saved LangGraph messages into the UI message history.</li>
+<li>The user can switch between threads, with each conversation keeping its own context.</li>
+</ul>
+<div class="callout"><strong>Important distinction:</strong> the app’s UI message list is not the same thing as LangGraph’s checkpointed thread state. The UI list is formatted for rendering; LangGraph state is fetched by thread ID.</div>
+</section>
+
+<section class="card" id="architecture">
+<h2>2. Architecture and prerequisites</h2>
+<p>The source lesson reuses the previous chatbot rather than rebuilding the backend. It has two main parts:</p>
+<table><thead><tr><th>Part</th><th>Responsibility</th><th>Change in this lesson?</th></tr></thead><tbody>
+<tr><td><strong>LangGraph backend</strong></td><td>Runs the chatbot graph and stores/checkpoints state by thread ID.</td><td>Existing backend is reused. The lesson demonstrates reading state with <code>get_state()</code>.</td></tr>
+<tr><td><strong>Streamlit frontend</strong></td><td>Displays the chat, sidebar, buttons, and message history.</td><td>Most changes happen here.</td></tr>
+<tr><td><strong>In-memory checkpointer</strong></td><td>Keeps thread state in process memory while the program is running.</td><td>It works for the demo, but does not preserve conversations across a process restart.</td></tr>
+</tbody></table>
+<p>Examples below show the core pattern from the lesson. Integrate them into the existing app and keep the names of your chatbot object and message classes consistent with your project.</p>
+</section>
+
+<section class="card" id="plan">
+<h2>3. Plan of action: break the feature into small tasks</h2>
+<p>The lesson’s central programming technique is to split a larger feature into smaller, testable steps.</p>
+<ol class="steps">
+<li><strong>Create the sidebar UI.</strong> Add the app title, a New chat button, and a “My conversations” section.</li>
+<li><strong>Generate a dynamic thread ID.</strong> Use UUIDs instead of hard-coding a value such as <code>"thread-1"</code>.</li>
+<li><strong>Store thread IDs in session state.</strong> Keep a list of conversations and show them in the sidebar.</li>
+<li><strong>Make New chat work.</strong> Generate a fresh ID, set it as the active thread, and clear the UI message history.</li>
+<li><strong>Make thread buttons clickable.</strong> Selecting a thread should fetch its LangGraph state and repopulate the UI.</li>
+<li><strong>Polish ordering and verify behavior.</strong> Display the most recent thread first and test that switching preserves each thread’s context.</li>
+</ol>
+<div class="callout"><strong>Why this breakdown helps:</strong> each task has a clear outcome, so errors are easier to locate. First make the UI visible, then make state correct, then connect the interactions.</div>
+</section>
+
+<section class="card" id="sidebar">
+<h2>4. Step 1 — Build the sidebar UI</h2>
+<p>Streamlit provides a sidebar container. The initial layout contains a title, a button for creating a new chat, and a heading for the conversation list.</p>
+<div class="code-label"><span>Python · initial sidebar</span><span>Streamlit</span></div>
+<pre><code>import streamlit as st
+
+st.sidebar.title("LangGraph Chatbot")
+st.sidebar.button("New chat")
+st.sidebar.header("My conversations")</code></pre>
+<p>At this point, the button is only a visual element. Its behavior will be added later. Separating UI construction from button behavior makes the first step easy to test.</p>
+<h3>Run the Streamlit app</h3>
+<pre><code>streamlit run streamlit_frontend.py</code></pre>
+<p class="muted">Use the actual filename in your project. In the lesson, a filename typo caused the first run command to fail; correcting the filename resolved it.</p>
+</section>
+
+<section class="card" id="thread-id">
+<h2>5. Step 2 — Generate a dynamic thread ID</h2>
+<p>A fixed thread ID is not suitable when users can create an unknown number of conversations. If every chat reused the same ID, messages could be associated with the wrong thread. The lesson uses Python’s <code>uuid</code> module to generate unique IDs.</p>
+<div class="code-label"><span>Python · utility function</span><span>UUID v4</span></div>
+<pre><code>import uuid
+
+def generate_thread_id():
+    """Return a new unique identifier for a conversation."""
+    return str(uuid.uuid4())</code></pre>
+<p>The thread ID for the active conversation is stored in Streamlit’s <code>st.session_state</code>. Initialize it only if it does not already exist; Streamlit reruns the script during interactions.</p>
+<pre><code>if "thread_id" not in st.session_state:
+    st.session_state.thread_id = generate_thread_id()</code></pre>
+<h3>Pass the active ID to LangGraph</h3>
+<p>When invoking or streaming the graph, pass the ID through the configurable thread field. The exact payload used in the lesson is a configuration dictionary with <code>configurable.thread_id</code>.</p>
+<pre><code>config = {
+    "configurable": {
+        "thread_id": st.session_state.thread_id
+    }
+}
+
+# Example pattern — adapt to your graph and message format:
+# response = chatbot.stream(input_payload, config=config)</code></pre>
+<div class="callout warn"><strong>Keep the configuration consistent.</strong> Use the same thread ID for messages that belong to the same conversation. Use a new ID only when starting a new conversation or deliberately switching to another one.</div>
+</section>
+
+<section class="card" id="new-chat">
+<h2>6. Step 3 — Implement the New chat action</h2>
+<p>Clicking New chat should do three things: generate a new thread ID, set it as the active ID, and clear the frontend’s current message history. Clearing the UI history makes the chat panel appear empty for the new conversation; it does not delete the older thread’s checkpointed state.</p>
+<div class="code-label"><span>Python · reset the active chat</span><span>Session state</span></div>
+<pre><code>def reset_chat():
+    st.session_state.thread_id = generate_thread_id()
+    st.session_state.message_history = []</code></pre>
+<p>Initialize the message history before it is used:</p>
+<pre><code>if "message_history" not in st.session_state:
+    st.session_state.message_history = []</code></pre>
+<p>Wire the callback to the sidebar button:</p>
+<pre><code>st.sidebar.button("New chat", on_click=reset_chat)</code></pre>
+<p>After the click, the app reruns with a fresh active thread and an empty message list. In the next step, the new ID is also added to a list so that the old conversation remains accessible in the sidebar.</p>
+</section>
+
+<section class="card" id="thread-list">
+<h2>7. Step 4 — Keep and display all conversation IDs</h2>
+<p>Changing the active thread ID alone is not enough: it would replace the only reference to the previous thread. The lesson solves this by maintaining a <code>chat_threads</code> list in session state.</p>
+<div class="code-label"><span>Python · initialize the list</span><span>Session state</span></div>
+<pre><code>if "chat_threads" not in st.session_state:
+    st.session_state.chat_threads = []</code></pre>
+<p>Use a small helper to avoid adding the same ID more than once:</p>
+<pre><code>def add_thread(thread_id):
+    if thread_id not in st.session_state.chat_threads:
+        st.session_state.chat_threads.append(thread_id)</code></pre>
+<p>Add the initial thread after initialization, and add each new thread when resetting the chat:</p>
+<pre><code>if "thread_id" not in st.session_state:
+    st.session_state.thread_id = generate_thread_id()
+
+add_thread(st.session_state.thread_id)
+
+def reset_chat():
+    st.session_state.thread_id = generate_thread_id()
+    st.session_state.message_history = []
+    add_thread(st.session_state.thread_id)</code></pre>
+<p>Then render a button for each stored thread ID. Converting the ID to a string is useful because the Streamlit button label expects text.</p>
+<pre><code>st.sidebar.header("My conversations")
+
+for thread_id in reversed(st.session_state.chat_threads):
+    st.sidebar.button(
+        str(thread_id),
+        key=f"thread-{thread_id}",
+        on_click=load_conversation,
+        args=(thread_id,)
+    )</code></pre>
+<p>The <code>reversed()</code> call makes recently created threads appear first because the list is appended to as new conversations are created.</p>
+<div class="callout"><strong>UI improvement opportunity:</strong> UUIDs are useful identifiers but poor conversation titles. The lesson leaves a homework task to replace them with meaningful names, such as “Factorial code” or “AI job crisis blog.”</div>
+</section>
+
+<section class="card" id="resume">
+<h2>8. Step 5 — Load a previous conversation</h2>
+<p>To resume a conversation, the app must retrieve the messages associated with the selected thread ID from LangGraph. The lesson uses <code>chatbot.get_state(config)</code>; the returned state snapshot exposes the graph values, including the message list.</p>
+<div class="code-label"><span>Python · retrieve messages from LangGraph</span><span>Backend object</span></div>
+<pre><code>def get_thread_messages(thread_id):
+    config = {
+        "configurable": {
+            "thread_id": thread_id
+        }
+    }
+    snapshot = chatbot.get_state(config)
+    return snapshot.values.get("messages", [])</code></pre>
+<p>In the source lesson, the graph’s stored messages use message objects (for example, human and AI messages), while the Streamlit frontend renders a list of dictionaries with <code>role</code> and <code>content</code>. Convert between those formats before updating the UI history.</p>
+<div class="code-label"><span>Python · convert message objects for the UI</span><span>Format adapter</span></div>
+<pre><code>def load_conversation(thread_id):
+    # Mark the selected conversation as active.
+    st.session_state.thread_id = thread_id
+
+    # Fetch messages saved by LangGraph for this thread.
+    messages = get_thread_messages(thread_id)
+
+    # Convert graph message objects to the UI's role/content format.
+    formatted_messages = []
+    for msg in messages:
+        if isinstance(msg, HumanMessage):
+            role = "user"
+        else:
+            role = "assistant"
+
+        formatted_messages.append({
+            "role": role,
+            "content": msg.content
+        })
+
+    st.session_state.message_history = formatted_messages</code></pre>
+<p>Import the message class used by your LangChain/LangGraph version if you use the example above:</p>
+<pre><code>from langchain_core.messages import HumanMessage</code></pre>
+<div class="callout warn"><strong>Adaptation note:</strong> this example assumes the graph stores user messages as <code>HumanMessage</code> and assistant responses as other message objects. If your graph also stores tool messages, system messages, or custom message types, map those roles explicitly instead of treating every non-human message as assistant text.</div>
+<h3>Why update the active thread ID?</h3>
+<p>When a user selects an older conversation, set <code>st.session_state.thread_id</code> to that selected ID. Otherwise, the UI might display one conversation while subsequent messages are sent to another thread.</p>
+<h3>Render messages from the frontend history</h3>
+<pre><code>for message in st.session_state.message_history:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])</code></pre>
+<p>Use this same rendering loop after loading history and after new messages arrive. This keeps the display logic in one place.</p>
+</section>
+
+<section class="card" id="flow">
+<h2>9. End-to-end interaction flow</h2>
+<div class="diagram">
+<svg viewBox="0 0 850 450" role="img" aria-label="Flowchart showing new chat and resume chat paths">
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#7b86a1"/></marker></defs>
+<rect x="255" y="16" width="340" height="54" rx="12" fill="#e9edff" stroke="#b9c5fb"/><text x="425" y="38" text-anchor="middle" font-size="15" font-weight="700" fill="#26345b">User opens the app</text><text x="425" y="56" text-anchor="middle" font-size="12" fill="#596579">Initialize session state</text>
+<path d="M425 70 V96" stroke="#7b86a1" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="255" y="100" width="340" height="54" rx="12" fill="#ffffff" stroke="#d3dbe8"/><text x="425" y="122" text-anchor="middle" font-size="14" font-weight="700" fill="#26345b">Show conversation buttons</text><text x="425" y="140" text-anchor="middle" font-size="12" fill="#596579">Most recent first</text>
+<path d="M425 154 V178 H210 V202 M425 178 H640 V202" fill="none" stroke="#7b86a1" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="35" y="206" width="350" height="72" rx="12" fill="#e7f6f2" stroke="#9dd8cb"/><text x="210" y="229" text-anchor="middle" font-size="14" font-weight="700" fill="#115e59">New chat clicked</text><text x="210" y="248" text-anchor="middle" font-size="12" fill="#115e59">Generate ID · set active thread</text><text x="210" y="264" text-anchor="middle" font-size="12" fill="#115e59">Clear UI history · add to thread list</text>
+<rect x="465" y="206" width="350" height="72" rx="12" fill="#fff4df" stroke="#efd08c"/><text x="640" y="229" text-anchor="middle" font-size="14" font-weight="700" fill="#875d10">Existing thread clicked</text><text x="640" y="248" text-anchor="middle" font-size="12" fill="#875d10">Set selected ID as active thread</text><text x="640" y="264" text-anchor="middle" font-size="12" fill="#875d10">Fetch LangGraph state</text>
+<path d="M210 278 V312 H425 V333 M640 278 V312 H425" fill="none" stroke="#7b86a1" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="235" y="337" width="380" height="66" rx="12" fill="#ffffff" stroke="#d3dbe8"/><text x="425" y="360" text-anchor="middle" font-size="14" font-weight="700" fill="#26345b">Update message_history</text><text x="425" y="380" text-anchor="middle" font-size="12" fill="#596579">Convert messages to role/content dictionaries</text>
+<path d="M425 403 V421" stroke="#7b86a1" stroke-width="2" marker-end="url(#arrow)"/><text x="425" y="442" text-anchor="middle" font-size="13" font-weight="700" fill="#26345b">Render the selected conversation</text>
+</svg>
+<div class="caption">Two paths share the same frontend rendering: create a blank thread or restore an existing thread.</div>
+</div>
+<h3>State model at a glance</h3>
+<table><thead><tr><th>Session key</th><th>Purpose</th></tr></thead><tbody>
+<tr><td><code>thread_id</code></td><td>The currently selected conversation ID.</td></tr>
+<tr><td><code>chat_threads</code></td><td>IDs that should be available as selectable conversations in the sidebar.</td></tr>
+<tr><td><code>message_history</code></td><td>Messages formatted for display in the main chat panel.</td></tr>
+</tbody></table>
+</section>
+
+<section class="card" id="persistence">
+<h2>10. Limitation: why chats disappear after a refresh or restart</h2>
+<p>The lesson finishes with an important limitation. Its in-memory checkpointer stores graph state in RAM. If the Python process terminates or the app is restarted, that in-memory state is lost. A session list in Streamlit does not turn an in-memory LangGraph checkpointer into durable storage.</p>
+<div class="diagram">
+<svg viewBox="0 0 820 190" role="img" aria-label="Comparison between in-memory and database persistence">
+<rect x="18" y="18" width="380" height="150" rx="14" fill="#fff7e6" stroke="#efd08c"/><text x="208" y="45" text-anchor="middle" font-size="16" font-weight="700" fill="#875d10">In-memory checkpointer</text>
+<rect x="50" y="61" width="316" height="42" rx="8" fill="#ffffff" stroke="#efd08c"/><text x="208" y="87" text-anchor="middle" font-size="13" fill="#6b4a0d">Thread state stored in RAM</text><path d="M208 104 V120" stroke="#b7791f" stroke-width="2"/><text x="208" y="143" text-anchor="middle" font-size="13" font-weight="700" fill="#875d10">Process restart → state lost</text>
+<rect x="422" y="18" width="380" height="150" rx="14" fill="#e7f6f2" stroke="#9dd8cb"/><text x="612" y="45" text-anchor="middle" font-size="16" font-weight="700" fill="#115e59">Database-backed checkpointer</text>
+<rect x="454" y="61" width="316" height="42" rx="8" fill="#ffffff" stroke="#9dd8cb"/><text x="612" y="87" text-anchor="middle" font-size="13" fill="#115e59">Thread state stored durably</text><path d="M612 104 V120" stroke="#0f766e" stroke-width="2"/><text x="612" y="143" text-anchor="middle" font-size="13" font-weight="700" fill="#115e59">Restart → reload saved state</text>
+</svg>
+<div class="caption">The next step in the series is to connect the LangGraph backend to durable database storage.</div>
+</div>
+<p>The planned improvement is to connect the LangGraph backend to a database-backed checkpointer. That is what makes old conversations available after the app process has restarted, rather than only while the current process remains alive.</p>
+<div class="callout warn"><strong>Do not confuse the two persistence layers:</strong> <code>st.session_state</code> is frontend session state; the LangGraph checkpointer stores graph state. Durable conversation recovery requires an appropriate persistent checkpointer and a way to rediscover the saved thread IDs.</div>
+</section>
+
+<section class="card" id="testing">
+<h2>11. Testing checklist</h2>
+<ul class="checklist">
+<li>On first load, a thread ID is created and appears in the sidebar.</li>
+<li>Sending a message adds it to the active conversation only.</li>
+<li>Clicking New chat creates a different ID and clears the visible history.</li>
+<li>The previous thread ID remains in the conversation list.</li>
+<li>Creating several chats adds each new ID only once.</li>
+<li>Clicking an older thread loads its previous user and assistant messages.</li>
+<li>After switching threads, the next user message goes to the selected thread.</li>
+<li>The most recently created conversation appears at the top.</li>
+<li>Refreshing/restarting behavior is understood: in-memory state is not durable.</li>
+</ul>
+<h3>Common problems and fixes</h3>
+<table><thead><tr><th>Symptom</th><th>Likely cause / fix</th></tr></thead><tbody>
+<tr><td>New chat button does nothing</td><td>Only the button UI exists; attach <code>on_click=reset_chat</code>.</td></tr>
+<tr><td>Previous thread disappears from sidebar</td><td>Only the active ID is stored; maintain a separate <code>chat_threads</code> list.</td></tr>
+<tr><td>Wrong conversation receives new messages</td><td>Selected thread ID was not written to <code>st.session_state.thread_id</code> before invoking the graph.</td></tr>
+<tr><td>Loaded messages do not render</td><td>Message formats differ; convert graph message objects into dictionaries with <code>role</code> and <code>content</code>.</td></tr>
+<tr><td>Chats vanish after app restart</td><td>The checkpointer is in-memory; use durable database-backed persistence.</td></tr>
+<tr><td>Duplicate buttons or key errors</td><td>Ensure thread IDs are unique, labels are strings, and each button has a stable unique key.</td></tr>
+</tbody></table>
+</section>
+
+<section class="card" id="homework">
+<h2>12. Homework: give conversations meaningful names</h2>
+<p>The lesson’s proposed exercise is to show a logical conversation title instead of raw UUIDs, similar to a chat application’s conversation list.</p>
+<ul>
+<li>Start with a simple title derived from the first user message.</li>
+<li>Keep the thread ID as the internal key; store the title separately.</li>
+<li>Handle long prompts by shortening the visible title without changing the stored original message.</li>
+<li>Consider what to show for an empty chat before the first message is sent.</li>
+</ul>
+<p>For example, a conversation might display “Python factorial function” while its internal thread ID remains a UUID. This makes the sidebar much easier to scan.</p>
+</section>
+
+<section class="card">
+<h2>Quick recap</h2>
+<ul>
+<li><strong>Sidebar:</strong> title, New chat button, and conversation list.</li>
+<li><strong>Unique IDs:</strong> use <code>uuid.uuid4()</code> instead of a hard-coded thread ID.</li>
+<li><strong>New chat:</strong> generate a new ID, make it active, and reset UI history.</li>
+<li><strong>Thread list:</strong> keep all IDs in session state and render newest first.</li>
+<li><strong>Resume:</strong> call <code>chatbot.get_state(config)</code>, extract messages, map them into the UI format, and display them.</li>
+<li><strong>Persistence:</strong> an in-memory checkpointer loses state when the process ends; database-backed persistence is the next improvement.</li>
+</ul>
+<p class="muted">These notes are based on the supplied lesson transcript. Code snippets are teaching patterns and may need small adjustments to match the exact imports, graph object, and message types in your existing project.</p>
+</section>
+</main>
+</div>
+<footer class="footer">Study notes · LangGraph chatbot · Resume-chat feature</footer>
+</div>
+</body>
+</html>
