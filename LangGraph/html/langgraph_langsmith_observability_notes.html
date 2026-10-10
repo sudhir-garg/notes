@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LangGraph Observability with LangSmith — Practical Notes</title>
+<style>
+:root{--ink:#172033;--muted:#5e6b82;--line:#dce4ef;--paper:#fff;--wash:#f4f7fb;--blue:#2457c5;--blue2:#eaf1ff;--teal:#087f8c;--green:#18794e;--amber:#8a5300;--red:#a33434;--shadow:0 8px 28px rgba(20,39,75,.08)}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:var(--wash);color:var(--ink);font:16px/1.72 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.layout{max-width:1440px;margin:auto;display:grid;grid-template-columns:260px minmax(0,900px);gap:34px;padding:28px}
+nav{position:sticky;top:20px;align-self:start;background:white;border:1px solid var(--line);border-radius:16px;padding:20px;max-height:calc(100vh - 40px);overflow:auto;box-shadow:var(--shadow)}
+nav strong{display:block;font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:10px}nav a{display:block;color:#34435c;text-decoration:none;font-size:13px;padding:5px 0}nav a:hover{color:var(--blue)}
+main{min-width:0;background:var(--paper);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);overflow:hidden}
+.hero{padding:52px 54px 44px;background:linear-gradient(130deg,#10264e,#2457c5 68%,#148a9b);color:#fff}.eyebrow{font-size:12px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;opacity:.85}.hero h1{font-size:clamp(30px,4vw,46px);line-height:1.12;margin:14px 0}.hero p{font-size:18px;max-width:720px;color:#e9efff}.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}.chip{border:1px solid #ffffff55;background:#ffffff17;padding:5px 10px;border-radius:99px;font-size:12px}
+.content{padding:18px 54px 56px}section{padding-top:26px;margin-top:10px}h2{font-size:27px;line-height:1.25;margin:0 0 16px;letter-spacing:-.02em}h3{font-size:19px;margin:25px 0 8px}h4{margin:18px 0 5px}p{margin:10px 0}ul,ol{padding-left:25px}li{margin:5px 0}.lead{font-size:18px;color:#34435c}.muted{color:var(--muted)}.callout{padding:15px 18px;border-left:4px solid var(--blue);background:var(--blue2);border-radius:0 10px 10px 0;margin:18px 0}.callout.tip{border-color:var(--green);background:#eaf7ef}.callout.warn{border-color:#d58b17;background:#fff5df}.callout.danger{border-color:var(--red);background:#fff0f0}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}th,td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#edf2f9;font-weight:750}tr:nth-child(even) td{background:#fbfcfe}
+pre{background:#101a2b;color:#e6edf8;padding:18px;border-radius:12px;overflow:auto;font-size:13px;line-height:1.6;border:1px solid #273750}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}p code,li code,td code{background:#edf2f8;color:#183c7a;padding:2px 5px;border-radius:4px;font-size:.9em}
+.diagram{border:1px solid var(--line);border-radius:16px;background:linear-gradient(#fff,#f8faff);padding:18px;margin:18px 0;overflow:hidden}.diagram svg{display:block;width:100%;height:auto}.caption{font-size:13px;color:var(--muted);margin-top:8px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.card{border:1px solid var(--line);border-radius:13px;padding:16px;background:#fff}.card h3{margin:0 0 6px;font-size:17px}.number{font-size:12px;font-weight:800;color:var(--blue);letter-spacing:.08em;text-transform:uppercase}
+.kbd{font-weight:700;color:var(--blue)}.checklist li{list-style:"✓  ";padding-left:5px}.footer{padding:22px 54px;background:#f1f5fa;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+@media(max-width:1000px){.layout{grid-template-columns:1fr;padding:12px}nav{position:relative;top:auto;max-height:none}.content,.hero,.footer{padding-left:25px;padding-right:25px}.grid{grid-template-columns:1fr}}
+@media print{body{background:white}.layout{display:block;padding:0}nav{display:none}main{box-shadow:none;border:0}.hero{background:#eef3ff!important;color:#172033}.hero p{color:#34435c}.content{padding:15px 25px}.diagram,pre,table{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav aria-label="Table of contents">
+<strong>On this page</strong>
+<a href="#overview">1. Overview</a><a href="#journey">2. Project recap</a><a href="#observability">3. Observability</a><a href="#setup">4. LangSmith setup</a><a href="#traces">5. Projects, traces and runs</a><a href="#threads">6. Threads and conversations</a><a href="#code">7. Implementation pattern</a><a href="#metrics">8. What to inspect</a><a href="#pitfalls">9. Pitfalls & safety</a><a href="#workflow">10. End-to-end workflow</a><a href="#interview">11. Interview recap</a><a href="#glossary">12. Glossary</a>
+</nav>
+<main>
+<header class="hero">
+<div class="eyebrow">LangGraph · LangSmith · Agentic AI</div>
+<h1>Adding Observability to a LangGraph Chatbot</h1>
+<p>Practical learning notes on tracing executions with LangSmith, inspecting latency and token usage, and organizing chatbot turns into conversation threads.</p>
+<div class="chips"><span class="chip">Technical tutorial</span><span class="chip">Python examples</span><span class="chip">Architecture diagrams</span><span class="chip">Source-based notes</span></div>
+</header>
+<div class="content">
+<section id="overview">
+<h2>1. Overview</h2>
+<p class="lead">This lesson adds <strong>observability</strong> to an existing LangGraph chatbot by integrating <strong>LangSmith</strong>. It then connects each execution trace to a conversation thread so that separate conversations are easy to inspect independently.</p>
+<div class="callout"><strong>Central idea:</strong> enable LangSmith tracing through environment configuration, then pass a stable thread identifier in the run configuration and attach that identifier as trace metadata. This gives you both execution-level detail and conversation-level organization.</div>
+<div class="diagram">
+<svg viewBox="0 0 820 230" role="img" aria-label="Observability architecture: user, LangGraph chatbot, LangSmith tracing dashboard">
+<defs><marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#526b91"/></marker></defs>
+<rect x="18" y="62" width="170" height="92" rx="13" fill="#edf3ff" stroke="#8ba9e8" stroke-width="1.5"/><text x="103" y="98" text-anchor="middle" font-size="17" font-weight="700" fill="#1d438d">User</text><text x="103" y="122" text-anchor="middle" font-size="12" fill="#405575">Question / reply</text>
+<rect x="265" y="42" width="250" height="132" rx="13" fill="#e8f7f6" stroke="#6ebbb5" stroke-width="1.5"/><text x="390" y="76" text-anchor="middle" font-size="17" font-weight="700" fill="#075e65">LangGraph chatbot</text><text x="390" y="102" text-anchor="middle" font-size="13" fill="#235e62">Graph nodes · LLM calls</text><text x="390" y="124" text-anchor="middle" font-size="13" fill="#235e62">State · streaming · persistence</text><text x="390" y="148" text-anchor="middle" font-size="12" fill="#235e62">Normal app execution</text>
+<rect x="590" y="62" width="210" height="92" rx="13" fill="#fff4df" stroke="#e3b45b" stroke-width="1.5"/><text x="695" y="98" text-anchor="middle" font-size="17" font-weight="700" fill="#805000">LangSmith</text><text x="695" y="122" text-anchor="middle" font-size="12" fill="#805000">Traces · tokens · latency</text>
+<path d="M188 108 H257" stroke="#526b91" stroke-width="2" marker-end="url(#arr)"/><path d="M515 91 H582" stroke="#526b91" stroke-width="2" marker-end="url(#arr)"/><path d="M582 130 H523" stroke="#526b91" stroke-width="2" marker-end="url(#arr)"/><text x="550" y="77" text-anchor="middle" font-size="11" fill="#526b91">trace data</text><text x="550" y="151" text-anchor="middle" font-size="11" fill="#526b91">inspect</text>
+<text x="410" y="208" text-anchor="middle" font-size="12" fill="#5e6b82">Tracing observes the run; it does not replace the chatbot's own persistence.</text>
+</svg>
+<div class="caption">Conceptual view: the application continues to respond normally while execution details are captured for later debugging and analysis.</div>
+</div>
+</section>
+<section id="journey">
+<h2>2. Project recap: what already exists?</h2>
+<p>The lesson continues an incremental chatbot project. Before adding observability, the chatbot already has several capabilities:</p>
+<div class="grid">
+<div class="card"><div class="number">Capability 01</div><h3>GUI</h3><p>A user interface through which a person can interact with the chatbot.</p></div>
+<div class="card"><div class="number">Capability 02</div><h3>Streaming</h3><p>The response can appear progressively, rather than making the user wait for the entire answer before seeing anything.</p></div>
+<div class="card"><div class="number">Capability 03</div><h3>Database persistence</h3><p>Chat history survives a program restart. A user can reopen the application later and recover previous chats.</p></div>
+<div class="card"><div class="number">Capability 04</div><h3>Observability (this lesson)</h3><p>Execution details are recorded in LangSmith so developers can inspect what happened during a turn.</p></div>
+</div>
+<div class="callout tip"><strong>Keep the concepts separate:</strong> database persistence stores application conversation state for the chatbot to use again. LangSmith tracing stores execution telemetry for developers to understand and debug the system.</div>
+</section>
+<section id="observability">
+<h2>3. What is observability?</h2>
+<p>In this lesson, observability means being able to follow a chatbot execution end to end. For a given interaction, a developer can inspect the user's input, the model's output, timing information, token usage, status, and internal steps represented in the trace.</p>
+<h3>Why it matters</h3>
+<ul>
+<li><strong>Debugging:</strong> find which node or model call produced an unexpected result.</li>
+<li><strong>Performance:</strong> identify slow executions and examine time to first token and overall latency.</li>
+<li><strong>Cost awareness:</strong> inspect input and output token counts, which can help estimate model usage costs.</li>
+<li><strong>Learning complex flows:</strong> as tools, RAG, agents, or MCP integrations are added, traces reveal how the components execute.</li>
+<li><strong>Production monitoring:</strong> use run histories and telemetry as evidence when diagnosing incidents.</li>
+</ul>
+<h3>Observability is more than logging the final answer</h3>
+<table><thead><tr><th>Only saving a chat transcript</th><th>Tracing with observability</th></tr></thead><tbody>
+<tr><td>User message and final assistant response</td><td>Input/output plus execution hierarchy and component-level runs</td></tr>
+<tr><td>Usually insufficient to explain slowness</td><td>Timing and latency details can help localize slow steps</td></tr>
+<tr><td>Usually lacks model usage telemetry</td><td>Token usage may be available when supported by the integration/provider</td></tr>
+<tr><td>Useful for conversation history</td><td>Useful for debugging, evaluation, performance analysis and operational visibility</td></tr>
+</tbody></table>
+<div class="callout warn"><strong>Privacy note:</strong> traces may contain user prompts, model responses, and metadata. Do not send secrets or sensitive personal data to a tracing service unless your organization's policies, configuration, access controls, and retention requirements permit it.</div>
+</section>
+<section id="setup">
+<h2>4. Set up LangSmith tracing</h2>
+<p>The transcript's setup flow is: create or sign in to a LangSmith account, generate an API key, place the tracing settings in the project's environment configuration, then run the existing chatbot. With tracing configured, the lesson demonstrates that the main chatbot logic does not need to be rewritten just to capture traces.</p>
+<h3>Step 1 — Create an API key</h3>
+<ol><li>Open the LangSmith website and sign in.</li><li>Go to the account or workspace settings and find the API keys section.</li><li>Create a key with a recognizable description and copy it securely.</li><li>Store it in your local environment configuration. Do not commit it to source control.</li></ol>
+<h3>Step 2 — Add environment variables</h3>
+<p>The transcript refers to these variables. The endpoint shown here is the common LangSmith API endpoint; use the endpoint documented for your workspace if it differs.</p>
+<pre><code># .env — example only; replace the placeholder with your own key
+LANGSMITH_TRACING=true
+LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+LANGSMITH_API_KEY=your_langsmith_api_key
+LANGSMITH_PROJECT=chatbot-project</code></pre>
+<p>The lesson uses the project name <code>chatbot-project</code> as an example. Runs that inherit this environment configuration are grouped under that project in the LangSmith dashboard.</p>
+<div class="callout danger"><strong>Never paste a real API key into notes, screenshots, public repositories, or chat messages.</strong> If a key is exposed, revoke it and create a replacement.</div>
+<h3>Step 3 — Load the environment</h3>
+<p>For a Python project using a <code>.env</code> file, a typical setup is:</p>
+<pre><code>from dotenv import load_dotenv
+
+load_dotenv()
+
+# The LangChain/LangGraph integration reads the relevant
+# LANGSMITH_* variables from the process environment.
+# Continue to run your existing graph/chatbot normally.</code></pre>
+<p>Install the relevant packages in your project's environment if needed:</p>
+<pre><code>pip install langsmith python-dotenv</code></pre>
+<p>Package requirements depend on the rest of the project; the chatbot will also need its existing LangGraph, LangChain integration, and model-provider packages.</p>
+<h3>Step 4 — Run a normal chat turn</h3>
+<p>Run the same chatbot code and send a message. Open the matching LangSmith project and check that a trace appears. In the transcript's demonstration, the chatbot behaves normally while LangSmith records the run behind the scenes.</p>
+</section>
+<section id="traces">
+<h2>5. Understand projects, traces and runs</h2>
+<p>Three related terms are important. A <strong>project</strong> groups related tracing activity; a <strong>trace</strong> represents a top-level execution associated with an interaction; and <strong>runs</strong> are the individual steps/components inside that trace, such as a graph node or model call. Exact hierarchy and labels depend on the integration and SDK version.</p>
+<div class="diagram">
+<svg viewBox="0 0 820 290" role="img" aria-label="Project contains traces; a trace contains multiple runs">
+<rect x="185" y="12" width="450" height="55" rx="12" fill="#eaf1ff" stroke="#8ba9e8"/><text x="410" y="35" text-anchor="middle" font-size="17" font-weight="700" fill="#1d438d">LangSmith project: chatbot-project</text><text x="410" y="53" text-anchor="middle" font-size="12" fill="#405575">A workspace/group for related traces</text>
+<path d="M410 67 V88 M140 88 H680 M140 88 V106 M410 88 V106 M680 88 V106" stroke="#7a8eae" stroke-width="1.5" fill="none"/>
+<g><rect x="35" y="106" width="210" height="58" rx="10" fill="#e8f7f6" stroke="#6ebbb5"/><text x="140" y="130" text-anchor="middle" font-size="15" font-weight="700" fill="#075e65">Trace 1</text><text x="140" y="149" text-anchor="middle" font-size="12" fill="#235e62">Chat turn: “Hi”</text></g>
+<g><rect x="305" y="106" width="210" height="58" rx="10" fill="#e8f7f6" stroke="#6ebbb5"/><text x="410" y="130" text-anchor="middle" font-size="15" font-weight="700" fill="#075e65">Trace 2</text><text x="410" y="149" text-anchor="middle" font-size="12" fill="#235e62">Chat turn: follow-up</text></g>
+<g><rect x="575" y="106" width="210" height="58" rx="10" fill="#e8f7f6" stroke="#6ebbb5"/><text x="680" y="130" text-anchor="middle" font-size="15" font-weight="700" fill="#075e65">Trace 3</text><text x="680" y="149" text-anchor="middle" font-size="12" fill="#235e62">Another turn</text></g>
+<path d="M140 164 V185 M410 164 V185 M680 164 V185" stroke="#7a8eae" stroke-width="1.5"/>
+<g fill="#fff4df" stroke="#e3b45b"><rect x="45" y="185" width="190" height="40" rx="8"/><rect x="315" y="185" width="190" height="40" rx="8"/><rect x="585" y="185" width="190" height="40" rx="8"/></g>
+<g fill="#805000" font-size="12" text-anchor="middle"><text x="140" y="210">Graph node → LLM call</text><text x="410" y="210">Graph node → LLM call</text><text x="680" y="210">Graph node → LLM call</text></g>
+<text x="410" y="260" text-anchor="middle" font-size="13" fill="#5e6b82">Inspect a trace to explore inputs, outputs, timings, tokens and nested runs.</text>
+</svg>
+<div class="caption">Simplified hierarchy for learning. A real trace can include several nested graph nodes, tool calls, and model invocations.</div>
+</div>
+<p>In the demonstration, a message such as “Give me a roadmap to study AI engineering” produces a trace. A later message produces another trace. Opening a trace reveals details such as the graph node (for example, a chat node), the model call, input/output, start and end time, token counts, and latency when available.</p>
+</section>
+<section id="threads">
+<h2>6. Why threads matter</h2>
+<p>Without an explicit conversation/thread identifier in tracing metadata, separate chats can appear together in a project's trace list without an obvious grouping that reflects the application's conversation structure. The lesson solves this by attaching the current chatbot thread ID to each trace.</p>
+<h3>The intended organization</h3>
+<div class="diagram">
+<svg viewBox="0 0 820 280" role="img" aria-label="Two independent conversation threads, each containing multiple chat-turn traces">
+<rect x="24" y="18" width="772" height="105" rx="13" fill="#f0f5ff" stroke="#9bb5ed"/><text x="44" y="43" font-size="16" font-weight="700" fill="#1d438d">Thread A · Conversation with user A</text>
+<rect x="44" y="59" width="210" height="45" rx="8" fill="#fff" stroke="#9bb5ed"/><text x="149" y="78" text-anchor="middle" font-size="12" font-weight="700" fill="#1d438d">Trace 1</text><text x="149" y="94" text-anchor="middle" font-size="11" fill="#405575">Hi → Hello</text>
+<path d="M254 82 H285" stroke="#7186ad" stroke-width="1.5"/><path d="M278 77 L285 82 L278 87" stroke="#7186ad" fill="none"/>
+<rect x="291" y="59" width="210" height="45" rx="8" fill="#fff" stroke="#9bb5ed"/><text x="396" y="78" text-anchor="middle" font-size="12" font-weight="700" fill="#1d438d">Trace 2</text><text x="396" y="94" text-anchor="middle" font-size="11" fill="#405575">Name → response</text>
+<path d="M501 82 H532" stroke="#7186ad" stroke-width="1.5"/><path d="M525 77 L532 82 L525 87" stroke="#7186ad" fill="none"/>
+<rect x="538" y="59" width="230" height="45" rx="8" fill="#fff" stroke="#9bb5ed"/><text x="653" y="78" text-anchor="middle" font-size="12" font-weight="700" fill="#1d438d">Trace 3</text><text x="653" y="94" text-anchor="middle" font-size="11" fill="#405575">Follow-up → response</text>
+<rect x="24" y="145" width="772" height="105" rx="13" fill="#eaf8f4" stroke="#80c8b5"/><text x="44" y="170" font-size="16" font-weight="700" fill="#08695c">Thread B · Separate conversation</text>
+<rect x="44" y="186" width="210" height="45" rx="8" fill="#fff" stroke="#80c8b5"/><text x="149" y="205" text-anchor="middle" font-size="12" font-weight="700" fill="#08695c">Trace 1</text><text x="149" y="221" text-anchor="middle" font-size="11" fill="#286b60">Hi, I'm Rahul</text>
+<path d="M254 209 H285" stroke="#4e9b8d" stroke-width="1.5"/><path d="M278 204 L285 209 L278 214" stroke="#4e9b8d" fill="none"/>
+<rect x="291" y="186" width="210" height="45" rx="8" fill="#fff" stroke="#80c8b5"/><text x="396" y="205" text-anchor="middle" font-size="12" font-weight="700" fill="#08695c">Trace 2</text><text x="396" y="221" text-anchor="middle" font-size="11" fill="#286b60">Study roadmap → answer</text>
+<text x="653" y="213" text-anchor="middle" font-size="12" fill="#286b60">Independent thread ID</text>
+</svg>
+<div class="caption">The application creates a distinct thread ID for each conversation. Every turn in that conversation reuses the same ID.</div>
+</div>
+<p>The transcript's example uses two separate conversations: one with greetings and follow-ups, and another with a different user's study-roadmap question. With thread IDs, the dashboard can show each conversation as its own thread, with its own turn traces nested beneath it.</p>
+<h3>Thread ID, trace metadata and run name have different roles</h3>
+<table><thead><tr><th>Field</th><th>Purpose</th><th>Expected behavior</th></tr></thead><tbody>
+<tr><td><code>configurable.thread_id</code></td><td>LangGraph execution/checkpoint thread identifier</td><td>Reuse it for turns in the same conversation; use a different one for a new conversation.</td></tr>
+<tr><td><code>metadata.thread_id</code></td><td>Trace metadata used to associate/filter traces by conversation</td><td>Set it to the same current thread ID so the tracing view can group or identify the conversation.</td></tr>
+<tr><td><code>run_name</code></td><td>Human-readable label for a run/trace</td><td>Optional. The lesson uses “Chat Turn” instead of a generic “LangGraph” label.</td></tr>
+</tbody></table>
+<div class="callout warn"><strong>Important distinction:</strong> LangGraph's <code>configurable.thread_id</code> controls graph/checkpointer thread behavior. Adding <code>metadata.thread_id</code> labels the trace; metadata alone should not be assumed to create or persist application conversation state.</div>
+</section>
+<section id="code">
+<h2>7. Implementation pattern</h2>
+<p>The exact surrounding code depends on the chatbot project, but the lesson's key change is to keep the existing configurable thread ID and add metadata plus an optional descriptive run name to the invocation config.</p>
+<h3>Example A — Invoke a compiled LangGraph graph</h3>
+<pre><code># Example pattern; adapt `graph` and `thread_id` to your application.
+thread_id = "conversation-123"
+
+config = {
+    "configurable": {
+        "thread_id": thread_id
+    },
+    "metadata": {
+        "thread_id": thread_id
+    },
+    "run_name": "Chat Turn"
+}
+
+result = graph.invoke(
+    {"messages": [{"role": "user", "content": "Hi"}]},
+    config=config
+)</code></pre>
+<p>This is an illustrative invocation pattern. If your graph expects a different state schema (for example, a LangGraph <code>MessagesState</code> schema), adapt the input shape to match it.</p>
+<h3>Example B — Stream a turn using the same config</h3>
+<pre><code>for event in graph.stream(
+    {"messages": [{"role": "user", "content": "Explain LangGraph"}]},
+    config=config,
+    stream_mode="updates"
+):
+    print(event)</code></pre>
+<p>Use the same thread ID for subsequent turns in the same conversation. If your application streams tokens through a different API, preserve the same tracing/configuration information in that call.</p>
+<h3>Example C — Create a new conversation correctly</h3>
+<pre><code>from uuid import uuid4
+
+# Generate once when a new conversation is created.
+new_thread_id = str(uuid4())
+
+# Store this ID in the session / database with the conversation.
+# For every later turn in that conversation, load and reuse it.
+config = {
+    "configurable": {"thread_id": new_thread_id},
+    "metadata": {"thread_id": new_thread_id},
+    "run_name": "Chat Turn",
+}</code></pre>
+<div class="callout tip"><strong>Rule of thumb:</strong> create a thread ID when a new conversation begins, persist it with that conversation, and reuse it for all later turns. Do not generate a fresh ID for every message, or each turn will look like a separate conversation.</div>
+<h3>Example D — Minimal .env template</h3>
+<pre><code>LANGSMITH_TRACING=true
+LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+LANGSMITH_API_KEY=replace_me
+LANGSMITH_PROJECT=chatbot-project</code></pre>
+<p>Environment variable names and tracing behavior can vary with library versions. The lesson uses the LangSmith environment configuration approach, which lets supported LangChain/LangGraph integrations report traces without adding manual tracing calls around every node.</p>
+</section>
+<section id="metrics">
+<h2>8. What should you inspect in a trace?</h2>
+<table><thead><tr><th>Field / signal</th><th>What it tells you</th><th>Example use</th></tr></thead><tbody>
+<tr><td>Input</td><td>What was sent to the node or model</td><td>Check whether the intended user question reached the LLM.</td></tr>
+<tr><td>Output</td><td>What the node or model returned</td><td>Find the step where an unexpected answer appeared.</td></tr>
+<tr><td>Start/end time and duration</td><td>How long a run took</td><td>Investigate a slow response.</td></tr>
+<tr><td>Time to first token</td><td>How long the user waited before streamed output began, when available</td><td>Diagnose perceived responsiveness.</td></tr>
+<tr><td>Input/output tokens</td><td>Token usage reported by the provider/integration</td><td>Understand context growth and usage cost.</td></tr>
+<tr><td>Status/error</td><td>Whether the run succeeded or failed</td><td>Locate errors and failed calls.</td></tr>
+<tr><td>Nested runs</td><td>Which graph nodes, model calls or tools ran</td><td>Follow an agent's execution path.</td></tr>
+<tr><td>Thread metadata</td><td>Which conversation the trace belongs to</td><td>Inspect one chat without mixing it with another.</td></tr>
+</tbody></table>
+<p>Availability and naming of individual fields depend on the model provider, SDK, streaming mode, and integration. Treat the trace as an inspection tool, not a guarantee that every provider exposes every metric.</p>
+</section>
+<section id="pitfalls">
+<h2>9. Common pitfalls and good practices</h2>
+<ul>
+<li><strong>One trace project, many unrelated conversations:</strong> use consistent thread metadata so the conversations can be identified and grouped.</li>
+<li><strong>New ID for every turn:</strong> breaks conversation grouping. Reuse the ID for the lifetime of a conversation.</li>
+<li><strong>Same ID for every user:</strong> risks mixing unrelated conversations and may also cause incorrect checkpoint state. Generate IDs per conversation and enforce authorization at the application layer.</li>
+<li><strong>Metadata mistaken for persistence:</strong> trace metadata labels telemetry; the graph checkpointer/database manages application state.</li>
+<li><strong>API key committed to Git:</strong> load it from environment/secrets management and keep it out of code and version control.</li>
+<li><strong>Assuming tracing is free of privacy risk:</strong> inspect what is captured and apply appropriate redaction, access control, retention, and data-handling rules.</li>
+<li><strong>Dashboard is empty:</strong> confirm the tracing flag, endpoint, API key, project name, network access, package versions, and that the code path actually invokes an instrumented integration.</li>
+</ul>
+</section>
+<section id="workflow">
+<h2>10. End-to-end workflow checklist</h2>
+<ol class="checklist">
+<li>Create/sign in to LangSmith and generate an API key.</li>
+<li>Set tracing, endpoint, API key, and project environment variables.</li>
+<li>Load environment variables before invoking the chatbot.</li>
+<li>Run the existing application and send a test message.</li>
+<li>Confirm that the trace appears in the intended LangSmith project.</li>
+<li>Inspect input/output, model or graph-node runs, duration, tokens and status.</li>
+<li>Pass the current conversation ID as <code>configurable.thread_id</code>.</li>
+<li>Attach the same ID as <code>metadata.thread_id</code> for trace organization.</li>
+<li>Optionally set <code>run_name</code> to a meaningful label such as <code>Chat Turn</code>.</li>
+<li>Test two different conversations and verify their traces remain separately grouped.</li>
+<li>Restart the app and verify that application persistence still behaves as designed.</li>
+</ol>
+</section>
+<section id="interview">
+<h2>11. Interview-ready recap</h2>
+<h3>What is LangSmith observability?</h3>
+<p>It is the ability to inspect an LLM application's execution through traces, including inputs, outputs, component runs, timing, token usage, and errors where available. It helps debug, evaluate, and monitor complex LLM workflows.</p>
+<h3>What is the difference between a project, trace, and thread?</h3>
+<ul><li><strong>Project:</strong> organizes related tracing activity.</li><li><strong>Trace:</strong> captures one execution or interaction, with nested component runs.</li><li><strong>Thread:</strong> represents a conversation across multiple turns; a thread can contain multiple traces.</li></ul>
+<h3>Why add thread IDs to metadata?</h3>
+<p>To associate each trace with the application's conversation identifier, making it easier to browse turns belonging to the same conversation. The thread ID should be stable for a conversation and different for a new one.</p>
+<h3>Does LangSmith require changing the main chatbot code?</h3>
+<p>In the lesson's setup, supported LangGraph/LangChain integrations begin tracing from environment configuration, so basic tracing can work without rewriting the main execution logic. Explicit thread metadata and a custom run name require an invocation-config change.</p>
+<h3>Why is this useful before adding tools or RAG?</h3>
+<p>Tools, retrieval, and agent loops introduce more steps and failure points. A trace makes the execution path visible so developers can see which calls happened, where latency accumulated, and what data moved between components.</p>
+</section>
+<section id="glossary">
+<h2>12. Glossary</h2>
+<table><thead><tr><th>Term</th><th>Meaning in this lesson</th></tr></thead><tbody>
+<tr><td>Observability</td><td>Visibility into application execution and behavior through traces and telemetry.</td></tr>
+<tr><td>LangSmith</td><td>Tracing/observability platform used to inspect LangChain and LangGraph applications.</td></tr>
+<tr><td>Project</td><td>A named grouping for related traces in the dashboard.</td></tr>
+<tr><td>Trace</td><td>A top-level execution record for an interaction or run.</td></tr>
+<tr><td>Run</td><td>An individual operation within a trace, such as a node or model call.</td></tr>
+<tr><td>Thread ID</td><td>An identifier for one conversation across multiple turns.</td></tr>
+<tr><td>Metadata</td><td>Additional key-value information attached to a trace/run for identification or filtering.</td></tr>
+<tr><td>Run name</td><td>A human-readable label for an execution, such as “Chat Turn”.</td></tr>
+<tr><td>Latency</td><td>The time taken for an operation or response.</td></tr>
+<tr><td>Token usage</td><td>Input and output tokens reported for model calls.</td></tr>
+</tbody></table>
+</section>
+</div>
+<footer class="footer">Prepared from the supplied lesson transcript. Code samples are teaching patterns and may need adjustment for the exact LangGraph state schema and installed SDK versions. No transcript citation placeholders are embedded in this HTML.</footer>
+</main>
+</div>
+</body>
+</html>
