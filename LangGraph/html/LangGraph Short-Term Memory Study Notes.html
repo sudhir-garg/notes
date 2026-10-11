@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LangGraph Short-Term Memory — Study Notes</title>
+<style>
+:root{--ink:#182235;--muted:#53627a;--paper:#ffffff;--bg:#f3f6fb;--accent:#315bd6;--soft:#eaf0ff;--line:#dbe3ef;--code:#111827;--green:#e8f7ef;--amber:#fff5df}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.72 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.hero{background:linear-gradient(135deg,#172554,#315bd6);color:white;padding:54px 22px 46px}.hero-inner{max-width:1050px;margin:auto}.eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:.78rem;font-weight:700;opacity:.82}.hero h1{font-size:clamp(2rem,5vw,3.5rem);line-height:1.12;margin:.6rem 0 1rem}.hero p{max-width:780px;font-size:1.08rem;opacity:.94}.meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.pill{border:1px solid #ffffff66;border-radius:99px;padding:4px 12px;font-size:.83rem}
+.layout{max-width:1150px;margin:28px auto;padding:0 18px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:26px}.toc{align-self:start;position:sticky;top:18px;background:white;border:1px solid var(--line);border-radius:16px;padding:18px}.toc strong{display:block;margin-bottom:8px}.toc a{display:block;text-decoration:none;color:var(--muted);padding:5px 0;font-size:.91rem}.toc a:hover{color:var(--accent)}main{min-width:0}.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:clamp(20px,4vw,34px);margin-bottom:22px;box-shadow:0 5px 20px #15284a08}.card h2{font-size:1.65rem;line-height:1.25;margin:.1rem 0 1rem}.card h3{margin:1.5rem 0 .45rem;font-size:1.15rem}.muted{color:var(--muted)}.callout{border-left:4px solid var(--accent);background:var(--soft);padding:14px 17px;border-radius:0 10px 10px 0;margin:18px 0}.warning{border-left-color:#c48615;background:var(--amber)}.success{border-left-color:#208553;background:var(--green)}ul,ol{padding-left:1.35rem}li{margin:.3rem 0}code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#edf1f7;padding:.12rem .32rem;border-radius:5px;font-size:.9em}pre{background:var(--code);color:#e5edf8;border-radius:12px;padding:18px;overflow:auto;line-height:1.55;font-size:.88rem}pre code{background:transparent;padding:0;color:inherit}.diagram{background:#f8faff;border:1px solid var(--line);padding:18px;border-radius:14px;margin:18px 0;text-align:center}.flow{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap}.node{border:1px solid #9fb3ea;background:white;border-radius:10px;padding:10px 14px;font-weight:650}.arrow{color:var(--accent);font-weight:800;font-size:1.3rem}.small{font-size:.9rem}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;margin:15px 0;font-size:.94rem}th,td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#f0f4fc}.tag{display:inline-block;background:#edf1f7;color:#34435b;border-radius:6px;padding:2px 7px;font-size:.8rem;font-weight:650}.footer{text-align:center;color:var(--muted);padding:30px 15px;font-size:.9rem}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.toc{position:static}.toc nav{columns:2}.hero{padding-top:38px}}
+@media(max-width:520px){.toc nav{columns:1}.card{padding:20px}.flow{flex-direction:column}.arrow{transform:rotate(90deg)}}
+</style>
+</head>
+<body>
+<header class="hero"><div class="hero-inner">
+<div class="eyebrow">Agentic AI • LangGraph • Study Notes</div>
+<h1>Short-Term Memory in LangGraph</h1>
+<p>A practical guide to threads, checkpointers, persistent conversation state, context-window overflow, trimming, deletion, and summarization.</p>
+<div class="meta"><span class="pill">Blog-style notes</span><span class="pill">Concepts + Python examples</span><span class="pill">Based on the supplied lecture transcript</span></div>
+</div></header>
+<div class="layout">
+<aside class="toc"><strong>On this page</strong><nav>
+<a href="#plan">Plan of action</a><a href="#fundamentals">Memory fundamentals</a><a href="#threads">Threads & checkpointers</a><a href="#memory-code">In-memory example</a><a href="#persistence">Persistence with PostgreSQL</a><a href="#context">Context overflow</a><a href="#trimming">Trimming</a><a href="#deletion">Deletion</a><a href="#summary">Summarization</a><a href="#comparison">Comparison</a><a href="#pitfalls">Pitfalls & best practices</a><a href="#roadmap">Plan of action / practice</a><a href="#recap">Quick recap</a>
+</nav></aside>
+<main>
+<section class="card" id="plan"><h2>1. Plan of Action</h2>
+<p>This lesson builds from the concept of LLM memory to a working short-term-memory strategy in LangGraph. The focus is not only remembering prior turns, but also keeping memory within the model's context budget.</p>
+<ol><li>Review why LLM calls are stateless by default.</li><li>Implement short-term memory with a <strong>thread ID</strong> and a <strong>checkpointer</strong>.</li><li>Understand why in-memory checkpoints disappear after a process restart.</li><li>Persist graph state in PostgreSQL.</li><li>Understand context-window overflow and why a long transcript can become too large.</li><li>Apply trimming, deletion, and summarization.</li><li>Build a small practice workflow and test its state.</li></ol>
+<div class="callout"><strong>Prerequisite:</strong> Understand LangGraph state, nodes, edges, messages, and the earlier conceptual lesson on short-term vs long-term memory.</div>
+</section>
+
+<section class="card" id="fundamentals"><h2>2. Memory Fundamentals: Why an LLM Needs Help</h2>
+<p>A language model does not automatically retain a conversation between independent API/model calls. Unless earlier messages or an equivalent memory representation are sent again, the next call may not know what was said before.</p>
+<div class="diagram"><div class="flow"><div class="node">User turn 1</div><div class="arrow">→</div><div class="node">LLM response</div></div><p class="muted small">A later call containing only “What is my name?” has no earlier name statement to use.</p><div class="flow"><div class="node">Earlier messages</div><div class="arrow">+</div><div class="node">Current message</div><div class="arrow">→</div><div class="node">LLM</div></div><p class="muted small">Sending relevant conversation history supplies short-term context.</p></div>
+<h3>Conversation buffer</h3><p>A basic approach is to keep prior user and assistant messages and include them in later model input. In LangGraph, the state commonly contains a message list, and the checkpointer saves snapshots of that state between graph runs.</p>
+<h3>Short-term vs long-term memory</h3>
+<div class="table-wrap"><table><thead><tr><th>Type</th><th>Purpose</th><th>Typical implementation</th></tr></thead><tbody>
+<tr><td><strong>Short-term memory</strong></td><td>Context for a particular conversation/thread</td><td>Message state + checkpointer + thread ID</td></tr>
+<tr><td><strong>Long-term memory</strong></td><td>Information intended to be reused across conversations or sessions</td><td>Store/search user facts or documents separately, often through a database or vector store</td></tr></tbody></table></div>
+<div class="callout"><strong>Key idea:</strong> A checkpointer saves graph state. A thread ID tells LangGraph which conversation's checkpoint history to load and update.</div>
+</section>
+
+<section class="card" id="threads"><h2>3. Threads and Checkpointers</h2>
+<ul><li><strong>State:</strong> the data flowing through a graph; here, typically the conversation messages.</li><li><strong>Checkpointer:</strong> a component that saves state snapshots at graph supersteps so a later run can continue from saved state.</li><li><strong>Thread ID:</strong> a stable identifier for one conversation. Reuse it to continue that conversation; use a different ID for a separate conversation.</li></ul>
+<div class="diagram"><div class="flow"><div class="node">Graph input</div><div class="arrow">→</div><div class="node">Node / model</div><div class="arrow">→</div><div class="node">Updated state</div></div><div class="flow" style="margin-top:12px"><div class="node">Checkpointer saves snapshot</div><div class="arrow">↔</div><div class="node">thread_id = conversation key</div></div></div>
+<p>If the same thread is used for “My name is Nitesh” and then “What is my name?”, the previous message can be available. If the second call uses a new thread ID, that new thread has no prior conversation history.</p>
+</section>
+
+<section class="card" id="memory-code"><h2>4. Minimal Short-Term Memory Example (In-Memory)</h2>
+<p>The following is an illustrative modern LangGraph pattern. It uses a message-state graph and an in-memory checkpointer. Install the required packages and configure your model credentials before running it.</p>
+<pre><code>pip install -U langgraph langchain-openai python-dotenv</code></pre>
+<pre><code>import os
+from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
+from langgraph.graph import StateGraph, START, END, MessagesState
+from langgraph.checkpoint.memory import InMemorySaver
+
+load_dotenv()
+model = ChatOpenAI(model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"))
+
+def call_model(state: MessagesState):
+    response = model.invoke(state["messages"])
+    return {"messages": [response]}
+
+builder = StateGraph(MessagesState)
+builder.add_node("chat", call_model)
+builder.add_edge(START, "chat")
+builder.add_edge("chat", END)
+
+checkpointer = InMemorySaver()
+graph = builder.compile(checkpointer=checkpointer)
+
+config = {"configurable": {"thread_id": "thread-1"}}
+
+graph.invoke(
+    {"messages": [{"role": "user", "content": "Hi, my name is Nitesh."}]},
+    config=config,
+)
+result = graph.invoke(
+    {"messages": [{"role": "user", "content": "What is my name?"}]},
+    config=config,
+)
+print(result["messages"][-1].content)</code></pre>
+<div class="callout warning"><strong>Important:</strong> Exact class names and import paths can vary by LangGraph version. The core pattern is stable: compile with a checkpointer and pass the same <code>configurable.thread_id</code> on every turn. The example above is a teaching template, not a substitute for checking the version-specific API docs.</div>
+<h3>Try a different thread</h3>
+<pre><code>other_config = {"configurable": {"thread_id": "thread-2"}}
+result = graph.invoke(
+    {"messages": [{"role": "user", "content": "What is my name?"}]},
+    config=other_config,
+)
+# This separate thread has no name statement in its history.</code></pre>
+<p>Because <code>InMemorySaver</code> stores checkpoints in process memory, state generally disappears when the Python process ends. It is convenient for demos and tests, but not durable persistence.</p>
+</section>
+
+<section class="card" id="persistence"><h2>5. Persistence with PostgreSQL</h2>
+<p>For an application that must recover conversations after a restart, use a durable checkpointer backend. The lecture demonstrates PostgreSQL running in Docker and a PostgreSQL-backed LangGraph checkpointer.</p>
+<h3>5.1 Start PostgreSQL using Docker Compose</h3>
+<p>Create a file named <code>compose.yaml</code>. Choose a strong local password; do not commit real credentials to a public repository.</p>
+<pre><code>services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: langgraph
+      POSTGRES_PASSWORD: change-this-local-password
+      POSTGRES_DB: langgraph
+    ports:
+      - "5432:5432"
+    volumes:
+      - langgraph_pgdata:/var/lib/postgresql/data
+volumes:
+  langgraph_pgdata:</code></pre>
+<p>Start the service and check its status:</p>
+<pre><code>docker compose up -d
+docker compose ps</code></pre>
+<h3>5.2 Install the PostgreSQL checkpointer package</h3>
+<pre><code>pip install -U langgraph langgraph-checkpoint-postgres "psycopg[binary,pool]" langchain-openai python-dotenv</code></pre>
+<h3>5.3 Compile the graph with a PostgreSQL checkpointer</h3>
+<p>The connection string below is for the example Docker configuration. Put credentials in environment variables in real projects. The context manager manages the connection/checkpointer lifecycle; setup should be run as required by the installed package's documentation.</p>
+<pre><code>import os
+from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
+from langgraph.graph import StateGraph, START, END, MessagesState
+from langgraph.checkpoint.postgres import PostgresSaver
+
+load_dotenv()
+model = ChatOpenAI(model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"))
+DB_URI = os.environ["LANGGRAPH_DB_URI"]
+# Example value:
+# postgresql://langgraph:password@localhost:5432/langgraph
+
+def call_model(state: MessagesState):
+    return {"messages": [model.invoke(state["messages"])]}
+
+builder = StateGraph(MessagesState)
+builder.add_node("chat", call_model)
+builder.add_edge(START, "chat")
+builder.add_edge("chat", END)
+
+config = {"configurable": {"thread_id": "thread-1"}}
+
+with PostgresSaver.from_conn_string(DB_URI) as checkpointer:
+    checkpointer.setup()  # Initialize checkpoint tables if needed
+    graph = builder.compile(checkpointer=checkpointer)
+
+    graph.invoke(
+        {"messages": [{"role": "user", "content": "My name is Nitesh."}]},
+        config=config,
+    )
+    result = graph.invoke(
+        {"messages": [{"role": "user", "content": "What is my name?"}]},
+        config=config,
+    )
+    print(result["messages"][-1].content)</code></pre>
+<h3>5.4 Verify persistence</h3>
+<ol><li>Run the app with <code>thread-1</code> and send a few messages.</li><li>Stop and restart the Python process while leaving the PostgreSQL container and its volume intact.</li><li>Recreate the graph with the same database and checkpointer configuration.</li><li>Call <code>graph.get_state({"configurable": {"thread_id": "thread-1"}})</code> to inspect the saved state.</li><li>Use <code>thread-2</code> to verify that conversations remain isolated.</li></ol>
+<div class="callout success"><strong>Expected result:</strong> The thread's saved graph state can be retrieved after restarting the application, provided the database and its persisted data are still available.</div>
+<div class="callout warning"><strong>Production note:</strong> Durable checkpoints are only one part of production readiness. Add authentication, authorization, connection management, backups, retention policies, secrets management, and monitoring. Do not assume a database checkpoint alone is a complete user-memory strategy.</div>
+</section>
+
+<section class="card" id="context"><h2>6. Context Window and Context Overflow</h2>
+<p>A model's context window limits how much input and generated output it can process in one request. The exact limit depends on the model. A growing conversation may exceed the available budget because both user messages and assistant responses consume tokens.</p>
+<div class="diagram"><div class="flow"><div class="node">Old turns</div><div class="arrow">+</div><div class="node">Recent turns</div><div class="arrow">+</div><div class="node">Current prompt</div><div class="arrow">→</div><div class="node">Context budget</div></div><p class="muted small">If the total is too large, the request may fail, be truncated, or leave too little room for a useful answer.</p></div>
+<p>Blindly attaching every past message to every model call is simple, but it becomes expensive and eventually may not fit. The lesson introduces three complementary operations:</p>
+<ul><li><strong>Trimming:</strong> send only a selected subset of recent messages to the model.</li><li><strong>Deletion:</strong> remove selected messages from graph state.</li><li><strong>Summarization:</strong> compress older conversation history into a concise summary and keep recent turns verbatim.</li></ul>
+</section>
+
+<section class="card" id="trimming"><h2>7. Trimming: Keep Recent Messages Within a Budget</h2>
+<p>Trimming selects a suffix of the conversation that fits a configured token budget. In the lecture's example, the cap is 150 tokens; that number is only a demonstration and should be tuned to the model and application.</p>
+<pre><code>from langchain_core.messages import trim_messages
+
+def call_model(state):
+    trimmed = trim_messages(
+        state["messages"],
+        max_tokens=150,
+        strategy="last",
+        token_counter=model,  # or a supported token counter
+        include_system=True,
+        allow_partial=False,
+        start_on="human",
+    )
+    response = model.invoke(trimmed)
+    return {"messages": [response]}</code></pre>
+<p>Use the supported arguments for the version of LangChain installed. Some environments use a model token counter; others may use a tokenizer or a custom approximate counter. Ensure the retained messages form a valid sequence for the model.</p>
+<h3>What trimming does — and does not do</h3>
+<ul><li>It creates a smaller list for the current model call.</li><li>It does <strong>not necessarily delete</strong> old messages from the graph's stored state.</li><li>Old facts may become unavailable to the model if they are outside the trimmed subset.</li><li>A strict budget should leave room for system instructions, tool results, and the model's expected output.</li></ul>
+<div class="callout warning"><strong>Limitation:</strong> If the user's name appeared only in a trimmed-away turn, the model may no longer know it. Trimming trades historical detail for a bounded prompt.</div>
+</section>
+
+<section class="card" id="deletion"><h2>8. Deletion: Remove Messages from State</h2>
+<p>Deletion differs from trimming. It changes the stored message state rather than merely hiding older messages from a single model invocation. LangGraph's message state supports removal instructions through <code>RemoveMessage</code>.</p>
+<pre><code>from langchain_core.messages import RemoveMessage
+
+def delete_old_messages(state):
+    messages = state["messages"]
+    if len(messages) <= 10:
+        return {}
+
+    # Example policy: retain the newest four messages.
+    old_messages = messages[:-4]
+    return {
+        "messages": [
+            RemoveMessage(id=message.id)
+            for message in old_messages
+            if message.id is not None
+        ]
+    }</code></pre>
+<p>Attach this cleanup node after the chat node if that is the desired execution order. Test the policy with alternating user and assistant messages so that you do not accidentally leave an invalid or confusing partial exchange.</p>
+<div class="callout"><strong>Lecture example:</strong> once the state contains more than 10 messages, remove the earliest six and retain the newest eight when there are 14 total. The precise retention rule is an application decision.</div>
+</section>
+
+<section class="card" id="summary"><h2>9. Summarization: Preserve the Meaning of Older Turns</h2>
+<p>Summarization reduces the history's size while preserving important information. Instead of discarding every old turn, a model summarizes the older section; the application then supplies that summary together with recent messages.</p>
+<div class="diagram"><div class="flow"><div class="node">Older messages</div><div class="arrow">→</div><div class="node">Summary model</div><div class="arrow">→</div><div class="node">Compact summary</div></div><div class="flow" style="margin-top:12px"><div class="node">Summary</div><div class="arrow">+</div><div class="node">Recent messages</div><div class="arrow">→</div><div class="node">Chat model</div></div></div>
+<h3>Example policy from the lecture</h3>
+<ul><li>Allow ordinary chat while there are six or fewer messages.</li><li>When the state exceeds six messages, summarize the older portion.</li><li>Keep the newest two messages verbatim.</li><li>Store the updated summary in a dedicated state field.</li><li>Delete the old messages that have been summarized, avoiding duplicate full history plus summary.</li></ul>
+<h3>Custom state with a summary field</h3>
+<pre><code>from typing import Annotated
+from typing_extensions import TypedDict
+from langgraph.graph.message import add_messages
+from langchain_core.messages import AnyMessage
+
+class ChatState(TypedDict):
+    messages: Annotated[list[AnyMessage], add_messages]
+    summary: str</code></pre>
+<p>For a real implementation, give <code>summary</code> an appropriate default/optional type and ensure message updates use the reducer semantics your graph expects. Below is the core logic in pseudocode-like Python, intended to make the workflow clear:</p>
+<pre><code>def should_summarize(state):
+    return len(state["messages"]) > 6
+
+def summarize_old_history(state):
+    messages = state["messages"]
+    recent = messages[-2:]
+    older = messages[:-2]
+
+    old_summary = state.get("summary", "")
+    if old_summary:
+        prompt = (
+            "Update the existing conversation summary using the new messages. "
+            "Keep stable facts, user preferences, decisions, and unresolved tasks.\\n\\n"
+            f"Existing summary:\\n{old_summary}\\n\\n"
+            f"New older messages:\\n{older}"
+        )
+    else:
+        prompt = (
+            "Summarize the conversation above. Preserve names, preferences, "
+            "decisions, constraints, and open questions.\\n\\n"
+            f"{older}"
+        )
+
+    new_summary = summary_model.invoke(prompt).content
+
+    # In a real graph, return RemoveMessage(id=...) updates for the
+    # old messages and retain the newest two, using the correct reducer.
+    return {
+        "summary": new_summary,
+        # "messages": [RemoveMessage(id=m.id) for m in older]
+    }</code></pre>
+<div class="callout warning"><strong>Implementation detail:</strong> The summarization example above isolates the idea; it is not a complete drop-in graph because message deletion must be returned using the correct message reducer and every removed message needs a valid ID. Also ensure that the summary is passed to the chat model as context (for example, a system message) on subsequent turns.</div>
+<h3>What should a good summary preserve?</h3>
+<ul><li>Stable user facts explicitly shared in the conversation.</li><li>Goals, preferences, constraints, and decisions.</li><li>Important technical details or code decisions.</li><li>Pending questions, commitments, and next steps.</li><li>Uncertainty: do not turn a guess into a fact.</li></ul>
+</section>
+
+<section class="card" id="comparison"><h2>10. Trimming vs Deletion vs Summarization</h2>
+<div class="table-wrap"><table><thead><tr><th>Technique</th><th>What changes?</th><th>Strength</th><th>Trade-off</th></tr></thead><tbody>
+<tr><td><strong>Trimming</strong></td><td>Model input for a particular call</td><td>Simple, fast, bounded context</td><td>Older facts may be invisible to the model</td></tr>
+<tr><td><strong>Deletion</strong></td><td>Stored graph message state</td><td>Reduces retained state and checkpoint size</td><td>Deleted details cannot be recovered from that state unless stored elsewhere</td></tr>
+<tr><td><strong>Summarization</strong></td><td>Older history is compressed into a summary; old turns can be removed</td><td>Preserves high-value context over long conversations</td><td>Summaries can omit nuance or introduce errors; requires extra model work</td></tr></tbody></table></div>
+<p><strong>Practical pattern:</strong> Use a token budget for the active prompt, keep a compact summary of older history, and retain a limited recent window verbatim. Delete old messages only after the summary has been successfully produced and validated.</p>
+</section>
+
+<section class="card" id="pitfalls"><h2>11. Common Pitfalls and Best Practices</h2>
+<ul><li><strong>Changing thread IDs accidentally:</strong> a new ID points to a different conversation. Persist the ID in your UI/session metadata.</li><li><strong>Using in-memory storage in production:</strong> it is not durable across process restarts.</li><li><strong>Assuming checkpoints are long-term memory:</strong> checkpoints preserve thread state; they do not automatically create searchable cross-thread user memory.</li><li><strong>Setting the token limit too high:</strong> leave headroom for system messages, tool calls, and output tokens.</li><li><strong>Trimming without testing:</strong> ensure the retained message sequence is valid and contains the context required for the next response.</li><li><strong>Deleting before summarizing:</strong> if summarization fails, important context can be lost. Generate and verify the summary first.</li><li><strong>Trusting summaries blindly:</strong> summaries are lossy. Preserve critical structured facts separately when correctness matters.</li><li><strong>Ignoring privacy and retention:</strong> define who can access each thread, how long checkpoints are kept, and how users can delete their data.</li></ul>
+</section>
+
+<section class="card" id="roadmap"><h2>12. Plan of Action: Hands-on Practice</h2>
+<ol><li><strong>Baseline:</strong> create a one-node chat graph with no checkpointer. Ask “My name is Nitesh” and then “What is my name?” in separate calls; observe the missing context.</li><li><strong>Add thread memory:</strong> compile with <code>InMemorySaver</code> and reuse one thread ID. Verify that the second call can use the first turn.</li><li><strong>Test thread isolation:</strong> use another thread ID and confirm that the history is separate.</li><li><strong>Test restart behavior:</strong> restart Python and inspect the in-memory state; it should not be treated as durable.</li><li><strong>Add PostgreSQL:</strong> configure a PostgreSQL checkpointer and verify the same thread's state after restarting the application.</li><li><strong>Add trimming:</strong> set a small test token limit and log which messages are passed to the model.</li><li><strong>Add deletion:</strong> remove older messages by ID and inspect the resulting graph state.</li><li><strong>Add summarization:</strong> trigger a summary when message count or estimated tokens cross a threshold; keep recent turns and inject the summary into model context.</li><li><strong>Evaluate:</strong> test recall of user-provided facts, long-running tasks, summary quality, token usage, and cross-thread privacy.</li></ol>
+<h3>Suggested project structure</h3>
+<pre><code>langgraph-memory-demo/
+├── .env
+├── compose.yaml
+├── requirements.txt
+├── memory_inmemory.py
+├── memory_postgres.py
+├── memory_trimming.py
+├── memory_deletion.py
+└── memory_summarization.py</code></pre>
+<h3>Example environment variables</h3>
+<pre><code>OPENAI_API_KEY=your_api_key_here
+OPENAI_MODEL=gpt-4o-mini
+LANGGRAPH_DB_URI=postgresql://langgraph:your_password@localhost:5432/langgraph</code></pre>
+<p class="small muted">Keep <code>.env</code> out of version control. Use a <code>.gitignore</code> entry for <code>.env</code>, and rotate any credential that is accidentally exposed.</p>
+</section>
+
+<section class="card" id="recap"><h2>13. Quick Recap</h2>
+<ul><li>LLM calls do not automatically remember previous independent calls; context must be supplied.</li><li>In LangGraph, short-term conversation memory is commonly implemented with message state, a checkpointer, and a stable thread ID.</li><li><code>InMemorySaver</code> is convenient for demos but is not durable across process restarts.</li><li>A PostgreSQL checkpointer can persist graph checkpoints between application runs.</li><li>Long histories can exceed the model's context budget.</li><li><strong>Trimming</strong> limits what the model sees on a call; it does not inherently delete saved state.</li><li><strong>Deletion</strong> removes messages from state.</li><li><strong>Summarization</strong> compresses older context and is usually paired with deletion of summarized turns.</li></ul>
+<div class="callout success"><strong>Remember this mental model:</strong> Thread ID selects the conversation, the checkpointer saves its state, trimming controls the active prompt, and summarization helps preserve useful context as the conversation grows.</div>
+</section>
+</main></div>
+<footer class="footer">Study notes prepared from the supplied lecture transcript • Review package documentation for version-specific APIs before production use.</footer>
+</body></html>
