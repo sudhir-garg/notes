@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building a Planning AI Agent with LangGraph — Study Notes</title>
+<style>
+:root{--ink:#182230;--muted:#536273;--line:#dbe3ec;--paper:#fff;--bg:#f3f6fa;--accent:#3659c9;--soft:#eaf0ff;--code:#101827}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.72 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:linear-gradient(135deg,#14213d,#3659c9);color:white;padding:56px 22px 46px}
+.hero,.layout{max-width:1080px;margin:auto}.eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:.78rem;font-weight:700;opacity:.85}
+h1{font-size:clamp(2rem,5vw,3.3rem);line-height:1.12;margin:.5rem 0 1rem;max-width:850px}
+header p{max-width:760px;font-size:1.08rem;color:#e7edff}
+.pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}.pill{border:1px solid #ffffff66;border-radius:99px;padding:4px 11px;font-size:.82rem}
+.layout{display:grid;grid-template-columns:245px minmax(0,1fr);gap:28px;padding:30px 18px 70px}
+nav{position:sticky;top:16px;align-self:start;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px;max-height:calc(100vh - 32px);overflow:auto}
+nav strong{display:block;margin-bottom:8px}nav a{display:block;color:var(--muted);text-decoration:none;padding:5px 0;font-size:.9rem}nav a:hover{color:var(--accent)}
+main{min-width:0}.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:clamp(20px,4vw,34px);margin-bottom:22px;box-shadow:0 4px 18px #14213d08}
+h2{font-size:1.65rem;line-height:1.25;margin:.1rem 0 1rem}h3{font-size:1.15rem;margin:1.5rem 0 .4rem}p{margin:.65rem 0}li{margin:.35rem 0}a{color:var(--accent)}
+.callout{background:var(--soft);border-left:4px solid var(--accent);padding:13px 16px;border-radius:8px;margin:16px 0}
+.small{font-size:.9rem;color:var(--muted)}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.mini{border:1px solid var(--line);border-radius:12px;padding:16px;background:#fbfcfe}
+.flow{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;margin:18px 0}.node{flex:1 1 120px;text-align:center;padding:13px 10px;border:1px solid #bdc9dc;border-radius:10px;background:#f8faff;font-weight:650}.arrow{align-self:center;color:var(--accent);font-weight:800}
+pre{overflow:auto;background:var(--code);color:#e6edf7;border-radius:12px;padding:18px;font-size:.87rem;line-height:1.55;tab-size:4}code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}p code,li code{background:#eef1f6;padding:.12em .35em;border-radius:4px;color:#26354c}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:.94rem}th,td{border:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}th{background:#f2f5fa}
+svg{max-width:100%;height:auto;display:block;margin:18px auto}.check li{list-style:"☐  ";padding-left:5px}
+footer{text-align:center;color:var(--muted);padding:24px}
+@media(max-width:800px){.layout{grid-template-columns:1fr}nav{position:static;max-height:none}.grid2{grid-template-columns:1fr}.arrow{display:none}}
+@media print{body{background:white}.layout{display:block}nav{display:none}.card{break-inside:avoid;box-shadow:none}header{background:#243b72!important;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<header><div class="hero">
+<div class="eyebrow">LangGraph • Agentic AI • Project notes</div>
+<h1>Building a Planning AI Agent with LangGraph</h1>
+<p>A blog-writing agent that plans first, then writes sections in parallel, optionally researches current topics, adds generated images, and presents the result through a Streamlit interface.</p>
+<div class="pills"><span class="pill">Planning agents</span><span class="pill">Orchestrator–worker</span><span class="pill">Structured output</span><span class="pill">Tavily research</span><span class="pill">Image generation</span></div>
+</div></header>
+<div class="layout">
+<nav><strong>On this page</strong>
+<a href="#overview">1. Overview</a><a href="#planning">2. Planning agents</a><a href="#architecture">3. Full architecture</a><a href="#stages">4. Four-stage plan</a><a href="#stage1">5. Stage 1: Basic agent</a><a href="#prompts">6. Better plans and prompts</a><a href="#research">7. Stage 2: Research</a><a href="#images">8. Stage 3: Images</a><a href="#ui">9. Stage 4: Streamlit UI</a><a href="#code">10. Code blueprint</a><a href="#testing">11. Testing checklist</a><a href="#takeaways">12. Key takeaways</a>
+</nav>
+<main>
+<section class="card" id="overview"><h2>1. What are we building?</h2>
+<p>The project in the lesson is a <b>planning-based AI blog-writing agent</b>. A user supplies a topic or a more detailed brief. Instead of immediately writing a long answer, the agent first creates a structured plan, then delegates each planned section to a worker, and finally combines the results into a Markdown blog.</p>
+<p>The full demo described in the transcript adds online research for topics that need fresh information, generated images placed into the blog, evidence/citation display, execution logs, an image listing, downloadable output, and access to previously generated blogs.</p>
+<div class="callout"><b>Core idea:</b> Plan → execute subtasks → combine results. This is especially useful for multi-part tasks where an immediate one-shot response may omit important sections or lack organization.</div>
+<div class="grid2"><div class="mini"><h3>Input</h3><p>A topic such as “Self-attention,” or a brief that specifies audience, tone, and desired coverage.</p></div><div class="mini"><h3>Output</h3><p>A titled, structured Markdown blog. In later stages, it can include citations and images.</p></div></div>
+</section>
+<section class="card" id="planning"><h2>2. Planning agent vs direct execution</h2>
+<p>A planning agent does not jump straight to the final task. It creates a structured plan of work and then executes that plan step by step.</p>
+<table><thead><tr><th>Direct execution</th><th>Planning-based execution</th></tr></thead><tbody><tr><td>Receives a task and starts answering immediately.</td><td>Understands the task and breaks it into subtasks first.</td></tr><tr><td>Can be sufficient for small, self-contained requests.</td><td>Useful for complex deliverables with multiple sections or dependencies.</td></tr><tr><td>May omit coverage or produce uneven structure.</td><td>Plan defines section order, goals, and writing requirements before drafting.</td></tr></tbody></table>
+<p>Example: asking for a blog about transformer architecture in one step may lead to missing details. A planner can decide on an introduction, mechanism, worked example, applications, limitations, and conclusion before any section is written.</p>
+</section>
+<section class="card" id="architecture"><h2>3. Full agent architecture</h2>
+<p>The lesson describes a LangGraph flow with a router, optional research, an orchestrator/planner, dynamically created workers, and a reducer.</p>
+<div class="flow"><div class="node">User topic</div><span class="arrow">→</span><div class="node">Router<br><small>Need research?</small></div><span class="arrow">→</span><div class="node">Research<br><small>if needed</small></div></div>
+<div class="flow"><div class="node">Orchestrator / Planner<br><small>Structured plan</small></div><span class="arrow">→</span><div class="node">Fan-out<br><small>one worker per task</small></div><span class="arrow">→</span><div class="node">Parallel workers<br><small>write sections</small></div><span class="arrow">→</span><div class="node">Reducer<br><small>merge + images</small></div></div>
+<p class="small">For topics that do not need fresh facts, the router can bypass research and send the topic directly to planning. The graph still uses the same planner → workers → reducer path.</p>
+<h3>Node responsibilities</h3>
+<ul><li><b>Router:</b> decides whether online research is needed; in the research-enabled version, it also suggests search queries.</li>
+<li><b>Research node:</b> sends queries to Tavily and stores retrieved information for downstream nodes.</li>
+<li><b>Orchestrator/planner:</b> creates a structured blog plan: title, audience, tone, and a list of section tasks.</li>
+<li><b>Fan-out:</b> checks how many tasks are in the plan and dispatches one worker invocation per task using LangGraph’s `Send` API.</li>
+<li><b>Worker:</b> writes only its assigned section, using the topic and overall plan for context.</li>
+<li><b>Reducer:</b> joins section outputs in order, forms the Markdown blog, and in the image-enabled stage identifies places where images are useful and inserts them.</li></ul>
+</section>
+<section class="card" id="stages"><h2>4. Four-stage plan of action</h2>
+<div class="grid2">
+<div class="mini"><h3>Stage 1 — Basic text blog</h3><p>Build the planner, dynamic workers, and reducer. No web research or images.</p></div>
+<div class="mini"><h3>Stage 2 — Internet research</h3><p>Add a router, search-query generation, Tavily retrieval, and research context for planning/writing.</p></div>
+<div class="mini"><h3>Stage 3 — Images</h3><p>Inspect the merged blog, generate relevant images, and place them at appropriate positions.</p></div>
+<div class="mini"><h3>Stage 4 — GUI</h3><p>Wrap the workflow in a Streamlit application with inputs, progress, tabs, history, and download options.</p></div>
+</div>
+</section>
+<section class="card" id="stage1"><h2>5. Stage 1: Basic blog-writing agent</h2>
+<h3>Structured plan schema</h3><p>The lesson models the planner’s response using Pydantic. The plan contains a blog title and a list of task objects. Each task corresponds to one blog section and includes an ID, title, and brief.</p>
+<pre><code>from typing import List
+from pydantic import BaseModel, Field
+
+class SectionTask(BaseModel):
+    id: int
+    title: str
+    brief: str = Field(description="What this section should cover")
+
+class BlogPlan(BaseModel):
+    title: str
+    tasks: List[SectionTask]</code></pre>
+<p>This schema makes the planner’s output predictable enough for the graph to dispatch workers without trying to parse an unstructured paragraph.</p>
+<h3>Graph state</h3>
+<pre><code>from typing import Annotated, TypedDict
+import operator
+
+class BlogState(TypedDict):
+    topic: str
+    plan: BlogPlan
+    sections: Annotated[list[str], operator.add]
+    final_blog: str</code></pre>
+<p><code>topic</code> is the user’s input, <code>plan</code> is the planner output, <code>sections</code> collects the outputs from worker runs, and <code>final_blog</code> holds the merged result. The reducer annotation allows multiple worker updates to be accumulated as a list.</p>
+<h3>Planner → fan-out → worker → reducer</h3>
+<pre><code># Illustrative LangGraph pattern; connect node functions in your graph.
+def orchestrator(state):
+    structured_llm = llm.with_structured_output(BlogPlan)
+    plan = structured_llm.invoke([
+        ("system", "Create a blog plan with 5–7 useful sections."),
+        ("human", state["topic"]),
+    ])
+    return {"plan": plan}
+
+def fan_out(state):
+    # One Send per planned section/task
+    return [
+        Send("worker", {
+            "topic": state["topic"],
+            "plan": state["plan"],
+            "task": task,
+        })
+        for task in state["plan"].tasks
+    ]
+
+def worker(worker_state):
+    task = worker_state["task"]
+    result = llm.invoke([
+        ("system", "Write one clean Markdown section. Return only that section."),
+        ("human", f"""Blog topic: {worker_state['topic']}
+Overall plan: {worker_state['plan']}
+Section title: {task.title}
+Section brief: {task.brief}"""),
+    ])
+    return {"sections": [result.content]}
+
+def reducer(state):
+    title = state["plan"].title
+    body = "\\n\\n".join(state["sections"])
+    final_blog = f"# {title}\\n\\n{body}"
+    with open("blog.md", "w", encoding="utf-8") as f:
+        f.write(final_blog)
+    return {"final_blog": final_blog}</code></pre>
+<div class="callout"><b>Implementation note:</b> This is a teaching blueprint illustrating the concepts in the transcript, not a complete copy of the instructor’s project. A working application also needs imports, model configuration, state definitions for worker payloads, graph wiring, compile/invoke code, and compatible LangGraph/LangChain package versions.</div>
+<h3>Why dynamic fan-out matters</h3><p>The planner may produce five sections for one topic and seven for another. The program should not hard-code a fixed number of workers. It should create one worker task per item in <code>plan.tasks</code>, allowing sections to be written in parallel.</p>
+</section>
+<section class="card" id="prompts"><h2>6. Improve quality with better plans and prompts</h2>
+<p>The first basic version uses simple prompts. The lesson improves quality by expanding the plan schema and giving the model more explicit instructions.</p>
+<table><thead><tr><th>Field</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>Blog title</td><td>Title of the final article.</td></tr><tr><td>Audience</td><td>Who the article is written for.</td></tr><tr><td>Tone</td><td>Style, such as approachable, technical, or formal.</td></tr><tr><td>Task ID and title</td><td>Identifies and names each section.</td></tr><tr><td>Goal</td><td>One sentence describing what the reader should understand or be able to do after the section.</td></tr><tr><td>Bullet points</td><td>Three to five concrete, non-overlapping points to cover.</td></tr><tr><td>Target words</td><td>Approximate length of each section.</td></tr><tr><td>Section type</td><td>For example: introduction, core explanation, example, or checklist.</td></tr></tbody></table>
+<p>With this richer plan, each worker receives a clear section goal and non-overlapping coverage points. The transcript reports that this produced more detailed output, including code examples and a summary, compared with the simpler first draft.</p>
+<h3>Example of a richer task model</h3>
+<pre><code>class DetailedTask(BaseModel):
+    id: int
+    title: str
+    goal: str
+    points: list[str]
+    target_words: int
+    section_type: str
+
+class DetailedBlogPlan(BaseModel):
+    title: str
+    audience: str
+    tone: str
+    tasks: list[DetailedTask]</code></pre>
+<p>When improving prompts, describe both the desired output and the constraints: expected format, audience, section purpose, use of examples, and what not to repeat.</p>
+</section>
+<section class="card" id="research"><h2>7. Stage 2: Add internet research with a router and Tavily</h2>
+<p>Language models can have gaps in current or rapidly changing information. The router estimates whether a topic needs external research. For example, “What is self-attention?” may not need a search, while “Top AI news this week” or a timeline of recent product releases probably does.</p>
+<div class="flow"><div class="node">Topic</div><span class="arrow">→</span><div class="node">Router<br>need research?</div><span class="arrow">→</span><div class="node">Query list</div><span class="arrow">→</span><div class="node">Tavily search</div><span class="arrow">→</span><div class="node">Research context</div></div>
+<h3>Research flow</h3><ol><li>The router decides whether research is needed and proposes search queries.</li><li>The research node submits each query to Tavily, described in the lesson as a search engine designed for LLM applications.</li><li>Search results are stored in graph state as research context, ideally with source URLs and relevant snippets.</li><li>The planner uses the topic plus research context to create a more informed outline.</li><li>Workers receive the relevant research context when writing sections that need it.</li><li>The final application displays citations/evidence so readers can inspect the sources.</li></ol>
+<h3>Illustrative router output</h3>
+<pre><code>class ResearchRoute(BaseModel):
+    needs_research: bool
+    search_queries: list[str]
+
+# Example result for a time-sensitive topic:
+{
+    "needs_research": True,
+    "search_queries": [
+        "ChatGPT release timeline and updates",
+        "Major new ChatGPT features by year",
+        "OpenAI announcements about ChatGPT",
+    ],
+}</code></pre>
+<div class="callout"><b>Reliability reminder:</b> Search results are evidence to evaluate, not guaranteed truth. Preserve source URLs, prefer authoritative and recent sources, and make claims traceable to the sources used. The router’s decision is a model judgment, so test it with both timeless and time-sensitive prompts.</div>
+</section>
+<section class="card" id="images"><h2>8. Stage 3: Add automatic image generation</h2>
+<p>After the reducer combines the text sections, the image-enabled flow asks a model to identify where an image would help explain the blog. It then generates appropriate visuals and places them into the corresponding locations in the Markdown content. The transcript’s demo uses Gemini for image generation.</p>
+<div class="flow"><div class="node">Merged blog</div><span class="arrow">→</span><div class="node">Find image opportunities</div><span class="arrow">→</span><div class="node">Generate visual assets</div><span class="arrow">→</span><div class="node">Insert into Markdown</div></div>
+<h3>Practical image insertion pattern</h3>
+<pre><code>![Diagram explaining self-attention](images/self_attention.png)
+
+![Worked example of attention scores](images/attention_example.png)</code></pre>
+<p>Markdown image syntax uses the form <code>![alternative text](path-or-URL)</code>. In a production app, store generated images with stable filenames or URLs and keep an image manifest that maps each image to its prompt, section, and output path.</p>
+<ul><li>Generate images only where they add explanatory value; avoid decorative images that do not support the content.</li><li>Use descriptive prompts tied to the exact section.</li><li>Keep alternative text for accessibility.</li><li>Ensure the downloaded blog includes its image files, or package the Markdown and assets together.</li><li>Show generated images in the app’s image tab, as described in the demo.</li></ul>
+</section>
+<section class="card" id="ui"><h2>9. Stage 4: Build the Streamlit GUI</h2>
+<p>The final stage converts the workflow from a script into a usable application. The demo includes a topic/brief input, a Generate Blog action, progress updates by graph node, tabs for the plan and blog, evidence/citations, execution logs, generated images, downloads, and a way to reopen previously generated blogs.</p>
+<h3>Suggested UI components</h3><ul><li><b>Sidebar:</b> topic/brief input, optional audience and tone, Generate button, previous blogs.</li><li><b>Progress area:</b> current graph node (router, research, orchestrator, worker, reducer) and status messages.</li><li><b>Plan tab:</b> title, audience, tone, planned sections, target word counts, and each section’s goals.</li><li><b>Blog tab:</b> render the final Markdown and embedded images.</li><li><b>Evidence tab:</b> source links and citation information for research-backed claims.</li><li><b>Logs tab:</b> key decisions and node execution details for debugging.</li><li><b>Images tab:</b> gallery/list of generated visuals.</li><li><b>Download/history:</b> download Markdown and images, and revisit prior blog runs.</li></ul>
+<pre><code>import streamlit as st
+
+st.title("LangGraph Blog Writing Agent")
+topic = st.text_area("Blog topic or brief")
+audience = st.text_input("Audience (optional)")
+tone = st.selectbox(
+    "Tone", ["Clear and approachable", "Technical", "Formal"]
+)
+
+if st.button("Generate blog", type="primary") and topic.strip():
+    with st.status("Generating your blog...", expanded=True) as status:
+        # Invoke your compiled LangGraph app here.
+        # Update status as graph nodes complete.
+        result = app.invoke({
+            "topic": topic,
+            "audience": audience,
+            "tone": tone,
+        })
+        status.update(label="Blog generated", state="complete")
+    st.markdown(result["final_blog"])
+    st.download_button(
+        "Download Markdown",
+        data=result["final_blog"],
+        file_name="blog.md",
+        mime="text/markdown",
+    )</code></pre>
+<p class="small">This is a minimal UI sketch, not the complete streaming/progress implementation shown in the demo. To show node-by-node progress, consume graph streaming events or updates supported by the LangGraph version used in your environment.</p>
+</section>
+<section class="card" id="code"><h2>10. End-to-end implementation checklist</h2>
+<ol><li>Define Pydantic schemas for the plan and each section task.</li><li>Define graph state fields for topic, plan, research results, section outputs, final blog, citations, images, and logs as needed.</li><li>Configure the LLM and use structured output for planner/router responses.</li><li>Implement router and optional research node.</li><li>Implement planner/orchestrator.</li><li>Implement fan-out with one `Send` per task.</li><li>Implement worker prompts so each worker writes one section only.</li><li>Implement reducer to merge sections in planned order and create a Markdown file.</li><li>Add image generation and insert image references where relevant.</li><li>Wire graph edges and conditional routing, compile the graph, and invoke it with a topic.</li><li>Build the Streamlit interface and persist run history if the app needs it.</li></ol>
+<h3>Conceptual graph wiring</h3>
+<pre><code>START → router
+router ── research required ──→ research ──→ planner
+router ── no research ────────────────────→ planner
+planner → fan-out (Send per task) → workers → reducer → END</code></pre>
+<p>In LangGraph, the fan-out function commonly returns a list of <code>Send</code> objects from a conditional edge. Make sure your graph’s state reducers are configured to combine parallel worker updates rather than overwriting them.</p>
+</section>
+<section class="card" id="testing"><h2>11. Testing and troubleshooting checklist</h2>
+<ul class="check"><li>Does the planner always return a valid structured plan?</li><li>Does every task have a unique ID, useful title, and clear goal/brief?</li><li>Does fan-out create exactly one worker invocation per task?</li><li>Do parallel worker outputs all reach the reducer?</li><li>Are sections merged in the intended order, rather than relying on accidental completion order?</li><li>Does the router skip research for timeless topics and request it for current topics?</li><li>Are search results and citations preserved with their URLs?</li><li>Does each research-dependent worker receive the relevant evidence?</li><li>Are generated image files available when the Markdown is downloaded?</li><li>Does the UI show useful errors if an API call fails or no topic is entered?</li><li>Can an old blog run be opened again if history is enabled?</li></ul>
+<h3>Common failure points</h3><ul><li><b>Vague output:</b> enrich the plan schema and prompts with audience, goals, coverage bullets, and target length.</li><li><b>Repeated sections:</b> ask the planner for non-overlapping points and give each worker the full outline.</li><li><b>Missing worker results:</b> verify state reducers and graph fan-in configuration.</li><li><b>Stale claims:</b> route current topics to research and check publication dates.</li><li><b>Broken images:</b> use stable asset paths and package files for download.</li><li><b>Hard-to-debug runs:</b> log node names, decisions, and source metadata without exposing secrets.</li></ul>
+</section>
+<section class="card" id="takeaways"><h2>12. Key takeaways and project potential</h2>
+<ul><li>Planning is valuable when a task has multiple distinct subtasks or needs a consistent structure.</li><li>The orchestrator–worker pattern separates planning from execution and supports dynamic parallelism.</li><li>Structured output gives downstream code a stable schema to work with.</li><li>Better schemas and precise prompts can noticeably improve writing quality before adding more tools.</li><li>Research makes the agent more useful for current topics; citations make the resulting claims easier to verify.</li><li>Image generation can turn a plain article into a richer, illustrated blog.</li><li>A GUI with progress, plan inspection, evidence, logs, images, downloads, and history makes the project more practical to demonstrate.</li></ul>
+<div class="callout"><b>Portfolio angle:</b> The lesson presents this as a substantial project with room for refinement. A strong portfolio version could add user-specific writing preferences, editable outlines, human approval before execution, source-quality checks, retry/error handling, and persistent project history.</div>
+<p><b>One-line recap:</b> The agent receives a topic, decides whether to research it, creates a structured plan, writes each section through parallel workers, merges the content, optionally adds images, and presents the result through a user interface.</p>
+</section>
+<footer>Study notes based on the supplied lesson transcript. Code examples are explanatory blueprints and may need adaptation to your installed package versions and API setup.</footer>
+</main></div></body></html>
