@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LangGraph Subgraphs — Study Notes</title>
+<style>
+:root{--ink:#182334;--muted:#536174;--paper:#fff;--bg:#f3f6fb;--line:#dbe3ee;--blue:#2859c5;--blue2:#eaf1ff;--teal:#087f8c;--teal2:#e5f8f7;--gold:#a45b00;--gold2:#fff4df;--code:#101827}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.72 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.hero{background:linear-gradient(135deg,#13284b,#2859c5 70%,#087f8c);color:white;padding:64px 22px 52px}.hero-inner{max-width:1040px;margin:auto}.eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:.78rem;font-weight:800;opacity:.85}.hero h1{font-size:clamp(2.1rem,5vw,3.6rem);line-height:1.1;margin:.45rem 0 1rem}.hero p{max-width:760px;font-size:1.12rem;color:#edf4ff}.chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:22px}.chip{border:1px solid #ffffff60;background:#ffffff15;padding:5px 11px;border-radius:999px;font-size:.85rem}
+.layout{max-width:1160px;margin:28px auto;padding:0 18px;display:grid;grid-template-columns:245px minmax(0,1fr);gap:26px}.toc{position:sticky;top:16px;align-self:start;background:white;border:1px solid var(--line);border-radius:16px;padding:18px}.toc strong{display:block;margin-bottom:8px}.toc a{display:block;color:var(--muted);text-decoration:none;padding:5px 0;font-size:.91rem}.toc a:hover{color:var(--blue)}main{min-width:0}.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:clamp(20px,3vw,34px);margin-bottom:20px;box-shadow:0 5px 18px #152b4b08}.card h2{font-size:1.65rem;line-height:1.25;margin:.1rem 0 1rem}.card h3{font-size:1.15rem;margin:1.5rem 0 .45rem}.muted{color:var(--muted)}.lead{font-size:1.08rem}.callout{border-left:4px solid var(--blue);background:var(--blue2);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0}.callout.teal{border-color:var(--teal);background:var(--teal2)}.callout.gold{border-color:#d58a1c;background:var(--gold2)}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.mini{border:1px solid var(--line);border-radius:13px;padding:15px}.mini h3{margin:.1rem 0 .4rem}.visual{background:#f8faff;border:1px solid var(--line);border-radius:14px;padding:12px;margin:18px 0;overflow:hidden}.visual svg{display:block;width:100%;height:auto}.caption{font-size:.88rem;color:var(--muted);margin:.5rem 0 0}table{width:100%;border-collapse:collapse;margin:15px 0;font-size:.94rem}th,td{text-align:left;vertical-align:top;padding:11px;border-bottom:1px solid var(--line)}th{background:#f3f6fb}pre{overflow:auto;background:var(--code);color:#e7eefb;border-radius:13px;padding:18px;font: .87rem/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;tab-size:4}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}p code,li code,td code{background:#edf1f7;padding:2px 5px;border-radius:5px;color:#19345d}.tag{display:inline-block;background:#e9effa;color:#254a92;border-radius:7px;padding:2px 8px;font-size:.8rem;font-weight:700}ol,ul{padding-left:1.35rem}li{margin:.35rem 0}.flow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}.node{border:2px solid #9db5e8;background:#edf3ff;color:#183e85;padding:12px 15px;border-radius:11px;text-align:center;font-weight:700;min-width:100px}.arrow{font-size:1.4rem;color:#62748e}.subnode{border:2px dashed var(--teal);background:#e7fbf8;border-radius:12px;padding:12px;text-align:center;color:#075a63;font-weight:700}.footer{max-width:1100px;margin:0 auto 40px;padding:0 18px;color:var(--muted);font-size:.9rem}.check{list-style:none;padding:0}.check li{padding-left:1.8rem;position:relative}.check li:before{content:"✓";position:absolute;left:0;color:var(--teal);font-weight:900}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.toc{position:static}.toc a{display:inline-block;margin-right:12px}.grid2{grid-template-columns:1fr}}
+@media print{body{background:white}.hero{padding:28px}.layout{display:block}.toc{display:none}.card{break-inside:avoid;box-shadow:none}.visual{break-inside:avoid}}
+</style>
+</head>
+<body>
+<header class="hero"><div class="hero-inner">
+<div class="eyebrow">Agentic AI · LangGraph · Study guide</div>
+<h1>Subgraphs in LangGraph</h1>
+<p>A practical, text-first guide to what subgraphs are, why they matter in complex AI workflows, how parent and child graphs communicate, and two common implementation patterns.</p>
+<div class="chips"><span class="chip">Concepts</span><span class="chip">Architecture diagrams</span><span class="chip">Python examples</span><span class="chip">Revision notes</span></div>
+</div></header>
+<div class="layout">
+<nav class="toc" aria-label="Table of contents"><strong>On this page</strong>
+<a href="#overview">1. Overview</a><a href="#concept">2. What is a subgraph?</a><a href="#why">3. Why use them?</a><a href="#benefits">4. Benefits</a><a href="#patterns">5. Two patterns</a><a href="#isolated">6. Separate-state example</a><a href="#shared">7. Shared-state example</a><a href="#operations">8. Persistence & tracing</a><a href="#checklist">9. Checklist</a><a href="#glossary">10. Glossary</a>
+</nav>
+<main>
+<section class="card" id="overview"><h2>1. Overview</h2>
+<p class="lead">In LangGraph, a <strong>subgraph</strong> is a graph used as a component inside a larger, parent graph. Instead of putting every operation into one enormous workflow, you can package a coherent piece of work—such as translation, coding, testing, or review—into its own graph.</p>
+<div class="callout"><strong>Core idea:</strong> a node usually performs a task; a subgraph lets a whole sequence of tasks act as one component in a larger workflow.</div>
+<p>These notes follow the supplied lesson’s structure: conceptual definition, motivation, benefits, and the two ways of connecting a subgraph to a parent graph. Code below is a compact teaching example; check the LangGraph version and model-provider package in your environment before running it.</p>
+</section>
+
+<section class="card" id="concept"><h2>2. What is a subgraph?</h2>
+<p>A graph represents a workflow as <strong>nodes</strong> connected by <strong>edges</strong>. A node may call an LLM, retrieve documents, call a tool, validate an answer, or perform another task. A subgraph is a smaller graph that is incorporated into a parent graph.</p>
+<div class="visual">
+<svg viewBox="0 0 760 250" role="img" aria-label="Parent workflow containing a subgraph">
+<defs><marker id="arr1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#62748e"/></marker></defs>
+<rect x="12" y="12" width="736" height="226" rx="18" fill="#fff" stroke="#b9c8df" stroke-width="2"/>
+<text x="32" y="40" font-size="15" font-weight="700" fill="#42516a">PARENT GRAPH</text>
+<rect x="36" y="87" width="112" height="60" rx="11" fill="#edf3ff" stroke="#7898dc" stroke-width="2"/><text x="92" y="122" text-anchor="middle" font-size="16" font-weight="700" fill="#183e85">Start</text>
+<path d="M148 117 H195" stroke="#62748e" stroke-width="2.5" marker-end="url(#arr1)"/>
+<rect x="204" y="60" width="335" height="115" rx="15" fill="#e7fbf8" stroke="#087f8c" stroke-width="2.5" stroke-dasharray="7 5"/>
+<text x="371" y="83" text-anchor="middle" font-size="14" font-weight="700" fill="#075a63">SUBGRAPH · e.g. Translate</text>
+<rect x="224" y="101" width="84" height="48" rx="8" fill="#fff" stroke="#71b7bd"/><text x="266" y="130" text-anchor="middle" font-size="13" fill="#075a63">Prepare</text>
+<path d="M308 125 H330" stroke="#087f8c" stroke-width="2" marker-end="url(#arr1)"/>
+<rect x="337" y="101" width="84" height="48" rx="8" fill="#fff" stroke="#71b7bd"/><text x="379" y="130" text-anchor="middle" font-size="13" fill="#075a63">LLM</text>
+<path d="M421 125 H443" stroke="#087f8c" stroke-width="2" marker-end="url(#arr1)"/>
+<rect x="450" y="101" width="72" height="48" rx="8" fill="#fff" stroke="#71b7bd"/><text x="486" y="130" text-anchor="middle" font-size="13" fill="#075a63">Check</text>
+<path d="M539 117 H590" stroke="#62748e" stroke-width="2.5" marker-end="url(#arr1)"/>
+<rect x="600" y="87" width="112" height="60" rx="11" fill="#edf3ff" stroke="#7898dc" stroke-width="2"/><text x="656" y="122" text-anchor="middle" font-size="16" font-weight="700" fill="#183e85">End</text>
+</svg>
+<p class="caption">Diagram: the parent graph sees the translation subgraph as one workflow component, even though the subgraph contains its own internal steps.</p>
+</div>
+<p><strong>Example:</strong> a parent workflow might generate an English answer and then invoke a translation subgraph that returns a Hindi translation.</p>
+</section>
+
+<section class="card" id="why"><h2>3. Why are subgraphs useful?</h2>
+<p>Real-world GenAI applications often grow beyond a single prompt and response. A workflow may need tools, retrieval-augmented generation (RAG), conditional routing, retries, memory, human review, evaluation, and guardrails.</p>
+<h3>Example: a software-development agent</h3>
+<div class="visual"><div class="flow">
+<div class="node">Planning<br><small>Team lead</small></div><span class="arrow">→</span><div class="subnode">Backend<br>coding graph</div><span class="arrow">+</span><div class="subnode">Frontend<br>coding graph</div>
+</div><div class="flow" style="margin-top:14px"><span class="arrow">↓</span><div class="node">Testing</div><span class="arrow">→</span><div class="node">Code review</div><span class="arrow">→</span><div class="node">Deploy & monitor</div></div>
+<p class="caption">Illustrative workflow based on the lesson: each specialist can own its own internal logic and tools.</p></div>
+<p>Rather than build one tangled graph, split the system into smaller, focused subgraphs. A coding subgraph can contain coding-specific prompts, tools, checks, and retry logic; a testing subgraph can contain test execution and result interpretation.</p>
+</section>
+
+<section class="card" id="benefits"><h2>4. Benefits and design considerations</h2>
+<div class="grid2">
+<div class="mini"><h3>Modularity</h3><p>Separate responsibilities into understandable units. Each graph has a clear purpose and boundary.</p></div>
+<div class="mini"><h3>Reusability</h3><p>Reuse a coding or translation subgraph in more than one workflow, when its inputs and outputs fit.</p></div>
+<div class="mini"><h3>Maintainability</h3><p>Debug or update a focused unit without needing to understand every unrelated part of the overall graph.</p></div>
+<div class="mini"><h3>State boundaries</h3><p>Choose whether the child graph uses its own schema or works directly with the parent’s shared state schema.</p></div>
+<div class="mini"><h3>Observability</h3><p>Graph and subgraph execution can be inspected/traced at useful levels, depending on the tracing setup and configuration.</p></div>
+<div class="mini"><h3>Failure handling</h3><p>Smaller components make errors easier to locate. Explicit retries, fallbacks, and exception handling are still needed where appropriate.</p></div>
+</div>
+<div class="callout gold"><strong>Important nuance:</strong> a subgraph boundary is not, by itself, a guarantee that failures are isolated or that the rest of a workflow always continues. Define error handling and fallback behavior deliberately.</div>
+</section>
+
+<section class="card" id="patterns"><h2>5. Two common ways to connect subgraphs</h2>
+<table><thead><tr><th>Pattern</th><th>How it works</th><th>State relationship</th><th>Useful when…</th></tr></thead><tbody>
+<tr><td><strong>Invoke from a parent node</strong></td><td>The parent node calls the compiled child graph and maps the result back into parent state.</td><td>Can use separate schemas; data is passed explicitly.</td><td>The child is a self-contained module or its internal state differs from the parent’s.</td></tr>
+<tr><td><strong>Add the compiled graph as a node</strong></td><td>The compiled child graph is added directly to the parent graph as a node.</td><td>Commonly used when parent and child share compatible state keys/schema.</td><td>The child naturally reads and updates the same state shape as the parent.</td></tr>
+</tbody></table>
+<div class="visual"><div class="grid2">
+<div class="mini"><h3>Pattern A · explicit call</h3><div class="flow"><div class="node">Parent node</div><span class="arrow">→</span><div class="subnode">invoke(child)</div></div><p class="caption">Input mapping and output extraction happen in the parent node function.</p></div>
+<div class="mini"><h3>Pattern B · graph as node</h3><div class="flow"><div class="node">Parent graph</div><span class="arrow">→</span><div class="subnode">compiled child</div></div><p class="caption">The compiled child graph is wired into the parent graph directly.</p></div>
+</div></div>
+</section>
+
+<section class="card" id="isolated"><h2>6. Example A — invoke a translation subgraph from a node</h2>
+<p>In this pattern, the child graph uses a small state schema containing the English input and Hindi output. The parent has its own schema, and its translation node explicitly sends the English answer to the child and extracts the translated result.</p>
+<h3>Install the core packages</h3>
+<pre><code>pip install -U langgraph langchain-openai</code></pre>
+<p>Set <code>OPENAI_API_KEY</code> in your environment before running the example. Model names may need to be changed to one available to your account.</p>
+<h3>Python</h3>
+<pre><code>from typing import TypedDict
+from langgraph.graph import StateGraph, START, END
+from langchain_openai import ChatOpenAI
+
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+# Child graph has its own, small state schema.
+class TranslationState(TypedDict):
+    input_text: str
+    translated_text: str
+
+def translate(state: TranslationState):
+    response = llm.invoke(
+        "Translate the text into natural, clear Hindi. "
+        "Do not add explanations or extra content.\\n\\n"
+        f"Text: {state['input_text']}"
+    )
+    return {"translated_text": response.content}
+
+child_builder = StateGraph(TranslationState)
+child_builder.add_node("translate", translate)
+child_builder.add_edge(START, "translate")
+child_builder.add_edge("translate", END)
+translation_graph = child_builder.compile()
+
+# Parent graph has a separate schema.
+class ParentState(TypedDict):
+    question: str
+    english_answer: str
+    hindi_answer: str
+
+def generate_answer(state: ParentState):
+    response = llm.invoke(
+        f"Answer this question helpfully in English: {state['question']}"
+    )
+    return {"english_answer": response.content}
+
+def translate_in_parent(state: ParentState):
+    child_result = translation_graph.invoke(
+        {"input_text": state["english_answer"], "translated_text": ""}
+    )
+    return {"hindi_answer": child_result["translated_text"]}
+
+parent_builder = StateGraph(ParentState)
+parent_builder.add_node("generate", generate_answer)
+parent_builder.add_node("translate", translate_in_parent)
+parent_builder.add_edge(START, "generate")
+parent_builder.add_edge("generate", "translate")
+parent_builder.add_edge("translate", END)
+parent_graph = parent_builder.compile()
+
+result = parent_graph.invoke({
+    "question": "Why do plants need sunlight?",
+    "english_answer": "",
+    "hindi_answer": "",
+})
+print("English:", result["english_answer"])
+print("Hindi:", result["hindi_answer"])</code></pre>
+<div class="callout teal"><strong>Follow the data:</strong> parent <code>english_answer</code> → child <code>input_text</code> → child <code>translated_text</code> → parent <code>hindi_answer</code>.</div>
+</section>
+
+<section class="card" id="shared"><h2>7. Example B — add the compiled subgraph as a parent node</h2>
+<p>Here, the child and parent share the same state shape. The parent graph can add the compiled child graph directly as a node, rather than writing a wrapper node that invokes it.</p>
+<pre><code>from typing import TypedDict
+from langgraph.graph import StateGraph, START, END
+from langchain_openai import ChatOpenAI
+
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+class WorkflowState(TypedDict):
+    question: str
+    english_answer: str
+    hindi_answer: str
+
+def generate_answer(state: WorkflowState):
+    response = llm.invoke(
+        f"Answer this question helpfully in English: {state['question']}"
+    )
+    return {"english_answer": response.content}
+
+def translate_shared_state(state: WorkflowState):
+    response = llm.invoke(
+        "Translate into natural, clear Hindi. Return only the translation.\\n\\n"
+        f"{state['english_answer']}"
+    )
+    return {"hindi_answer": response.content}
+
+# Child graph uses the same state schema as the parent.
+child_builder = StateGraph(WorkflowState)
+child_builder.add_node("translate", translate_shared_state)
+child_builder.add_edge(START, "translate")
+child_builder.add_edge("translate", END)
+translation_graph = child_builder.compile()
+
+# Add the compiled child graph directly as a parent node.
+parent_builder = StateGraph(WorkflowState)
+parent_builder.add_node("generate", generate_answer)
+parent_builder.add_node("translate", translation_graph)
+parent_builder.add_edge(START, "generate")
+parent_builder.add_edge("generate", "translate")
+parent_builder.add_edge("translate", END)
+parent_graph = parent_builder.compile()
+
+result = parent_graph.invoke({
+    "question": "Why do plants need sunlight?",
+    "english_answer": "",
+    "hindi_answer": "",
+})
+print(result["english_answer"])
+print(result["hindi_answer"])</code></pre>
+<div class="callout gold"><strong>Schema note:</strong> when a child graph is added directly, make sure its state schema and the parent’s state schema are compatible. A child graph can return updates for keys it owns; it does not need to overwrite every key.</div>
+</section>
+
+<section class="card" id="operations"><h2>8. Persistence, streaming, and observability</h2>
+<ul>
+<li><strong>Persistence/checkpointing:</strong> LangGraph supports checkpointing for graph state. Configure a checkpointer on the parent graph and verify the behavior for your chosen LangGraph version and execution setup.</li>
+<li><strong>Streaming:</strong> graph execution can stream state updates or events. Subgraph-level streaming/visibility depends on the stream mode and configuration.</li>
+<li><strong>Inspecting subgraphs:</strong> compiled graph structures and execution traces can help investigate a focused component. Tracing products such as LangSmith can help examine calls, latency, and token usage when configured.</li>
+<li><strong>Retries and guardrails:</strong> implement retries, validation, timeouts, and fallback behavior intentionally; do not assume a subgraph automatically supplies these features.</li>
+</ul>
+<p class="muted">The source lesson specifically recommends consulting the official LangGraph documentation for persistence, streaming, and viewing subgraph state. These details can evolve across releases.</p>
+</section>
+
+<section class="card" id="checklist"><h2>9. Practical checklist</h2>
+<ul class="check">
+<li>Give each subgraph one clear responsibility.</li>
+<li>Choose between explicit invocation and adding the compiled graph as a node.</li>
+<li>Decide whether parent and child state should be separate or shared.</li>
+<li>Keep input/output keys explicit and document their meanings.</li>
+<li>Test the child graph independently before integrating it.</li>
+<li>Add error handling, retries, and fallbacks where needed.</li>
+<li>Trace runs and inspect intermediate state when debugging.</li>
+<li>Check official documentation for version-specific persistence and streaming options.</li>
+</ul>
+</section>
+
+<section class="card" id="glossary"><h2>10. Quick glossary</h2>
+<table><tbody>
+<tr><th>Graph</th><td>A workflow composed of connected steps.</td></tr>
+<tr><th>Node</th><td>A step that performs work or invokes a component.</td></tr>
+<tr><th>Edge</th><td>A connection defining what runs next.</td></tr>
+<tr><th>Parent graph</th><td>The larger workflow that coordinates components.</td></tr>
+<tr><th>Subgraph</th><td>A compiled graph used as a component within a parent graph.</td></tr>
+<tr><th>State</th><td>The data passed through and updated by graph nodes.</td></tr>
+<tr><th>Checkpoint</th><td>A saved snapshot of graph execution state, used for persistence and resuming workflows.</td></tr>
+<tr><th>Observability</th><td>The ability to inspect execution, intermediate results, errors, latency, and related signals.</td></tr>
+</tbody></table>
+<h3>One-minute revision</h3>
+<p>A subgraph lets you package a complex workflow into a reusable component. LangGraph commonly supports two integration patterns: call a child graph inside a parent node (useful for explicit mapping and separate state schemas), or add a compiled child graph directly as a node (useful when state schemas are compatible). Subgraphs improve modularity and can make reuse, maintenance, and tracing easier—but state design and error handling remain explicit engineering responsibilities.</p>
+</section>
+</main></div>
+<footer class="footer">Prepared as study notes from the supplied lesson transcript. Code is illustrative and may require small changes for your installed LangGraph and provider versions.</footer>
+</body></html>
