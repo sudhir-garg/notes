@@ -6,16 +6,22 @@
   <title>LangGraph Notes Index</title>
   <style>
     :root {
-      --bg: #f6f8fa;
+      --bg-1: #edf6ff;
+      --bg-2: #f5f3ff;
+      --bg-3: #fff7ed;
       --panel: #ffffff;
-      --panel-alt: #f9fafb;
-      --border: #d0d7de;
-      --text: #1f2328;
-      --muted: #57606a;
-      --heading: #24292f;
-      --accent: #0969da;
-      --accent-soft: #ddf4ff;
-      --shadow: 0 8px 24px rgba(140, 149, 159, 0.2);
+      --panel-alt: #f8fafc;
+      --border: #d7e3f0;
+      --text: #1f2937;
+      --muted: #52607a;
+      --heading: #0f172a;
+      --accent-1: #2563eb;
+      --accent-2: #7c3aed;
+      --accent-3: #14b8a6;
+      --accent-4: #f59e0b;
+      --shadow: 0 18px 38px rgba(148, 163, 184, 0.22);
+      --chip-bg: #eef6ff;
+      --chip-border: #bfdbfe;
     }
 
     * { box-sizing: border-box; }
@@ -23,9 +29,12 @@
     body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      background: var(--bg);
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.09), transparent 25%),
+        radial-gradient(circle at top right, rgba(124, 58, 237, 0.08), transparent 30%),
+        linear-gradient(135deg, var(--bg-1), var(--bg-2) 45%, var(--bg-3));
       color: var(--text);
-      padding: 40px 18px;
+      padding: 40px 18px 56px;
     }
 
     .container {
@@ -35,28 +44,64 @@
 
     .header {
       text-align: center;
-      margin-bottom: 26px;
+      margin-bottom: 28px;
+      position: relative;
+    }
+
+    .header::before {
+      content: "";
+      position: absolute;
+      inset: 48px auto auto 50%;
+      transform: translateX(-50%);
+      width: min(820px, 80vw);
+      height: 120px;
+      background: linear-gradient(90deg, rgba(37, 99, 235, 0.08), rgba(124, 58, 237, 0.08), rgba(20, 184, 166, 0.08));
+      border-radius: 999px;
+      filter: blur(14px);
+      z-index: 0;
     }
 
     h1 {
-      margin: 0 0 8px;
-      font-size: clamp(2rem, 4vw, 2.8rem);
+      position: relative;
+      z-index: 1;
+      margin: 0 0 10px;
+      font-size: clamp(2.2rem, 4vw, 3.2rem);
+      letter-spacing: -0.05em;
       color: var(--heading);
-      letter-spacing: -0.03em;
     }
 
     .subtitle {
+      position: relative;
+      z-index: 1;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
       margin: 0;
+      padding: 9px 16px;
+      border: 1px solid rgba(37, 99, 235, 0.18);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.7);
       color: var(--muted);
-      font-size: 1rem;
+      font-size: 0.95rem;
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.06);
+      backdrop-filter: blur(4px);
+    }
+
+    .subtitle .dot {
+      width: 10px;
+      height: 10px;
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+      border-radius: 50%;
+      box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.08);
     }
 
     .table-wrap {
-      background: var(--panel);
+      background: rgba(255,255,255,0.8);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 18px;
       box-shadow: var(--shadow);
       overflow: auto;
+      backdrop-filter: blur(2px);
     }
 
     table {
@@ -66,41 +111,54 @@
     }
 
     thead th {
-      background: var(--panel-alt);
+      background: linear-gradient(90deg, rgba(37,99,235,0.09), rgba(124,58,237,0.08), rgba(20,184,166,0.08));
       color: var(--heading);
       text-align: left;
       padding: 16px 18px;
       border-bottom: 1px solid var(--border);
-      font-size: 0.88rem;
-      letter-spacing: 0.02em;
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
     }
 
     tbody td {
-      padding: 14px 18px;
+      padding: 16px 18px;
       border-bottom: 1px solid var(--border);
-      vertical-align: top;
-      background: #fff;
+      vertical-align: middle;
+      background: rgba(255,255,255,0.86);
     }
 
     tbody tr:nth-child(even) td {
-      background: #fcfcfd;
+      background: rgba(248,250,252,0.9);
     }
 
     tbody tr:hover td {
-      background: #f6faff;
+      background: linear-gradient(90deg, rgba(37,99,235,0.04), rgba(124,58,237,0.03));
     }
 
     .serial {
       width: 72px;
       font-weight: 700;
-      color: var(--muted);
+      color: var(--heading);
+    }
+
+    .serial span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(37,99,235,0.12), rgba(124,58,237,0.12));
+      border: 1px solid rgba(124,58,237,0.12);
+      color: var(--heading);
     }
 
     .title {
       min-width: 420px;
       color: var(--heading);
-      font-weight: 600;
+      font-weight: 700;
+      letter-spacing: -0.01em;
     }
 
     .file-name {
@@ -110,24 +168,47 @@
       font-size: 0.9rem;
     }
 
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--chip-border);
+      background: var(--chip-bg);
+      color: var(--accent-1);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .chip::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-3));
+    }
+
     .link-btn {
       display: inline-block;
       padding: 8px 14px;
-      background: linear-gradient(180deg, #f6f8fa 0%, #eef2f7 100%);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--heading);
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+      border: 1px solid rgba(37,99,235,0.18);
+      color: #fff;
       text-decoration: none;
-      font-weight: 600;
-      font-size: 0.9rem;
-      transition: all 0.2s ease;
+      font-weight: 700;
+      font-size: 0.88rem;
+      box-shadow: 0 10px 18px rgba(37,99,235,0.2);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
     }
 
     .link-btn:hover {
-      background: var(--accent-soft);
-      border-color: #b6e3ff;
-      color: var(--accent);
       transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(124,58,237,0.28);
+      filter: brightness(1.04);
     }
 
     .footer {
@@ -135,6 +216,12 @@
       margin-top: 18px;
       color: var(--muted);
       font-size: 0.92rem;
+      font-weight: 600;
+    }
+
+    @media (max-width: 768px) {
+      body { padding-top: 28px; }
+      .subtitle { font-size: 0.88rem; }
     }
   </style>
 </head>
@@ -142,7 +229,7 @@
   <div class="container">
     <div class="header">
       <h1>LangGraph Notes</h1>
-      <p class="subtitle">Index of all LangGraph markdown notes</p>
+      <p class="subtitle"><span class="dot"></span>Index of all LangGraph markdown notes</p>
     </div>
 
     <div class="table-wrap">
@@ -157,166 +244,166 @@
         </thead>
         <tbody>
           <tr>
-            <td class="serial">01</td>
+            <td class="serial"><span>01</span></td>
             <td class="title">Generative AI Vs Agentic AI</td>
             <td class="file-name">02.Generative AI Vs Agentic AI.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/02.Generative%20AI%20Vs%20Agentic%20AI.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/02.Generative%20AI%20Vs%20Agentic%20AI.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">02</td>
+            <td class="serial"><span>02</span></td>
             <td class="title">Agentic AI</td>
             <td class="file-name">03.Agentic AI.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/03.Agentic%20AI.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/03.Agentic%20AI.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">03</td>
+            <td class="serial"><span>03</span></td>
             <td class="title">Lanchain vs Langgraph</td>
             <td class="file-name">04. Lanchain vs Langgraph.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/04.%20Lanchain%20vs%20Langgraph.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/04.%20Lanchain%20vs%20Langgraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">04</td>
+            <td class="serial"><span>04</span></td>
             <td class="title">LangGraph Core Concepts</td>
             <td class="file-name">05. LangGraph Core Concepts.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/05.%20LangGraph%20Core%20Concepts.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/05.%20LangGraph%20Core%20Concepts.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">05</td>
+            <td class="serial"><span>05</span></td>
             <td class="title">Sequential Workflows in LangGraph</td>
             <td class="file-name">06. Sequential Workflows in LangGraph.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/06.%20Sequential%20Workflows%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/06.%20Sequential%20Workflows%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">06</td>
+            <td class="serial"><span>06</span></td>
             <td class="title">Parallel Workflows in LangGraph</td>
             <td class="file-name">07.  Parallel Workflows in LangGraph.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/07.%20%20Parallel%20Workflows%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/07.%20%20Parallel%20Workflows%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">07</td>
+            <td class="serial"><span>07</span></td>
             <td class="title">Conditional Workflows in LangGraph</td>
             <td class="file-name">08.  Conditional Workflows in LangGraph.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/08.%20%20Conditional%20Workflows%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/08.%20%20Conditional%20Workflows%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">08</td>
+            <td class="serial"><span>08</span></td>
             <td class="title">Iterative Workflows in LangGraph</td>
             <td class="file-name">09.  Iterative Workflows in LangGraph.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/09.%20%20Iterative%20Workflows%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/09.%20%20Iterative%20Workflows%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">09</td>
+            <td class="serial"><span>09</span></td>
             <td class="title">How to build a Chatbot using LangGraph</td>
             <td class="file-name">10. How to build a Chatbot using LangGraph.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/10.%20How%20to%20build%20a%20Chatbot%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/10.%20How%20to%20build%20a%20Chatbot%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">10</td>
+            <td class="serial"><span>10</span></td>
             <td class="title">Persistence in LangGraph</td>
             <td class="file-name">11.  Persistence in LangGraph.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/11.%20%20Persistence%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/11.%20%20Persistence%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">11</td>
+            <td class="serial"><span>11</span></td>
             <td class="title">Building a Chatbot with UI in LangGraph &amp; Streamlit</td>
             <td class="file-name">12. Building a Chatbot with UI in LangGraph &amp; Streamlit.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/12.%20Building%20a%20Chatbot%20with%20UI%20in%20LangGraph%20%26%20Streamlit.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/12.%20Building%20a%20Chatbot%20with%20UI%20in%20LangGraph%20%26%20Streamlit.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">12</td>
+            <td class="serial"><span>12</span></td>
             <td class="title">Streaming in LangGraph</td>
             <td class="file-name">13. Streaming in LangGraph.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/13.%20Streaming%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/13.%20Streaming%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">13</td>
+            <td class="serial"><span>13</span></td>
             <td class="title">How to build a Resume Chat feature like ChatGPT</td>
             <td class="file-name">14. How to build a Resume Chat feature like ChatGPT.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/14.%20How%20to%20build%20a%20Resume%20Chat%20feature%20like%20ChatGPT.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/14.%20How%20to%20build%20a%20Resume%20Chat%20feature%20like%20ChatGPT.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">14</td>
+            <td class="serial"><span>14</span></td>
             <td class="title">LangGraph + SQLite | Chatbot with Database Integration</td>
             <td class="file-name">15. LangGraph + SQLite | Chatbot with Database Integration.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/15.%20LangGraph%20%2B%20SQLite%20%7C%20Chatbot%20with%20Database%20Integration.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/15.%20LangGraph%20%2B%20SQLite%20%7C%20Chatbot%20with%20Database%20Integration.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">15</td>
+            <td class="serial"><span>15</span></td>
             <td class="title">LangSmith Crash Course</td>
             <td class="file-name">16. LangSmith Crash Course.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/16.%20LangSmith%20Crash%20Course.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/16.%20LangSmith%20Crash%20Course.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">16</td>
+            <td class="serial"><span>16</span></td>
             <td class="title">LangSmith Integration with LangGraph Chatbot App</td>
             <td class="file-name">17. LangSmith Integration with LangGraph Chatbot App.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/17.%20LangSmith%20Integration%20with%20LangGraph%20Chatbot%20App.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/17.%20LangSmith%20Integration%20with%20LangGraph%20Chatbot%20App.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">17</td>
+            <td class="serial"><span>17</span></td>
             <td class="title">Tools in LangGraph</td>
             <td class="file-name">18. Tools in LangGraph.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/18.%20Tools%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/18.%20Tools%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">18</td>
+            <td class="serial"><span>18</span></td>
             <td class="title">How to build MCP Client using LangGraph</td>
             <td class="file-name">19.  How to build MCP Client using LangGraph.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/19.%20%20How%20to%20build%20MCP%20Client%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/19.%20%20How%20to%20build%20MCP%20Client%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">19</td>
+            <td class="serial"><span>19</span></td>
             <td class="title">RAG using LangGraph</td>
             <td class="file-name">20. RAG using LangGraph.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/20.%20RAG%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/20.%20RAG%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">20</td>
+            <td class="serial"><span>20</span></td>
             <td class="title">Human in the loop (HITL) using LangGraph</td>
             <td class="file-name">21. Human in the loop (HITL) using LangGraph.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/21.%20Human%20in%20the%20loop%20(HITL)%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/21.%20Human%20in%20the%20loop%20(HITL)%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">21</td>
+            <td class="serial"><span>21</span></td>
             <td class="title">SubGraphs in LangGraph</td>
             <td class="file-name">22. SubGraphs in LangGraph.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/22.%20SubGraphs%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/22.%20SubGraphs%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">22</td>
+            <td class="serial"><span>22</span></td>
             <td class="title">LLMs Don’t Have Memory — So How Do They Remember?</td>
             <td class="file-name">23.  LLMs Don’t Have Memory — So How Do They Remember?.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/23.%20%20LLMs%20Don%E2%80%99t%20Have%20Memory%20%E2%80%94%20So%20How%20Do%20They%20Remember%3F.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/23.%20%20LLMs%20Don%E2%80%99t%20Have%20Memory%20%E2%80%94%20So%20How%20Do%20They%20Remember%3F.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">23</td>
+            <td class="serial"><span>23</span></td>
             <td class="title">How To Implement Short Term Memory Using LangGraph</td>
             <td class="file-name">24. How To Implement Short Term Memory Using LangGraph.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/24.%20How%20To%20Implement%20Short%20Term%20Memory%20Using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/24.%20How%20To%20Implement%20Short%20Term%20Memory%20Using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">24</td>
+            <td class="serial"><span>24</span></td>
             <td class="title">Long Term Memory in LangGraph</td>
             <td class="file-name">25. Long Term Memory in LangGraph.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/25.%20Long%20Term%20Memory%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/25.%20Long%20Term%20Memory%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">25</td>
+            <td class="serial"><span>25</span></td>
             <td class="title">This AI Agent Plans, Researches &amp; Writes Blogs Automatically using LangGraph</td>
             <td class="file-name">26. This AI Agent Plans, Researches &amp; Writes Blogs Automatically using LangGraph.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/26.%20This%20AI%20Agent%20Plans,%20Researches%20%26%20Writes%20Blogs%20Automatically%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/26.%20This%20AI%20Agent%20Plans,%20Researches%20%26%20Writes%20Blogs%20Automatically%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">26</td>
+            <td class="serial"><span>26</span></td>
             <td class="title">Advanced RAG: How Corrective RAG (CRAG) Solves Traditional RAG Problems</td>
             <td class="file-name">27. Advanced RAG: How Corrective RAG (CRAG) Solves Traditional RAG Problems.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/27.%20Advanced%20RAG:%20How%20Corrective%20RAG%20(CRAG)%20Solves%20Traditional%20RAG%20Problems.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/27.%20Advanced%20RAG:%20How%20Corrective%20RAG%20(CRAG)%20Solves%20Traditional%20RAG%20Problems.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
-            <td class="serial">27</td>
+            <td class="serial"><span>27</span></td>
             <td class="title">Self-RAG Tutorial: How to Make Your AI Fact-Check Itself</td>
             <td class="file-name">28. Self-RAG Tutorial: How to Make Your AI Fact-Check Itself.md</td>
-            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/28.%20Self-RAG%20Tutorial:%20How%20to%20Make%20Your%20AI%20Fact-Check%20Itself.md" target="_blank" rel="noopener">Open</a></td>
+            <td><span class="chip">File</span> <a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/28.%20Self-RAG%20Tutorial:%20How%20to%20Make%20Your%20AI%20Fact-Check%20Itself.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
         </tbody>
       </table>
