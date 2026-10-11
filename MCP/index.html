@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MCP Learning Path</title>
+  <style>
+    :root {
+      --bg-1: #edf6ff;
+      --bg-2: #f5f3ff;
+      --bg-3: #fff7ed;
+      --panel: #ffffff;
+      --panel-alt: #f8fafc;
+      --border: #d7e3f0;
+      --text: #1f2937;
+      --muted: #52607a;
+      --heading: #0f172a;
+      --accent-1: #2563eb;
+      --accent-2: #7c3aed;
+      --accent-3: #14b8a6;
+      --accent-4: #f59e0b;
+      --shadow: 0 18px 38px rgba(148, 163, 184, 0.22);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.09), transparent 25%),
+        radial-gradient(circle at top right, rgba(124, 58, 237, 0.08), transparent 30%),
+        linear-gradient(135deg, var(--bg-1), var(--bg-2) 45%, var(--bg-3));
+      color: var(--text);
+      padding: 40px 18px 56px;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 28px;
+      position: relative;
+    }
+
+    .header::before {
+      content: "";
+      position: absolute;
+      inset: 48px auto auto 50%;
+      transform: translateX(-50%);
+      width: min(820px, 80vw);
+      height: 120px;
+      background: linear-gradient(90deg, rgba(37, 99, 235, 0.08), rgba(124, 58, 237, 0.08), rgba(20, 184, 166, 0.08));
+      border-radius: 999px;
+      filter: blur(14px);
+      z-index: 0;
+    }
+
+    h1 {
+      position: relative;
+      z-index: 1;
+      margin: 0 0 10px;
+      font-size: clamp(2.2rem, 4vw, 3.2rem);
+      letter-spacing: -0.05em;
+      color: var(--heading);
+    }
+
+    .subtitle {
+      position: relative;
+      z-index: 1;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      padding: 9px 16px;
+      border: 1px solid rgba(37, 99, 235, 0.18);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.7);
+      color: var(--muted);
+      font-size: 0.95rem;
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.06);
+      backdrop-filter: blur(4px);
+    }
+
+    .subtitle .dot {
+      width: 10px;
+      height: 10px;
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+      border-radius: 50%;
+      box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.08);
+    }
+
+    .table-wrap {
+      background: rgba(255,255,255,0.8);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: auto;
+      backdrop-filter: blur(2px);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1040px;
+    }
+
+    thead th {
+      background: linear-gradient(90deg, rgba(37,99,235,0.09), rgba(124,58,237,0.08), rgba(20,184,166,0.08));
+      color: var(--heading);
+      text-align: left;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    tbody td {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      background: rgba(255,255,255,0.86);
+    }
+
+    tbody tr:nth-child(even) td {
+      background: rgba(248,250,252,0.9);
+    }
+
+    tbody tr:hover td {
+      background: linear-gradient(90deg, rgba(37,99,235,0.04), rgba(124,58,237,0.03));
+    }
+
+    .serial {
+      width: 72px;
+      font-weight: 700;
+      color: var(--heading);
+    }
+
+    .serial span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(37,99,235,0.12), rgba(124,58,237,0.12));
+      border: 1px solid rgba(124,58,237,0.12);
+      color: var(--heading);
+    }
+
+    .title {
+      min-width: 360px;
+      color: var(--heading);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .description {
+      min-width: 420px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .link-btn {
+      display: inline-block;
+      padding: 8px 14px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+      border: 1px solid rgba(37,99,235,0.18);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.88rem;
+      box-shadow: 0 10px 18px rgba(37,99,235,0.2);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    }
+
+    .link-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(124,58,237,0.28);
+      filter: brightness(1.04);
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-weight: 600;
+    }
+
+    @media (max-width: 768px) {
+      body { padding-top: 28px; }
+      .subtitle { font-size: 0.88rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>MCP Learning Path</h1>
+      <p class="subtitle"><span class="dot"></span>Index of all MCP (Model Context Protocol) learning notes</p>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Link</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="serial"><span>01</span></td>
+            <td class="title">Introduction</td>
+            <td class="description">Get started with the fundamentals and core concepts of the Model Context Protocol (MCP).</td>
+            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/MCP/1.Introduction.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial"><span>02</span></td>
+            <td class="title">Why MCP Matters</td>
+            <td class="description">Understand the motivations, benefits, and real-world use cases behind the MCP design.</td>
+            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/MCP/2.WhyMCPMatters.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial"><span>03</span></td>
+            <td class="title">Architecture</td>
+            <td class="description">Deep dive into MCP architecture including Host, Client, Server, primitives, and transport layers.</td>
+            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/MCP/3.Architecture.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial"><span>04</span></td>
+            <td class="title">Lifecycle</td>
+            <td class="description">Learn the complete lifecycle of MCP connections including initialization, operation, and shutdown phases.</td>
+            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/MCP/4.LifeCycle.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial"><span>05</span></td>
+            <td class="title">Installation &amp; Setup</td>
+            <td class="description">Step-by-step guide to installing Claude Desktop and setting up MCP servers with proper configuration.</td>
+            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/MCP/5.Installation%26Setup.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial"><span>06</span></td>
+            <td class="title">Build Local MCP Servers</td>
+            <td class="description">Hands-on tutorial for building local MCP servers using FastMCP with the Expense Tracker example.</td>
+            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/MCP/6.BuildLocalMCPServers.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial"><span>07</span></td>
+            <td class="title">Build Remote MCP Servers</td>
+            <td class="description">Learn how to build, deploy, and connect remote MCP servers using FastMCP Cloud.</td>
+            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/MCP/7.BuildRemoteMCPServers.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial"><span>08</span></td>
+            <td class="title">Build MCP Clients</td>
+            <td class="description">Build custom MCP clients using LangChain and Streamlit to connect to multiple MCP servers.</td>
+            <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/MCP/8.BuildMCPClients.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footer">MCP Learning Path • GitHub file links</div>
+  </div>
+</body>
+</html>
