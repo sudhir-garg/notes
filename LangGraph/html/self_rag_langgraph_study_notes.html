@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Self-RAG with LangGraph — Complete Study Notes</title>
+<style>
+:root{--ink:#172033;--muted:#586579;--paper:#fff;--bg:#f3f6fb;--line:#dce4ef;--blue:#2458a6;--bluebg:#eaf2ff;--teal:#0f766e;--tealbg:#e4f7f3;--amber:#8a5200;--amberbg:#fff4d9;--red:#a32d35;--redbg:#fff0f0;--code:#111827}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.72 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+header{background:linear-gradient(135deg,#13284b,#2458a6);color:white;padding:54px 22px 44px}header .wrap,main,.footer{max-width:1050px;margin:auto}header h1{font-size:clamp(2rem,5vw,3.25rem);line-height:1.12;margin:12px 0}header p{max-width:760px;color:#e4edff;font-size:1.08rem}.eyebrow{text-transform:uppercase;letter-spacing:.13em;font-weight:750;font-size:.78rem;color:#bcd4ff}
+main{padding:26px 18px 60px}.panel,section{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:26px;margin:18px 0;box-shadow:0 5px 20px #152c4b08}
+h2{font-size:1.65rem;line-height:1.25;margin:0 0 14px}h3{font-size:1.15rem;margin:22px 0 8px}p{margin:10px 0}li{margin:5px 0}.muted,small{color:var(--muted)}.pill{display:inline-block;background:var(--bluebg);color:var(--blue);padding:3px 10px;border-radius:99px;font-size:.82rem;font-weight:700;margin:3px 5px 3px 0}
+.callout{padding:14px 16px;border-radius:10px;margin:14px 0;border-left:4px solid var(--blue);background:var(--bluebg)}.warn{background:var(--amberbg);border-color:#e2a332}.good{background:var(--tealbg);border-color:var(--teal)}.danger{background:var(--redbg);border-color:var(--red)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.mini{border:1px solid var(--line);padding:15px;border-radius:12px}.mini h3{margin:0 0 5px}.step{display:inline-grid;place-items:center;background:var(--blue);color:white;border-radius:50%;width:30px;height:30px;font-weight:800;margin-right:8px}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.94rem}th,td{text-align:left;padding:11px;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f4f7fc}
+pre{background:var(--code);color:#e5edf9;padding:18px;border-radius:12px;overflow:auto;font-size:.87rem;line-height:1.55}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}p code,li code{background:#eef2f8;padding:2px 5px;border-radius:5px;color:#20334f}
+.diagram{overflow-x:auto;background:#fbfdff;border:1px solid var(--line);border-radius:12px;padding:12px}.diagram svg{min-width:700px;width:100%;height:auto}.toc a{color:var(--blue);text-decoration:none}.toc a:hover{text-decoration:underline}
+footer{max-width:1050px;margin:auto;padding:0 18px 40px;color:var(--muted);font-size:.9rem}
+@media(max-width:600px){.panel,section{padding:18px}header{padding:38px 18px}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<div class="eyebrow">Advanced RAG · LangGraph · Study Guide</div>
+<h1>Self-RAG: Self-Reflective Retrieval-Augmented Generation</h1>
+<p>A blog-style set of study notes explaining why traditional RAG can fail, how Self-RAG evaluates its own retrieval and answers, and how the workflow is built incrementally with LangGraph.</p>
+<span class="pill">Theory + Architecture</span><span class="pill">Code Patterns</span><span class="pill">Worked Examples</span>
+</div></header>
+<main>
+<div class="panel">
+<h2>How to use these notes</h2>
+<p>These notes follow the supplied lesson’s sequence: traditional RAG problems → Self-RAG’s four questions → architecture → six implementation steps. The transcript describes a teaching implementation using an OpenAI LLM rather than the specially fine-tuned model used in the original Self-RAG research.</p>
+<div class="callout warn"><strong>Implementation note:</strong> The code below is a consolidated teaching scaffold that illustrates the workflow and state transitions. It is not a verbatim transcription of the video’s notebook. Package APIs and model names can change; test and adapt it to your installed LangChain/LangGraph versions.</div>
+</div>
+<section class="toc">
+<h2>On this page</h2>
+<div class="grid">
+<div class="mini"><a href="#rag-problems">1. Problems with traditional RAG</a><br><a href="#definition">2. What is Self-RAG?</a><br><a href="#questions">3. Four reflection questions</a></div>
+<div class="mini"><a href="#architecture">4. Architecture and flow</a><br><a href="#implementation">5. LangGraph implementation steps</a><br><a href="#testing">6. Testing and checklist</a></div>
+</div>
+</section>
+
+<section id="rag-problems"><h2>1. Why traditional RAG needs improvement</h2>
+<p>A conventional RAG pipeline commonly retrieves documents for every query, adds them to the prompt, and asks the LLM to generate an answer. Retrieval can help with private or current information, but retrieved text is not automatically relevant, accurate, or sufficient.</p>
+<div class="grid">
+<div class="mini"><h3>Problem 1 — Indiscriminate retrieval</h3><p>The system retrieves even when retrieval is unnecessary. For “How many seconds are in a minute?”, the model may already know the answer. Extra context can add noise, reduce answer clarity, and consume computation.</p><p><strong>Lesson:</strong> decide whether retrieval is needed before searching.</p></div>
+<div class="mini"><h3>Problem 2 — Blind trust in documents</h3><p>Semantic similarity does not guarantee that a passage answers the question. A document about how diabetes affects blood sugar may be retrieved for “What causes diabetes?” even though it does not explain the cause.</p><p><strong>Lesson:</strong> judge each retrieved document for relevance.</p></div>
+<div class="mini"><h3>Problem 3 — No answer verification</h3><p>A basic RAG chain may pass the generated answer directly to the user without checking whether claims are supported by the retrieved evidence or whether the answer actually answers the question.</p><p><strong>Lesson:</strong> verify grounding and usefulness after generation.</p></div>
+</div>
+</section>
+
+<section id="definition"><h2>2. What is Self-RAG?</h2>
+<p><strong>Self-RAG</strong> means <em>Self-Reflective Retrieval-Augmented Generation</em>. Instead of blindly trusting every retrieved passage and every generated answer, the workflow evaluates its own decisions at multiple stages and changes course when necessary.</p>
+<div class="callout good"><strong>Core idea:</strong> retrieve only when needed, filter irrelevant evidence, check whether claims are supported, revise unsupported answers, and verify that the final response answers the user’s question.</div>
+<p>Self-reflection here is an engineering mechanism implemented through model-based evaluators and conditional graph edges—not a claim that the model has human consciousness.</p>
+</section>
+
+<section id="questions"><h2>3. The four questions Self-RAG asks</h2>
+<table><thead><tr><th>Reflection question</th><th>Where it is checked</th><th>What it prevents</th></tr></thead><tbody>
+<tr><td><strong>1. Is retrieval needed?</strong></td><td>Before retrieval</td><td>Unnecessary retrieval for general knowledge or simple explanations.</td></tr>
+<tr><td><strong>2. Are the retrieved documents relevant?</strong></td><td>After retrieval, document by document</td><td>Irrelevant or merely topic-similar passages contaminating the context.</td></tr>
+<tr><td><strong>3. Is the answer grounded in the evidence?</strong></td><td>After generation</td><td>Unsupported claims or hallucinations.</td></tr>
+<tr><td><strong>4. Does the answer actually answer the question?</strong></td><td>After grounding checks</td><td>Factually supported text that still misses the user’s intent.</td></tr>
+</tbody></table>
+<h3>Grounding verdicts</h3>
+<div class="grid">
+<div class="mini"><h3><span style="color:#0f766e">Fully supported</span></h3><p>Every factual claim is supported by the supplied context. The answer can proceed to the usefulness check.</p></div>
+<div class="mini"><h3><span style="color:#8a5200">Partially supported</span></h3><p>Some claims are supported, but other claims are not present in the evidence. Revise the answer to remove unsupported details.</p></div>
+<div class="mini"><h3><span style="color:#a32d35">No support</span></h3><p>The answer is not supported by the retrieved context. Treat it as a grounding failure and attempt a strict revision or return no answer.</p></div>
+</div>
+<h3>Example: supported vs. invented details</h3>
+<p>Suppose the context says: “Clinical trials reported mild dizziness and nausea.” An answer that adds “fatigue and headaches, especially in older patients” contains extra claims not supported by that passage. Even if those claims sound plausible, they should not be presented as evidence-based facts.</p>
+<div class="callout warn"><strong>Important distinction:</strong> “grounded” and “useful” are different. An answer can repeat only true details from the documents yet still fail to answer the actual question.</div>
+</section>
+
+<section id="architecture"><h2>4. Self-RAG architecture at a glance</h2>
+<p>The lesson builds the graph incrementally. This diagram summarizes the complete workflow described in the transcript.</p>
+<div class="diagram">
+<svg viewBox="0 0 980 600" role="img" aria-label="Self-RAG flow diagram with retrieval decision, relevance filtering, answer generation, grounding verification and usefulness evaluation">
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#53657d"/></marker></defs>
+<rect x="350" y="18" width="280" height="48" rx="12" fill="#eaf2ff" stroke="#2458a6" stroke-width="2"/><text x="490" y="47" text-anchor="middle" font-size="16" fill="#172033" font-weight="700">User question</text>
+<path d="M490 66 V94" stroke="#53657d" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="330" y="98" width="320" height="58" rx="12" fill="#eaf2ff" stroke="#2458a6" stroke-width="2"/><text x="490" y="122" text-anchor="middle" font-size="15" fill="#172033" font-weight="700">Decide whether retrieval is needed</text><text x="490" y="142" text-anchor="middle" font-size="12" fill="#53657d">structured yes / no decision</text>
+<path d="M330 127 H170 V178" fill="none" stroke="#53657d" stroke-width="2" marker-end="url(#arrow)"/><text x="230" y="116" font-size="13" fill="#53657d">No</text>
+<rect x="45" y="182" width="250" height="55" rx="12" fill="#e4f7f3" stroke="#0f766e" stroke-width="2"/><text x="170" y="205" text-anchor="middle" font-size="15" fill="#172033" font-weight="700">Answer from general knowledge</text><text x="170" y="224" text-anchor="middle" font-size="12" fill="#53657d">No external context assumed</text>
+<path d="M170 237 V560 H490 V578" fill="none" stroke="#53657d" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M650 127 H810 V178" fill="none" stroke="#53657d" stroke-width="2" marker-end="url(#arrow)"/><text x="720" y="116" font-size="13" fill="#53657d">Yes</text>
+<rect x="690" y="182" width="240" height="55" rx="12" fill="#eaf2ff" stroke="#2458a6" stroke-width="2"/><text x="810" y="205" text-anchor="middle" font-size="15" fill="#172033" font-weight="700">Retrieve documents</text><text x="810" y="224" text-anchor="middle" font-size="12" fill="#53657d">vector store / retriever</text>
+<path d="M810 237 V263" stroke="#53657d" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="690" y="267" width="240" height="55" rx="12" fill="#eaf2ff" stroke="#2458a6" stroke-width="2"/><text x="810" y="290" text-anchor="middle" font-size="15" fill="#172033" font-weight="700">Filter for relevance</text><text x="810" y="309" text-anchor="middle" font-size="12" fill="#53657d">keep relevant documents only</text>
+<path d="M810 322 V347" stroke="#53657d" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="690" y="351" width="240" height="55" rx="12" fill="#eaf2ff" stroke="#2458a6" stroke-width="2"/><text x="810" y="374" text-anchor="middle" font-size="15" fill="#172033" font-weight="700">Generate from context</text><text x="810" y="393" text-anchor="middle" font-size="12" fill="#53657d">question + filtered evidence</text>
+<path d="M690 378 H650 V435" fill="none" stroke="#53657d" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="330" y="439" width="320" height="55" rx="12" fill="#fff4d9" stroke="#d49a26" stroke-width="2"/><text x="490" y="462" text-anchor="middle" font-size="15" fill="#172033" font-weight="700">Check evidence support</text><text x="490" y="481" text-anchor="middle" font-size="12" fill="#53657d">fully / partially / not supported</text>
+<path d="M490 494 V515" stroke="#53657d" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="330" y="519" width="320" height="42" rx="10" fill="#eaf2ff" stroke="#2458a6" stroke-width="2"/><text x="490" y="545" text-anchor="middle" font-size="15" fill="#172033" font-weight="700">Check usefulness</text>
+<path d="M650 540 H760 V461 H650" fill="none" stroke="#53657d" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrow)"/><text x="772" y="502" font-size="12" fill="#53657d">Revise / retry</text>
+<path d="M490 561 V578" stroke="#53657d" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="350" y="578" width="280" height="20" rx="7" fill="#e4f7f3" stroke="#0f766e"/><text x="490" y="592" text-anchor="middle" font-size="12" fill="#172033" font-weight="700">Final answer or “No answer found”</text>
+</svg>
+</div>
+<p class="muted">Conceptual diagram: the actual graph includes conditional edges and bounded loops. A direct-generation branch may finish without retrieval; the retrieval branch goes through relevance filtering, generation, support checking, and usefulness checking.</p>
+<h3>Two bounded loops</h3>
+<ul><li><strong>Revision loop:</strong> if an answer is partially or not supported, revise it using only the supplied context and run the support check again.</li><li><strong>Query-rewrite loop:</strong> if the answer is grounded but not useful, rewrite the retrieval query, retrieve again, and repeat the pipeline.</li></ul>
+<div class="callout danger"><strong>Safety valve:</strong> both loops need a maximum retry count. The lesson uses examples such as five or ten attempts. If the limit is reached without a satisfactory answer, return “No answer found” rather than looping indefinitely.</div>
+</section>
+
+<section id="implementation"><h2>5. Building it in LangGraph — step by step</h2>
+<p>The lesson uses a fictional company called <strong>Nexa AI Solutions</strong> and three document groups: company profile, company policies, and product/pricing information. Documents are split into chunks (the transcript’s example uses chunk size 600 and overlap 150), embedded in a vector store, and accessed through a retriever.</p>
+<h3><span class="step">1</span>Decide whether retrieval is needed</h3>
+<p>Use an LLM with structured output to return a boolean. Retrieval is appropriate for specific company facts, policy details, source-dependent information, or facts unlikely to be in the model’s general knowledge. General definitions and explanations may be answered directly. If uncertain, the lesson’s prompt prefers retrieval.</p>
+<pre><code>from pydantic import BaseModel, Field
+
+class RetrievalDecision(BaseModel):
+    should_retrieve: bool = Field(
+        description="True when external/company documents are needed"
+    )
+
+# Conceptual pattern:
+decision_llm = llm.with_structured_output(RetrievalDecision)
+
+def decide_retrieval(state):
+    result = decision_llm.invoke([
+        ("system", """Decide whether the question needs company-specific
+facts or external evidence. Use False for general explanations or
+definitions. If unsure, choose True."""),
+        ("human", state["question"])
+    ])
+    return {"need_retrieval": result.should_retrieve}</code></pre>
+<h3><span class="step">2</span>Retrieve, then filter relevant documents</h3>
+<p>First retrieve a candidate set. Then judge each document against the user’s question and keep only documents that contain information useful for answering it. Similar topic does not necessarily mean relevant evidence.</p>
+<pre><code>class RelevanceDecision(BaseModel):
+    relevant: bool = Field(
+        description="Whether this document helps answer the question"
+    )
+
+relevance_llm = llm.with_structured_output(RelevanceDecision)
+
+def retrieve_docs(state):
+    # In the full workflow, this uses state["retrieval_query"].
+    docs = retriever.invoke(state.get("retrieval_query", state["question"]))
+    return {"docs": docs}
+
+def filter_relevant_docs(state):
+    kept = []
+    for doc in state.get("docs", []):
+        verdict = relevance_llm.invoke([
+            ("system", "Judge whether the document helps answer the question."),
+            ("human", f'Question: {state["question"]}\nDocument: {doc.page_content}')
+        ])
+        if verdict.relevant:
+            kept.append(doc)
+    return {"relevant_docs": kept}</code></pre>
+<h3><span class="step">3</span>Generate from filtered context</h3>
+<p>Merge relevant document text into a context string and ask the model to answer from that context. If no relevant document remains, do not invent an answer from the absent company information.</p>
+<pre><code>def generate_from_context(state):
+    docs = state.get("relevant_docs", [])
+    if not docs:
+        return {"context": "", "answer": "No answer found"}
+
+    context = "\n\n".join(doc.page_content for doc in docs)
+    response = llm.invoke([
+        ("system", """Answer the question using only the supplied context.
+Do not add unsupported facts. If the context is insufficient, say so."""),
+        ("human", f'Question: {state["question"]}\n\nContext:\n{context}')
+    ])
+    return {"context": context, "answer": response.content}</code></pre>
+<h3><span class="step">4</span>Check whether the answer is supported</h3>
+<p>The support evaluator receives the question, answer, and context. It returns a verdict—fully supported, partially supported, or no support—plus evidence snippets. Only a fully supported answer proceeds to usefulness checking.</p>
+<pre><code>from typing import Literal
+from pydantic import BaseModel, Field
+
+class SupportCheck(BaseModel):
+    verdict: Literal["fully_supported", "partially_supported", "no_support"]
+    evidence: list[str] = Field(
+        description="Context excerpts that support the answer, if any"
+    )
+
+support_llm = llm.with_structured_output(SupportCheck)
+
+def check_support(state):
+    result = support_llm.invoke([
+        ("system", """Compare every factual claim in the answer with the
+context. Do not use outside knowledge. Mark fully_supported only if all
+claims are supported; partially_supported if some are; no_support if none
+are adequately supported. Return evidence excerpts."""),
+        ("human", f'Question: {state["question"]}\n'
+                  f'Context: {state.get("context", "")}\n'
+                  f'Answer: {state.get("answer", "")}')
+    ])
+    return {"support": result.verdict, "evidence": result.evidence}</code></pre>
+<h3><span class="step">5</span>Revise unsupported answers with a retry limit</h3>
+<p>For partially supported or unsupported answers, instruct the model to remove every claim not directly supported by the context. Count each revision attempt. Re-check the revised answer rather than assuming the revision succeeded.</p>
+<pre><code>MAX_REVISION_TRIES = 5
+
+def revise_answer(state):
+    revised = llm.invoke([
+        ("system", """You are a strict answer reviser. Rewrite the answer
+using only facts explicitly supported by the context. Remove unsupported
+claims; do not fill gaps using general knowledge. If evidence is insufficient,
+return 'No answer found.'"""),
+        ("human", f'Question: {state["question"]}\n'
+                  f'Context: {state.get("context", "")}\n'
+                  f'Current answer: {state.get("answer", "")}')
+    ])
+    return {
+        "answer": revised.content,
+        "revision_tries": state.get("revision_tries", 0) + 1
+    }
+
+def route_after_support(state):
+    if state.get("support") == "fully_supported":
+        return "check_usefulness"
+    if state.get("revision_tries", 0) >= MAX_REVISION_TRIES:
+        return "no_answer"
+    return "revise_answer"</code></pre>
+<h3><span class="step">6</span>Evaluate usefulness and rewrite the retrieval query</h3>
+<p>Even a grounded answer may omit the key fact needed to answer the user. A usefulness evaluator judges the question and answer and returns a verdict plus a reason. If useful, finish. If not useful, rewrite the retrieval query to improve the next search, then rerun retrieval and evaluation. Stop after a fixed number of retries.</p>
+<pre><code>class UsefulnessCheck(BaseModel):
+    useful: bool
+    reason: str
+
+usefulness_llm = llm.with_structured_output(UsefulnessCheck)
+
+def check_usefulness(state):
+    result = usefulness_llm.invoke([
+        ("system", """Decide whether the answer directly and sufficiently
+answers the user's question. Judge usefulness, not just factual support.
+Return a concise reason."""),
+        ("human", f'Question: {state["question"]}\nAnswer: {state["answer"]}')
+    ])
+    return {"useful": result.useful, "usefulness_reason": result.reason}
+
+class QueryRewrite(BaseModel):
+    retrieval_query: str = Field(
+        description="Short query optimized for vector retrieval"
+    )
+
+rewrite_llm = llm.with_structured_output(QueryRewrite)
+
+def rewrite_query(state):
+    result = rewrite_llm.invoke([
+        ("system", """Rewrite the user's question as a short query for
+searching internal company documents. Preserve key entities and add 2–5
+high-signal terms. Do not invent facts."""),
+        ("human", f'Question: {state["question"]}\n'
+                  f'Previous query: {state.get("retrieval_query", "")}\n'
+                  f'Previous answer: {state.get("answer", "")}')
+    ])
+    return {
+        "retrieval_query": result.retrieval_query,
+        "rewrite_tries": state.get("rewrite_tries", 0) + 1
+    }</code></pre>
+<div class="callout warn"><strong>Graph integration:</strong> these are node-level patterns, not a complete drop-in graph. The final LangGraph must define a shared state schema, register nodes, connect START/END, add conditional routing, initialize counters, and compile the graph. Route names must match registered node names.</div>
+<h3>Suggested state fields</h3>
+<table><thead><tr><th>Field</th><th>Purpose</th></tr></thead><tbody>
+<tr><td><code>question</code></td><td>Original user question; keep it unchanged for evaluation.</td></tr>
+<tr><td><code>retrieval_query</code></td><td>Current search query; may be rewritten during retries.</td></tr>
+<tr><td><code>need_retrieval</code></td><td>Boolean routing decision.</td></tr>
+<tr><td><code>docs</code> / <code>relevant_docs</code></td><td>All retrieved candidates vs. filtered evidence.</td></tr>
+<tr><td><code>context</code></td><td>Combined text of relevant documents.</td></tr>
+<tr><td><code>answer</code></td><td>Current answer, revised when needed.</td></tr>
+<tr><td><code>support</code> / <code>evidence</code></td><td>Grounding verdict and supporting excerpts.</td></tr>
+<tr><td><code>useful</code> / <code>usefulness_reason</code></td><td>Whether the answer satisfies the user’s intent, and why.</td></tr>
+<tr><td><code>revision_tries</code> / <code>rewrite_tries</code></td><td>Bounded-loop counters to prevent endless retries.</td></tr>
+</tbody></table>
+</section>
+
+<section id="testing"><h2>6. Testing the workflow</h2>
+<p>The lesson demonstrates the graph using the fictional Nexa AI Solutions documents. Example test categories include:</p>
+<table><thead><tr><th>Question</th><th>Expected path</th><th>What to inspect</th></tr></thead><tbody>
+<tr><td>“What is machine learning?”</td><td>Direct generation</td><td><code>need_retrieval = False</code>; no company documents should be needed.</td></tr>
+<tr><td>“Who is the CEO of Nexa AI?”</td><td>Retrieve and filter</td><td>The CEO passage should survive relevance filtering; the answer should cite/support the company document.</td></tr>
+<tr><td>“How many employees does Nexa AI have?”</td><td>Retrieve → generate → support → usefulness</td><td>Claims should be supported by the company profile. The transcript’s example mentions “85+ employees.”</td></tr>
+<tr><td>“Does Nexa AI offer a free trial, and for how long?”</td><td>Retrieve, then possibly no answer</td><td>If the documents do not say, the model must not invent a 14-day trial.</td></tr>
+<tr><td>“Describe Nexa AI’s company culture.”</td><td>Retrieve and evaluate; may need revision or rewritten query</td><td>Check whether the answer adds plausible but unsupported culture claims and whether the answer addresses the question.</td></tr>
+</tbody></table>
+<h3>Practical debugging checklist</h3>
+<ul>
+<li>Print the retrieval decision and current retrieval query.</li>
+<li>Compare total retrieved documents with the relevant-document count.</li>
+<li>Inspect the exact context passed to the answer generator.</li>
+<li>Log support verdicts and evidence excerpts for every answer.</li>
+<li>Track revision and query-rewrite counters.</li>
+<li>Check usefulness independently from factual grounding.</li>
+<li>Ensure empty evidence, failed structured output, or exhausted retries lead to a safe fallback.</li>
+<li>Keep the original user question separate from the rewritten retrieval query.</li>
+</ul>
+</section>
+
+<section><h2>7. Traditional RAG vs. Self-RAG</h2>
+<table><thead><tr><th>Aspect</th><th>Traditional RAG (as discussed in lesson)</th><th>Self-RAG workflow</th></tr></thead><tbody>
+<tr><td>Retrieval</td><td>Typically retrieves for each query</td><td>First decides whether retrieval is needed</td></tr>
+<tr><td>Document relevance</td><td>May pass retrieved passages straight to generation</td><td>Judges documents and filters irrelevant ones</td></tr>
+<tr><td>Grounding</td><td>May accept the first generated answer</td><td>Checks whether claims are supported by evidence</td></tr>
+<tr><td>Answer quality</td><td>May not explicitly verify question coverage</td><td>Checks usefulness and can search again</td></tr>
+<tr><td>Control flow</td><td>Often a simple retrieve-then-generate chain</td><td>Conditional branches and bounded retry loops</td></tr>
+<tr><td>Trade-off</td><td>Simpler and usually cheaper to run</td><td>More LLM calls, latency, and implementation complexity in exchange for stronger checks</td></tr>
+</tbody></table>
+</section>
+
+<section><h2>8. Key takeaways</h2>
+<ul>
+<li>Self-RAG is built around self-reflection at decision points, not retrieval alone.</li>
+<li>Semantic similarity is a candidate-finding mechanism—not proof that a passage answers the question.</li>
+<li>Every factual claim should be supported by the context when the task requires document-grounded answers.</li>
+<li>Grounding and usefulness are separate checks.</li>
+<li>Revision removes unsupported details; query rewriting attempts to retrieve better evidence.</li>
+<li>Use bounded retries and a clear “No answer found” fallback.</li>
+<li>The lesson builds the graph progressively: retrieval decision → relevance filter → context-based generation → support check → answer revision → usefulness check → query rewrite and re-retrieval.</li>
+</ul>
+</section>
+<div class="panel"><h2>Source scope</h2><p>Prepared from the user-provided transcript “Introduction to Advanced RAG Techniques” covering Self-RAG and its incremental LangGraph implementation. The examples and code scaffolds above are organized study aids based on that lesson; code blocks are illustrative reconstructions where the transcript described code behavior without providing a complete copyable listing.</p></div>
+</main>
+<footer>Self-RAG Study Notes · HTML document · You can open this file in a browser or keep it with your LangGraph learning materials.</footer>
+</body></html>
