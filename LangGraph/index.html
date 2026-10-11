@@ -20,8 +20,6 @@
       --accent-3: #14b8a6;
       --accent-4: #f59e0b;
       --shadow: 0 18px 38px rgba(148, 163, 184, 0.22);
-      --chip-bg: #eef6ff;
-      --chip-border: #bfdbfe;
     }
 
     * { box-sizing: border-box; }
@@ -107,7 +105,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 980px;
+      min-width: 1040px;
     }
 
     thead th {
@@ -155,17 +153,16 @@
     }
 
     .title {
-      min-width: 420px;
+      min-width: 360px;
       color: var(--heading);
       font-weight: 700;
       letter-spacing: -0.01em;
     }
 
-    .file-name {
+    .description {
       min-width: 420px;
       color: var(--muted);
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-      font-size: 0.9rem;
+      line-height: 1.5;
     }
 
     .link-btn {
@@ -215,7 +212,7 @@
           <tr>
             <th>#</th>
             <th>Title</th>
-            <th>File</th>
+            <th>Description</th>
             <th>Link</th>
           </tr>
         </thead>
@@ -223,163 +220,163 @@
           <tr>
             <td class="serial"><span>01</span></td>
             <td class="title">Generative AI Vs Agentic AI</td>
-            <td class="file-name">02.Generative AI Vs Agentic AI.md</td>
+            <td class="description">Compares generative AI with agentic AI and explains the shift from content generation to autonomous task execution.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/02.Generative%20AI%20Vs%20Agentic%20AI.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>02</span></td>
             <td class="title">Agentic AI</td>
-            <td class="file-name">03.Agentic AI.md</td>
+            <td class="description">Explains the foundations of agentic AI, autonomy, reasoning loops, and decision-making behavior in modern systems.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/03.Agentic%20AI.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>03</span></td>
             <td class="title">Lanchain vs Langgraph</td>
-            <td class="file-name">04. Lanchain vs Langgraph.md</td>
+            <td class="description">Breaks down the differences between LangChain and LangGraph and when to use each framework.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/04.%20Lanchain%20vs%20Langgraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>04</span></td>
             <td class="title">LangGraph Core Concepts</td>
-            <td class="file-name">05. LangGraph Core Concepts.md</td>
+            <td class="description">Introduces the primary concepts used to model stateful, graph-based AI workflows in LangGraph.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/05.%20LangGraph%20Core%20Concepts.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>05</span></td>
             <td class="title">Sequential Workflows in LangGraph</td>
-            <td class="file-name">06. Sequential Workflows in LangGraph.md</td>
+            <td class="description">Shows how to arrange tasks in a linear processing flow and enforce order across agent steps.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/06.%20Sequential%20Workflows%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>06</span></td>
             <td class="title">Parallel Workflows in LangGraph</td>
-            <td class="file-name">07.  Parallel Workflows in LangGraph.md</td>
+            <td class="description">Covers concurrent design patterns where multiple operations run in parallel to speed up processing.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/07.%20%20Parallel%20Workflows%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>07</span></td>
             <td class="title">Conditional Workflows in LangGraph</td>
-            <td class="file-name">08.  Conditional Workflows in LangGraph.md</td>
+            <td class="description">Demonstrates branching logic where workflow paths change based on runtime conditions and outputs.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/08.%20%20Conditional%20Workflows%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>08</span></td>
             <td class="title">Iterative Workflows in LangGraph</td>
-            <td class="file-name">09.  Iterative Workflows in LangGraph.md</td>
+            <td class="description">Explains repeated execution patterns and loop-based agent design in LangGraph workflows.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/09.%20%20Iterative%20Workflows%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>09</span></td>
             <td class="title">How to build a Chatbot using LangGraph</td>
-            <td class="file-name">10. How to build a Chatbot using LangGraph.md</td>
+            <td class="description">Walks through creating a chatbot with state, prompts, and conversational flow in LangGraph.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/10.%20How%20to%20build%20a%20Chatbot%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>10</span></td>
             <td class="title">Persistence in LangGraph</td>
-            <td class="file-name">11.  Persistence in LangGraph.md</td>
+            <td class="description">Shows how to save agent state and preserve user context across multiple interactions and sessions.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/11.%20%20Persistence%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>11</span></td>
             <td class="title">Building a Chatbot with UI in LangGraph &amp; Streamlit</td>
-            <td class="file-name">12. Building a Chatbot with UI in LangGraph &amp; Streamlit.md</td>
+            <td class="description">Builds a user-facing chat application with LangGraph and Streamlit for interactive demos and apps.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/12.%20Building%20a%20Chatbot%20with%20UI%20in%20LangGraph%20%26%20Streamlit.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>12</span></td>
             <td class="title">Streaming in LangGraph</td>
-            <td class="file-name">13. Streaming in LangGraph.md</td>
+            <td class="description">Introduces real-time streaming patterns for token-by-token responses and live UI updates.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/13.%20Streaming%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>13</span></td>
             <td class="title">How to build a Resume Chat feature like ChatGPT</td>
-            <td class="file-name">14. How to build a Resume Chat feature like ChatGPT.md</td>
+            <td class="description">Creates a resume-focused conversational feature with retrieval and custom chat interactions.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/14.%20How%20to%20build%20a%20Resume%20Chat%20feature%20like%20ChatGPT.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>14</span></td>
             <td class="title">LangGraph + SQLite | Chatbot with Database Integration</td>
-            <td class="file-name">15. LangGraph + SQLite | Chatbot with Database Integration.md</td>
+            <td class="description">Connects LangGraph chatbots to SQLite so agent sessions and data can be persisted and queried.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/15.%20LangGraph%20%2B%20SQLite%20%7C%20Chatbot%20with%20Database%20Integration.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>15</span></td>
             <td class="title">LangSmith Crash Course</td>
-            <td class="file-name">16. LangSmith Crash Course.md</td>
+            <td class="description">Introduces LangSmith and explains how to monitor, debug, and trace LangGraph-based applications.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/16.%20LangSmith%20Crash%20Course.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>16</span></td>
             <td class="title">LangSmith Integration with LangGraph Chatbot App</td>
-            <td class="file-name">17. LangSmith Integration with LangGraph Chatbot App.md</td>
+            <td class="description">Integrates LangSmith observability into a real chatbot application for tracing and debugging.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/17.%20LangSmith%20Integration%20with%20LangGraph%20Chatbot%20App.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>17</span></td>
             <td class="title">Tools in LangGraph</td>
-            <td class="file-name">18. Tools in LangGraph.md</td>
+            <td class="description">Explains how to define tools, connect external actions, and let agents execute real operations.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/18.%20Tools%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>18</span></td>
             <td class="title">How to build MCP Client using LangGraph</td>
-            <td class="file-name">19.  How to build MCP Client using LangGraph.md</td>
+            <td class="description">Shows how to create a Model Context Protocol client and integrate external systems into the agent workflow.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/19.%20%20How%20to%20build%20MCP%20Client%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>19</span></td>
             <td class="title">RAG using LangGraph</td>
-            <td class="file-name">20. RAG using LangGraph.md</td>
+            <td class="description">Covers Retrieval-Augmented Generation pipelines and how to combine retrieval with graph-based reasoning.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/20.%20RAG%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>20</span></td>
             <td class="title">Human in the loop (HITL) using LangGraph</td>
-            <td class="file-name">21. Human in the loop (HITL) using LangGraph.md</td>
+            <td class="description">Explains how to include human review and approval steps inside agent workflows for safety and control.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/21.%20Human%20in%20the%20loop%20(HITL)%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>21</span></td>
             <td class="title">SubGraphs in LangGraph</td>
-            <td class="file-name">22. SubGraphs in LangGraph.md</td>
+            <td class="description">Introduces modular graph decomposition so complex systems can be broken into reusable subgraphs.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/22.%20SubGraphs%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>22</span></td>
             <td class="title">LLMs Don’t Have Memory — So How Do They Remember?</td>
-            <td class="file-name">23.  LLMs Don’t Have Memory — So How Do They Remember?.md</td>
+            <td class="description">Explains how LLMs appear to remember without having persistent memory and how external state fills the gap.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/23.%20%20LLMs%20Don%E2%80%99t%20Have%20Memory%20%E2%80%94%20So%20How%20Do%20They%20Remember%3F.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>23</span></td>
             <td class="title">How To Implement Short Term Memory Using LangGraph</td>
-            <td class="file-name">24. How To Implement Short Term Memory Using LangGraph.md</td>
+            <td class="description">Shows how to maintain short-lived conversational memory within active sessions and state transitions.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/24.%20How%20To%20Implement%20Short%20Term%20Memory%20Using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>24</span></td>
             <td class="title">Long Term Memory in LangGraph</td>
-            <td class="file-name">25. Long Term Memory in LangGraph.md</td>
+            <td class="description">Covers durable memory design, retrieval, storage, and patterns for ongoing agent memory over time.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/25.%20Long%20Term%20Memory%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>25</span></td>
             <td class="title">This AI Agent Plans, Researches &amp; Writes Blogs Automatically using LangGraph</td>
-            <td class="file-name">26. This AI Agent Plans, Researches &amp; Writes Blogs Automatically using LangGraph.md</td>
+            <td class="description">Builds an autonomous research and writing agent that plans, sources content, and drafts blog posts.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/26.%20This%20AI%20Agent%20Plans,%20Researches%20%26%20Writes%20Blogs%20Automatically%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>26</span></td>
             <td class="title">Advanced RAG: How Corrective RAG (CRAG) Solves Traditional RAG Problems</td>
-            <td class="file-name">27. Advanced RAG: How Corrective RAG (CRAG) Solves Traditional RAG Problems.md</td>
+            <td class="description">Explains corrective RAG techniques that improve answer quality by checking retrieval quality and fixing failures.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/27.%20Advanced%20RAG:%20How%20Corrective%20RAG%20(CRAG)%20Solves%20Traditional%20RAG%20Problems.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
           <tr>
             <td class="serial"><span>27</span></td>
             <td class="title">Self-RAG Tutorial: How to Make Your AI Fact-Check Itself</td>
-            <td class="file-name">28. Self-RAG Tutorial: How to Make Your AI Fact-Check Itself.md</td>
+            <td class="description">Introduces self-reflection and verification loops to make AI answers more grounded and fact-aware.</td>
             <td><a class="link-btn" href="https://github.com/sudhir-garg/notes/blob/main/LangGraph/28.%20Self-RAG%20Tutorial:%20How%20to%20Make%20Your%20AI%20Fact-Check%20Itself.md" target="_blank" rel="noopener">Open</a></td>
           </tr>
         </tbody>
