@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Langchain - Learning Path</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .header h1 {
+            font-size: 3.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.95;
+            font-weight: 300;
+        }
+
+        .notes-grid {
+            display: grid;
+            gap: 20px;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .note-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            border-left: 5px solid #667eea;
+        }
+
+        .note-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            border-left-color: #764ba2;
+        }
+
+        .note-card a {
+            text-decoration: none;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .note-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .note-content {
+            flex: 1;
+        }
+
+        .note-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+            transition: color 0.3s ease;
+        }
+
+        .note-card:hover .note-title {
+            color: #667eea;
+        }
+
+        .note-description {
+            color: #718096;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+
+        .arrow {
+            font-size: 1.8em;
+            color: #cbd5e0;
+            transition: all 0.3s ease;
+        }
+
+        .note-card:hover .arrow {
+            color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 40px;
+            padding-top: 40px;
+            border-top: 2px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5em;
+            }
+
+            .header p {
+                font-size: 1em;
+            }
+
+            .note-card a {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .note-number {
+                font-size: 2em;
+            }
+
+            .stats {
+                flex-direction: column;
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔗 Langchain</h1>
+            <p>Master the fundamentals and advanced concepts of Langchain</p>
+        </div>
+
+        <div class="notes-grid">
+            <div class="note-card">
+                <a href="01.%20Introduction.md" target="_blank">
+                    <div class="note-number">01</div>
+                    <div class="note-content">
+                        <div class="note-title">Introduction</div>
+                        <div class="note-description">Get started with Langchain basics and overview</div>
+                    </div>
+                    <div class="arrow">→</div>
+                </a>
+            </div>
+
+            <div class="note-card">
+                <a href="02.%20Components.md" target="_blank">
+                    <div class="note-number">02</div>
+                    <div class="note-content">
+                        <div class="note-title">Components</div>
+                        <div class="note-description">Explore the core components of Langchain</div>
+                    </div>
+                    <div class="arrow">→</div>
+                </a>
+            </div>
+
+            <div class="note-card">
+                <a href="03.%20Models.md" target="_blank">
+                    <div class="note-number">03</div>
+                    <div class="note-content">
+                        <div class="note-title">Models</div>
+                        <div class="note-description">Learn about different language models</div>
+                    </div>
+                    <div class="arrow">→</div>
+                </a>
+            </div>
+
+            <div class="note-card">
+                <a href="04.%20Prompts.md" target="_blank">
+                    <div class="note-number">04</div>
+                    <div class="note-content">
+                        <div class="note-title">Prompts</div>
+                        <div class="note-description">Master prompt engineering techniques</div>
+                    </div>
+                    <div class="arrow">→</div>
+                </a>
+            </div>
+
+            <div class="note-card">
+                <a href="05.%20Structured%20Output.md" target="_blank">
+                    <div class="note-number">05</div>
+                    <div class="note-content">
+                        <div class="note-title">Structured Output</div>
+                        <div class="note-description">Work with structured data outputs</div>
+                    </div>
+                    <div class="arrow">→</div>
+                </a>
+            </div>
+
+            <div class="note-card">
+                <a href="06.%20Output%20Parsers.md" target="_blank">
+                    <div class="note-number">06</div>
+                    <div class="note-content">
+                        <div class="note-title">Output Parsers</div>
+                        <div class="note-description">Parse and format model outputs</div>
+                    </div>
+                    <div class="arrow">→</div>
+                </a>
+            </div>
+
+            <div class="note-card">
+                <a href="07.%20Chains.md" target="_blank">
+                    <div class="note-number">07</div>
+                    <div class="note-content">
+                        <div class="note-title">Chains</div>
+                        <div class="note-description">Build complex chains for multi-step tasks</div>
+                    </div>
+                    <div class="arrow">→</div>
+                </a>
+            </div>
+
+            <div class="note-card">
+                <a href="08.%20Runnables%20Part%201.md" target="_blank">
+                    <div class="note-number">08</div>
+                    <div class="note-content">
+                        <div class="note-title">Runnables Part 1</div>
+                        <div class="note-description">Introduction to Langchain Runnables</div>
+                    </div>
+                    <div class="arrow">→</div>
+                </a>
+            </div>
+
+            <div class="note-card">
+                <a href="09.%20Runnables%20Part%202.md" target="_blank">
+                    <div class="note-number">09</div>
+                    <div class="note-content">
+                        <div class="note-title">Runnables Part 2</div>
+                        <div class="note-description">Advanced Runnables concepts</div>
+                    </div>
+                    <div class="arrow">→</div>
+                </a>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <span class="stat-number">9</span>
+                <span class="stat-label">Chapters</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number">📚</span>
+                <span class="stat-label">Learning Path</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number">✨</span>
+                <span class="stat-label">Comprehensive</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
