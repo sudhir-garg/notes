@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Corrective RAG (CRAG) with LangGraph — Complete Study Notes</title>
+<style>
+:root{--bg:#f6f8fc;--paper:#fff;--ink:#1e293b;--muted:#526176;--line:#dce4ef;--blue:#2459a9;--bluebg:#eaf2ff;--green:#18794e;--greenbg:#e8f7ef;--amber:#9a5b00;--amberbg:#fff4d9;--red:#a12a2a;--redbg:#ffeded;--code:#101827}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.72 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+header{background:linear-gradient(135deg,#102b54,#2459a9);color:white;padding:52px 22px 42px}header .wrap,main,.footer{max-width:1060px;margin:auto}header h1{font-size:clamp(2rem,4vw,3.25rem);line-height:1.12;margin:12px 0}header p{max-width:780px;color:#e3ecff;font-size:1.08rem}.eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:.78rem;font-weight:800;color:#a9c8ff}
+main{padding:28px 18px 70px}.meta{display:flex;gap:9px;flex-wrap:wrap;margin-top:22px}.pill{font-size:.82rem;border:1px solid #ffffff55;border-radius:999px;padding:4px 11px;color:#f1f6ff}
+nav,.panel,section{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:24px;margin:18px 0;box-shadow:0 5px 18px #1b35500a}
+nav h2,section h2{margin-top:0}nav ol{columns:2;column-gap:35px;padding-left:22px}nav li{break-inside:avoid;margin:3px 0}a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+h2{font-size:1.65rem;line-height:1.25;margin:0 0 14px}h3{font-size:1.18rem;margin:25px 0 8px}h4{margin:16px 0 5px}p{margin:10px 0}ul,ol{padding-left:25px}li{margin:5px 0}.lead{font-size:1.08rem;color:#34445a}
+.callout{padding:14px 17px;border-left:4px solid var(--blue);background:var(--bluebg);border-radius:8px;margin:16px 0}.warn{border-color:#d08a00;background:var(--amberbg)}.good{border-color:var(--green);background:var(--greenbg)}.danger{border-color:var(--red);background:var(--redbg)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:.95rem}th,td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#edf3fb}
+code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.9em;background:#eef2f8;padding:2px 5px;border-radius:4px}pre{overflow:auto;background:var(--code);color:#e8edf7;padding:18px;border-radius:12px;line-height:1.55;font-size:.88rem}pre code{background:none;color:inherit;padding:0}
+.diagram{background:#fbfdff;border:1px solid var(--line);border-radius:12px;padding:12px;margin:18px 0;overflow-x:auto}.diagram svg{display:block;width:100%;height:auto;min-width:620px}.caption{font-size:.88rem;color:var(--muted);margin-top:6px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.card{border:1px solid var(--line);border-radius:12px;padding:15px}.card h3{margin-top:0}.tag{display:inline-block;font-size:.75rem;font-weight:800;padding:2px 8px;border-radius:6px;background:#edf3fb}
+.small{font-size:.9rem;color:var(--muted)}.step{display:flex;gap:13px;align-items:flex-start;margin:12px 0}.num{flex:0 0 32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--blue);color:white;font-weight:800}
+details{border:1px solid var(--line);border-radius:10px;padding:12px 15px;margin:10px 0}summary{font-weight:750;cursor:pointer}
+footer{padding:25px;color:var(--muted);text-align:center;font-size:.88rem}
+@media(max-width:700px){nav ol{columns:1}.grid{grid-template-columns:1fr}section,.panel,nav{padding:17px}header{padding-top:36px}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<div class="eyebrow">LangGraph • Retrieval-Augmented Generation</div>
+<h1>Corrective RAG (CRAG): From Traditional RAG to a Self-Correcting Retrieval Workflow</h1>
+<p>Study notes based on the supplied lesson transcript. Learn why traditional RAG can fail, how retrieval evaluation and knowledge refinement work, and how the workflow is assembled step by step in LangGraph.</p>
+<div class="meta"><span class="pill">Concepts + architecture</span><span class="pill">Code examples</span><span class="pill">SVG diagrams included</span><span class="pill">Approx. 75-minute lesson</span></div>
+</div></header>
+<main>
+<nav><h2>On this page</h2><ol>
+<li><a href="#overview">CRAG at a glance</a></li><li><a href="#rag">Traditional RAG workflow</a></li><li><a href="#failure">Why RAG can fail</a></li><li><a href="#architecture">CRAG architecture</a></li><li><a href="#refinement">Iteration 1: Knowledge refinement</a></li><li><a href="#evaluation">Iteration 2: Retrieval evaluation</a></li><li><a href="#web">Iteration 3: Web search</a></li><li><a href="#rewrite">Iteration 4: Query rewriting</a></li><li><a href="#ambiguous">Ambiguous retrieval</a></li><li><a href="#code">Code patterns</a></li><li><a href="#limits">Paper vs. tutorial implementation</a></li><li><a href="#review">Revision checklist</a></li>
+</ol></nav>
+
+<section id="overview"><h2>1. What is Corrective RAG (CRAG)?</h2>
+<p class="lead"><strong>Corrective Retrieval-Augmented Generation (CRAG)</strong> is a RAG design that evaluates retrieved evidence before asking the language model to answer. Instead of blindly trusting the retriever, it chooses how to proceed based on the usefulness of the retrieved documents.</p>
+<div class="callout good"><strong>Core idea:</strong> retrieve → evaluate evidence → refine relevant information and/or search externally → generate an answer from the selected context.</div>
+<p>Traditional RAG usually assumes the top retrieved passages are useful. CRAG adds a corrective decision step because a vector database may return only loosely related material—or no adequate evidence for the question.</p>
+<h3>What CRAG is trying to improve</h3><ul>
+<li>Reduce answers grounded in irrelevant or weakly relevant passages.</li>
+<li>Filter away unrelated sentences that happen to share a chunk with useful content.</li>
+<li>Use an external source such as web search when the private corpus is insufficient.</li>
+<li>Combine internal evidence with external evidence when the internal corpus helps but does not fully answer the question.</li>
+<li>Rewrite vague user questions into search-engine-friendly queries before web search.</li></ul>
+</section>
+
+<section id="rag"><h2>2. Traditional RAG: the baseline</h2>
+<div class="diagram"><svg viewBox="0 0 900 190" role="img" aria-label="Traditional RAG workflow"><defs><marker id="arr1" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#45658e"/></marker></defs>
+<g font-family="Arial" font-size="15" text-anchor="middle"><rect x="20" y="62" width="135" height="62" rx="10" fill="#eaf2ff" stroke="#6f95d3"/><text x="87" y="88" fill="#183b70">User query</text><text x="87" y="108" fill="#183b70" font-size="12">“What is ML?”</text>
+<rect x="205" y="62" width="145" height="62" rx="10" fill="#f0eaff" stroke="#9a82d0"/><text x="277" y="88" fill="#4b357e">Embedding</text><text x="277" y="108" fill="#4b357e" font-size="12">query → vector</text>
+<rect x="400" y="62" width="145" height="62" rx="10" fill="#e8f7ef" stroke="#64ae86"/><text x="472" y="88" fill="#155b3d">Vector store</text><text x="472" y="108" fill="#155b3d" font-size="12">similarity search</text>
+<rect x="595" y="62" width="125" height="62" rx="10" fill="#fff4d9" stroke="#d5a344"/><text x="657" y="88" fill="#805000">Retrieved</text><text x="657" y="108" fill="#805000" font-size="12">documents</text>
+<rect x="765" y="62" width="115" height="62" rx="10" fill="#eaf2ff" stroke="#6f95d3"/><text x="822" y="88" fill="#183b70">LLM</text><text x="822" y="108" fill="#183b70" font-size="12">answer</text>
+<path d="M155 93 H200 M350 93 H395 M545 93 H590 M720 93 H760" stroke="#45658e" stroke-width="2" fill="none" marker-end="url(#arr1)"/>
+<text x="450" y="30" fill="#526176" font-size="13">Retrieve top-k passages, add them to the prompt, generate</text></g></svg></div>
+<p>The three conceptual stages are:</p><ol><li><strong>Retrieval:</strong> embed the user query and find semantically similar document chunks.</li><li><strong>Augmentation:</strong> combine the query and retrieved text in the prompt.</li><li><strong>Generation:</strong> the LLM produces a response using the supplied context.</li></ol>
+<p>The transcript’s example pipeline loads three machine-learning/deep-learning books, splits them into chunks, embeds them, stores them in a FAISS vector store, and retrieves the top four documents for a query.</p>
+<table><thead><tr><th>Baseline setup described</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>Document loading</td><td>Load the source books as document objects.</td></tr><tr><td>Recursive character splitting</td><td>Chunk text; the example uses chunk size 900 and overlap 150.</td></tr><tr><td>Embeddings + FAISS</td><td>Convert chunks to vectors and store them for similarity search.</td></tr><tr><td>Retriever, top 4</td><td>Return the four most similar chunks for a query.</td></tr><tr><td>LLM generation</td><td>Prompt the model to answer from context, or say it does not know.</td></tr></tbody></table>
+</section>
+
+<section id="failure"><h2>3. Why traditional RAG can fail</h2>
+<h3>The “blind trust” problem</h3><p>A vector database generally returns the closest matches it can find; that does not guarantee the matches contain the answer. If the corpus lacks the right information, the retriever may return nearby but incorrect topics. The LLM may then answer from those passages or fall back on its learned, parametric knowledge.</p>
+<div class="diagram"><svg viewBox="0 0 850 210" role="img" aria-label="Traditional RAG failure"><defs><marker id="arr2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#8d6262"/></marker></defs><g font-family="Arial" text-anchor="middle">
+<rect x="15" y="55" width="180" height="65" rx="10" fill="#eaf2ff" stroke="#6f95d3"/><text x="105" y="81" font-size="14" fill="#183b70">Question: “What is</text><text x="105" y="101" font-size="14" fill="#183b70">an LLM?”</text>
+<rect x="245" y="55" width="180" height="65" rx="10" fill="#ffeded" stroke="#d98282"/><text x="335" y="81" font-size="14" fill="#8e2525">Retrieved: Random</text><text x="335" y="101" font-size="14" fill="#8e2525">Forest passages</text>
+<rect x="475" y="55" width="150" height="65" rx="10" fill="#fff4d9" stroke="#d5a344"/><text x="550" y="81" font-size="14" fill="#805000">LLM trusts</text><text x="550" y="101" font-size="14" fill="#805000">the context</text>
+<rect x="675" y="55" width="160" height="65" rx="10" fill="#ffeded" stroke="#d98282"/><text x="755" y="81" font-size="14" fill="#8e2525">Unsupported or</text><text x="755" y="101" font-size="14" fill="#8e2525">misleading answer</text>
+<path d="M195 88 H240 M425 88 H470 M625 88 H670" stroke="#8d6262" stroke-width="2" fill="none" marker-end="url(#arr2)"/>
+<text x="425" y="159" font-size="13" fill="#526176">The retriever found something similar—not necessarily evidence that answers the question.</text><text x="425" y="181" font-size="13" fill="#526176">In a business setting, an invented leave-policy answer could cause real harm.</text></g></svg></div>
+<p><strong>Transcript demonstration:</strong></p><ul>
+<li><strong>In-corpus query:</strong> “What is the bias-variance trade-off?” The retrieved passages discuss bias and variance, and the answer is well grounded.</li>
+<li><strong>Out-of-corpus query:</strong> “What are the top AI news from last month?” The books are old machine-learning texts and cannot reliably answer a recent-news question.</li>
+<li><strong>Missing-topic query:</strong> “What is a transformer in deep learning?” The retriever returns passages about MLPs, CNNs, regularization, and related topics—but not transformer architecture. The LLM still provides a plausible answer from its parametric knowledge.</li></ul>
+<div class="callout warn"><strong>Important distinction:</strong> an answer can be factually plausible while not being supported by the retrieved context. CRAG is designed to assess the evidence path, not merely whether the generated prose sounds confident.</div>
+</section>
+
+<section id="architecture"><h2>4. CRAG architecture and the three retrieval outcomes</h2>
+<p>CRAG inserts a <strong>retrieval evaluator</strong> between retrieval and generation. It examines the user query and retrieved documents, then determines whether the evidence is strong, weak, or mixed.</p>
+<div class="grid">
+<div class="card"><span class="tag" style="background:#e8f7ef;color:#18794e">CORRECT</span><h3>Strong evidence</h3><p>Use the relevant internal documents. Refine them to remove unrelated text, then generate.</p></div>
+<div class="card"><span class="tag" style="background:#ffeded;color:#a12a2a">INCORRECT</span><h3>Weak / irrelevant</h3><p>Rewrite the query if useful, search the web, then generate from external results.</p></div>
+<div class="card"><span class="tag" style="background:#fff4d9;color:#9a5b00">AMBIGUOUS</span><h3>Partially useful</h3><p>Keep useful internal documents, also search the web, merge the evidence, refine it, and generate.</p></div>
+</div>
+<div class="diagram"><svg viewBox="0 0 900 410" role="img" aria-label="CRAG routing architecture"><defs><marker id="arr3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#45658e"/></marker></defs><g font-family="Arial" text-anchor="middle">
+<rect x="350" y="15" width="200" height="42" rx="9" fill="#eaf2ff" stroke="#6f95d3"/><text x="450" y="41" font-size="14" fill="#183b70">User question</text>
+<rect x="350" y="85" width="200" height="42" rx="9" fill="#e8f7ef" stroke="#64ae86"/><text x="450" y="111" font-size="14" fill="#155b3d">Retrieve top-k docs</text>
+<rect x="330" y="155" width="240" height="48" rx="9" fill="#f0eaff" stroke="#9a82d0"/><text x="450" y="175" font-size="14" fill="#4b357e">Retrieval evaluator</text><text x="450" y="191" font-size="11" fill="#4b357e">score docs against query</text>
+<path d="M450 57 V80 M450 127 V150" stroke="#45658e" stroke-width="2" marker-end="url(#arr3)"/>
+<path d="M450 203 V224 H150 V246 M450 224 V246 M450 224 H750 V246" fill="none" stroke="#45658e" stroke-width="2" marker-end="url(#arr3)"/>
+<rect x="35" y="246" width="230" height="58" rx="9" fill="#e8f7ef" stroke="#64ae86"/><text x="150" y="270" font-size="14" fill="#155b3d">CORRECT</text><text x="150" y="289" font-size="12" fill="#155b3d">internal docs → refine</text>
+<rect x="335" y="246" width="230" height="58" rx="9" fill="#fff4d9" stroke="#d5a344"/><text x="450" y="270" font-size="14" fill="#805000">AMBIGUOUS</text><text x="450" y="289" font-size="12" fill="#805000">internal + web docs</text>
+<rect x="635" y="246" width="230" height="58" rx="9" fill="#ffeded" stroke="#d98282"/><text x="750" y="270" font-size="14" fill="#8e2525">INCORRECT</text><text x="750" y="289" font-size="12" fill="#8e2525">rewrite → web search</text>
+<path d="M150 304 V330 H450 V350 M450 304 V350 M750 304 V330 H450" fill="none" stroke="#45658e" stroke-width="2" marker-end="url(#arr3)"/>
+<rect x="330" y="350" width="240" height="45" rx="9" fill="#eaf2ff" stroke="#6f95d3"/><text x="450" y="378" font-size="14" fill="#183b70">Generate answer</text>
+</g></svg></div>
+<p class="caption">Conceptual view of the complete workflow. In the tutorial’s final graph, the ambiguous path is simplified: both INCORRECT and AMBIGUOUS route through query rewriting and web search; the refine node decides which evidence to use.</p>
+<h3>Internal and external knowledge</h3><ul>
+<li><strong>Internal knowledge:</strong> the refined content from the system’s own vector database.</li>
+<li><strong>External knowledge:</strong> documents returned by web search.</li>
+<li><strong>Generation:</strong> the LLM receives the question and the evidence selected for that route.</li></ul>
+</section>
+
+<section id="refinement"><h2>5. Iteration 1 — Knowledge refinement</h2>
+<p>Retrieved chunks are often imperfect because fixed-size chunking does not respect topic boundaries. One chunk may contain a useful explanation plus unrelated sentences from the next paragraph.</p>
+<h3>The three refinement steps</h3>
+<div class="step"><div class="num">1</div><div><strong>Decomposition</strong><br>Split each retrieved document into small sentence-level “strips” (often one sentence, sometimes a small group).</div></div>
+<div class="step"><div class="num">2</div><div><strong>Filtration</strong><br>For every strip, ask a relevance filter whether it directly helps answer the query. Keep useful strips; discard unrelated ones.</div></div>
+<div class="step"><div class="num">3</div><div><strong>Recomposition</strong><br>Join the kept strips to create a refined context for answer generation.</div></div>
+<div class="diagram"><svg viewBox="0 0 900 245" role="img" aria-label="Knowledge refinement"><defs><marker id="arr4" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#45658e"/></marker></defs><g font-family="Arial" text-anchor="middle">
+<rect x="20" y="45" width="200" height="120" rx="10" fill="#eaf2ff" stroke="#6f95d3"/><text x="120" y="68" font-size="14" fill="#183b70">Retrieved chunk</text><text x="120" y="94" font-size="12" fill="#183b70">S1: gradient descent</text><text x="120" y="114" font-size="12" fill="#183b70">S2: loss minimization</text><text x="120" y="134" font-size="12" fill="#8e2525">S3: CNNs / images</text><text x="120" y="153" font-size="12" fill="#8e2525">S4: unrelated topic</text>
+<rect x="270" y="45" width="170" height="120" rx="10" fill="#f0eaff" stroke="#9a82d0"/><text x="355" y="72" font-size="14" fill="#4b357e">Decompose</text><text x="355" y="99" font-size="12" fill="#4b357e">S1 • S2 • S3 • S4</text><text x="355" y="127" font-size="12" fill="#526176">Sentence strips</text>
+<rect x="490" y="45" width="170" height="120" rx="10" fill="#fff4d9" stroke="#d5a344"/><text x="575" y="72" font-size="14" fill="#805000">Filter</text><text x="575" y="101" font-size="12" fill="#18794e">✓ S1, S2 keep</text><text x="575" y="125" font-size="12" fill="#a12a2a">✕ S3, S4 discard</text>
+<rect x="710" y="45" width="170" height="120" rx="10" fill="#e8f7ef" stroke="#64ae86"/><text x="795" y="72" font-size="14" fill="#155b3d">Recompose</text><text x="795" y="103" font-size="12" fill="#155b3d">S1 + S2</text><text x="795" y="127" font-size="12" fill="#155b3d">Refined context</text>
+<path d="M220 105 H265 M440 105 H485 M660 105 H705" stroke="#45658e" stroke-width="2" marker-end="url(#arr4)"/><text x="450" y="207" font-size="13" fill="#526176">Only relevant strips are passed forward to generation.</text></g></svg></div>
+<p><strong>Example from the lesson:</strong> for “What is gradient descent?”, keep the sentences explaining gradient descent and loss minimization. Discard sentences about neural-network layers or convolutional networks if they do not help answer that query.</p>
+<p>The research paper described in the transcript used a fine-tuned T5-large model for filtering. The tutorial does not have access to that task-specific checkpoint, so it uses a chat LLM to return a structured true/false relevance judgment instead.</p>
+</section>
+
+<section id="evaluation"><h2>6. Iteration 2 — Retrieval evaluation and thresholding</h2>
+<p>The evaluator scores each retrieved document for its usefulness to the current query. The tutorial uses a 0–10 scale with two thresholds:</p>
+<table><thead><tr><th>Parameter</th><th>Example value</th><th>Meaning</th></tr></thead><tbody><tr><td>Lower threshold</td><td><strong>3</strong></td><td>Below this, a document is considered too weak to use.</td></tr><tr><td>Upper threshold</td><td><strong>7</strong></td><td>Above this, at least one document is strong enough for a CORRECT verdict.</td></tr></tbody></table>
+<div class="callout warn">The transcript describes scores inconsistently in one spoken example (for instance, “0.8” versus “8”). The intended scoring logic is a 0–10 scale: higher means more relevant, lower means less relevant.</div>
+<h3>Verdict rules</h3><ul>
+<li><strong>CORRECT:</strong> at least one document score is greater than the upper threshold (greater than 7 in the example).</li>
+<li><strong>INCORRECT:</strong> no document score is greater than the lower threshold (none is greater than 3).</li>
+<li><strong>AMBIGUOUS:</strong> neither condition above applies. Some evidence exists, but no document is strong enough to call retrieval fully correct.</li></ul>
+<table><thead><tr><th>Scores (example)</th><th>Verdict</th><th>Evidence used for generation</th></tr></thead><tbody>
+<tr><td>8, 4, 2</td><td><strong>CORRECT</strong></td><td>Keep scores greater than 3: 8 and 4. Exclude 2.</td></tr>
+<tr><td>1, 2</td><td><strong>INCORRECT</strong></td><td>Internal documents are insufficient; use web search.</td></tr>
+<tr><td>5, 4, 6</td><td><strong>AMBIGUOUS</strong></td><td>Keep sufficiently useful internal evidence and supplement with web results.</td></tr></tbody></table>
+<p><strong>Subtle but important:</strong> the verdict is based on the strongest score, but generation does not automatically use every retrieved document. The tutorial’s rule is to keep only documents whose score is greater than the lower threshold.</p>
+</section>
+
+<section id="web"><h2>7. Iteration 3 — External web search with Tavily</h2>
+<p>When retrieval is INCORRECT, the system cannot rely on the internal corpus. The tutorial adds a web-search node using Tavily.</p>
+<div class="step"><div class="num">1</div><div>Receive the query (later, the rewritten query) and call the Tavily search API.</div></div>
+<div class="step"><div class="num">2</div><div>Extract each result’s title, URL, and content.</div></div>
+<div class="step"><div class="num">3</div><div>Convert results into document objects and store them in the graph state.</div></div>
+<div class="step"><div class="num">4</div><div>Refine the selected context and generate an answer grounded in the web results.</div></div>
+<div class="callout danger"><strong>Production note:</strong> web search adds freshness, not automatic truth. Treat external pages as untrusted evidence, inspect source quality, and retain citations/URLs in the answer when possible.</div>
+</section>
+
+<section id="rewrite"><h2>8. Iteration 4 — Query rewriting</h2>
+<p>User questions are optimized for conversation, not necessarily for search engines. A vague question can produce weaker web results. A query-rewriting node uses an LLM to convert the original question into a short, specific search query.</p>
+<table><thead><tr><th>Original user question</th><th>Rewritten search query</th></tr></thead><tbody><tr><td>“Who was the screenwriter for Death of a Batman?”</td><td>“Death of a Batman screenwriter Wikipedia”</td></tr><tr><td>“Recent AI news”</td><td>“Recent AI news last 30 days”</td></tr></tbody></table>
+<p>The rewrite prompt in the transcript tells the model to keep the query short, add a time constraint when recency is implied, and return a structured JSON object containing one query. The Tavily node searches using this rewritten query rather than the original user wording.</p>
+<div class="callout"><strong>Flow change:</strong> INCORRECT / AMBIGUOUS → Rewrite query → Tavily search → Refine context → Generate.</div>
+</section>
+
+<section id="ambiguous"><h2>9. Handling AMBIGUOUS retrieval: merge internal and external evidence</h2>
+<p>An ambiguous result means internal passages are not strong enough to answer the full question alone, but they are not useless. The system should not throw away that partial evidence.</p>
+<ul><li>Retain internal documents with scores greater than the lower threshold.</li><li>Rewrite the query and retrieve external web documents.</li><li>Combine the selected internal documents and web documents.</li><li>Run knowledge refinement over the combined material.</li><li>Generate using the resulting refined context.</li></ul>
+<p>In the final tutorial graph, this is simplified into two routing branches: CORRECT goes directly to refinement; both INCORRECT and AMBIGUOUS go to query rewriting and web search. The refine node checks the verdict and chooses internal docs, web docs, or both.</p>
+</section>
+
+<section id="code"><h2>10. Code patterns (illustrative implementation)</h2>
+<p class="small">These snippets capture the logic explained in the transcript; they are teaching patterns, not a guaranteed drop-in copy of the instructor’s complete project. Exact imports and model/API versions may need adjustment. Configure API keys in environment variables; never hard-code secrets.</p>
+<h3>10.1 Define graph state</h3>
+<pre><code>from typing import TypedDict, Literal
+from langchain_core.documents import Document
+
+class CRAGState(TypedDict, total=False):
+    question: str
+    docs: list[Document]          # internal retrieval results
+    scores: list[float]
+    verdict: Literal["correct", "incorrect", "ambiguous"]
+    kept_docs: list[Document]
+    web_query: str
+    web_docs: list[Document]
+    refined_context: str
+    answer: str</code></pre>
+<h3>10.2 Classify retrieval scores</h3>
+<pre><code>LOWER_THRESHOLD = 3
+UPPER_THRESHOLD = 7
+
+def classify_retrieval(scores: list[float]) -> str:
+    # No evidence at all: treat as insufficient.
+    if not scores:
+        return "incorrect"
+
+    if any(score > UPPER_THRESHOLD for score in scores):
+        return "correct"
+
+    if all(score <= LOWER_THRESHOLD for score in scores):
+        return "incorrect"
+
+    return "ambiguous"</code></pre>
+<div class="callout warn">Threshold comparisons follow the lesson’s “greater than” wording: > 7 means CORRECT; if no score is > 3, INCORRECT; otherwise AMBIGUOUS. If your evaluator returns scores on a 0–1 scale, change the thresholds accordingly—do not mix scales.</div>
+<h3>10.3 Keep only documents above the lower threshold</h3>
+<pre><code>def select_useful_docs(docs, scores):
+    return [
+        doc for doc, score in zip(docs, scores)
+        if score > LOWER_THRESHOLD
+    ]</code></pre>
+<h3>10.4 Decompose text into sentence strips</h3>
+<pre><code>import re
+
+def decompose_to_sentences(text: str) -> list[str]:
+    # Simple demonstration splitter. For robust multilingual/PDF text,
+    # use a sentence tokenizer suited to your documents.
+    parts = re.split(r"(?&lt;=[.!?])\s+", text.strip())
+    return [part.strip() for part in parts if part.strip()]</code></pre>
+<h3>10.5 Filter strips with a structured LLM response</h3>
+<pre><code>from pydantic import BaseModel, Field
+
+class StripVerdict(BaseModel):
+    keep: bool = Field(
+        description="True only when this strip directly helps answer the question"
+    )
+
+# Pseudocode: adapt to the structured-output API of your chat model.
+filter_chain = llm.with_structured_output(StripVerdict)
+
+def refine_text(question: str, document_text: str) -> str:
+    strips = decompose_to_sentences(document_text)
+    kept = []
+
+    for strip in strips:
+        verdict = filter_chain.invoke(
+            f"""Question: {question}
+Sentence strip: {strip}
+
+Keep only if the strip directly helps answer the question."""
+        )
+        if verdict.keep:
+            kept.append(strip)
+
+    return " ".join(kept)</code></pre>
+<h3>10.6 Rewrite a question before web search</h3>
+<pre><code>class SearchQuery(BaseModel):
+    query: str
+
+# Pseudocode: structured LLM output
+rewrite_chain = llm.with_structured_output(SearchQuery)
+
+def rewrite_query(question: str) -> str:
+    result = rewrite_chain.invoke(
+        f"""You compose web-search queries.
+Keep the query short and specific.
+If the question implies recency, include a suitable time window.
+Do not answer the question. Return one search query.
+Question: {question}"""
+    )
+    return result.query</code></pre>
+<h3>10.7 Routing and context selection</h3>
+<pre><code>def route_after_evaluation(state: CRAGState) -> str:
+    if state["verdict"] == "correct":
+        return "refine"
+    # Both weak and mixed retrieval need external evidence.
+    return "rewrite_query"
+
+def choose_documents_for_refinement(state: CRAGState):
+    verdict = state["verdict"]
+    if verdict == "correct":
+        return state.get("kept_docs", [])
+    if verdict == "incorrect":
+        return state.get("web_docs", [])
+    # ambiguous: combine useful internal evidence + web evidence
+    return state.get("kept_docs", []) + state.get("web_docs", [])</code></pre>
+<h3>10.8 Overall graph shape</h3>
+<pre><code># Conceptual LangGraph wiring
+# START -> retrieve -> evaluate
+# evaluate -- correct --> refine -> generate -> END
+# evaluate -- incorrect/ambiguous --> rewrite_query
+# rewrite_query -> web_search -> refine -> generate -> END
+#
+# Nodes should return partial state updates, e.g.:
+# {"docs": retrieved_docs}
+# {"verdict": "ambiguous", "scores": scores}
+# {"web_query": rewritten_query}
+# {"web_docs": web_documents}
+# {"refined_context": refined_text}
+# {"answer": generated_answer}</code></pre>
+</section>
+
+<section id="limits"><h2>11. What the tutorial implementation does—and does not—replicate</h2>
+<table><thead><tr><th>Aspect</th><th>As described in the lesson</th></tr></thead><tbody>
+<tr><td>Retrieval store</td><td>FAISS vector store over chunks from three ML/deep-learning books.</td></tr>
+<tr><td>Initial retriever</td><td>Semantic similarity search, top four documents.</td></tr>
+<tr><td>Knowledge refinement</td><td>Sentence-level decomposition and LLM-based keep/discard filtering.</td></tr>
+<tr><td>Retrieval evaluation</td><td>LLM produces relevance scores; lower and upper thresholds create verdicts.</td></tr>
+<tr><td>External search</td><td>Tavily search, with title, URL, and content extracted into documents.</td></tr>
+<tr><td>Query rewriting</td><td>LLM rewrites vague or underspecified questions for search.</td></tr>
+<tr><td>Ambiguous route</td><td>Combines selected internal documents with web documents before refinement.</td></tr>
+<tr><td>Difference from original paper</td><td>The paper used a task-fine-tuned T5-large model for refinement/evaluation. The tutorial substitutes a chat LLM because the fine-tuned checkpoint was not available to the instructor.</td></tr>
+</tbody></table>
+<div class="callout warn"><strong>Practical caution:</strong> LLM-generated scores and keep/discard decisions are themselves fallible. For production, test threshold choices against labelled examples, handle empty results and API errors, record source URLs, and evaluate faithfulness—not just answer fluency.</div>
+</section>
+
+<section id="review"><h2>12. Revision checklist</h2>
+<ul>
+<li>Traditional RAG has retrieval, augmentation, and generation.</li>
+<li>Top-k similarity does not guarantee evidence relevance.</li>
+<li>CRAG evaluates retrieved documents before trusting them.</li>
+<li>Knowledge refinement = decomposition → filtration → recomposition.</li>
+<li>In the lesson’s example: lower threshold = 3; upper threshold = 7.</li>
+<li>CORRECT: at least one score is greater than 7.</li>
+<li>INCORRECT: no score is greater than 3.</li>
+<li>AMBIGUOUS: some useful evidence exists, but no score exceeds 7.</li>
+<li>Only documents scoring greater than 3 are retained for internal evidence.</li>
+<li>INCORRECT uses external search; AMBIGUOUS merges internal and external evidence.</li>
+<li>Query rewriting makes a vague user question more useful to a search engine.</li>
+<li>The final graph can route CORRECT directly to refinement and route other verdicts through rewrite + web search.</li>
+</ul>
+<h3>Self-test</h3>
+<details><summary>1. Why can traditional RAG hallucinate even when retrieval succeeds?</summary><p>Retrieval may return loosely related documents. If the model treats them as trustworthy evidence, it can produce an unsupported answer or fall back on parametric knowledge.</p></details>
+<details><summary>2. What are the three knowledge-refinement steps?</summary><p>Decomposition into sentence strips, filtration by relevance to the query, and recomposition of the kept strips.</p></details>
+<details><summary>3. Scores are 8, 4, and 2. What is the verdict and which documents are retained?</summary><p>CORRECT, because one score is greater than 7. Retain scores greater than 3: the documents scored 8 and 4; exclude the document scored 2.</p></details>
+<details><summary>4. What should happen when internal evidence is ambiguous?</summary><p>Keep useful internal evidence, retrieve external web evidence, merge both sources, refine the combined context, then generate.</p></details>
+<details><summary>5. Why rewrite a query before web search?</summary><p>It can add missing keywords or time constraints and make a vague conversational question more explicit for a search engine.</p></details>
+</section>
+</main>
+<footer class="footer">Prepared as standalone HTML study notes from the supplied transcript. Embedded SVG diagrams and code snippets work offline; external APIs and model credentials are not included.</footer>
+</body></html>
