@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building a RAG Chatbot with LangGraph — Study Notes</title>
+<style>
+:root{--ink:#172033;--muted:#5b6475;--paper:#fff;--bg:#f3f6fb;--line:#dce3ee;--accent:#4f46e5;--accent2:#0f766e;--soft:#eef2ff;--code:#101827;--gold:#f4b942}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.hero{background:linear-gradient(130deg,#111827,#263c69 62%,#3c4aa0);color:white;padding:64px 22px 54px}.hero-inner{max-width:1080px;margin:auto}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:.76rem;font-weight:800;color:#b9c7ff}.hero h1{font-size:clamp(2.2rem,5vw,4rem);line-height:1.08;max-width:850px;margin:14px 0}.hero p{max-width:760px;color:#e1e7f5;font-size:1.12rem}.meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.pill{border:1px solid #66749b;border-radius:999px;padding:5px 12px;font-size:.85rem;color:#f4f6ff}
+.layout{max-width:1180px;margin:32px auto;padding:0 20px;display:grid;grid-template-columns:255px minmax(0,1fr);gap:28px}.toc{align-self:start;position:sticky;top:18px;background:white;border:1px solid var(--line);border-radius:16px;padding:20px;max-height:calc(100vh - 36px);overflow:auto}.toc h2{font-size:.95rem;margin:0 0 10px}.toc a{display:block;text-decoration:none;color:#46516a;font-size:.88rem;padding:5px 0;line-height:1.4}.toc a:hover{color:var(--accent)}main{min-width:0}.section{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:clamp(20px,4vw,38px);margin-bottom:22px;box-shadow:0 8px 28px #17203308}.section h2{font-size:1.75rem;line-height:1.25;margin:0 0 14px}.section h3{font-size:1.2rem;margin:26px 0 8px}.section h4{margin:18px 0 6px}.lead{font-size:1.08rem;color:#354158}.muted,.caption{color:var(--muted)}.callout{border-left:4px solid var(--accent);background:var(--soft);padding:14px 17px;border-radius:0 10px 10px 0;margin:18px 0}.callout.green{border-color:var(--accent2);background:#ecfdf5}.callout.amber{border-color:#d97706;background:#fffbeb}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}.mini{border:1px solid var(--line);border-radius:13px;padding:15px;background:#fbfcff}.mini strong{display:block;margin-bottom:5px}.number{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--soft);color:var(--accent);font-weight:800;margin-bottom:7px}.diagram{margin:22px 0;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fbfcff;overflow:auto}.diagram svg{display:block;width:100%;height:auto;min-width:540px}.caption{font-size:.88rem;margin-top:8px}pre{background:var(--code);color:#e7edf7;padding:18px;border-radius:12px;overflow:auto;font: .88rem/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;tab-size:4}code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}p code,li code{background:#eef1f7;color:#26324a;padding:.12em .35em;border-radius:5px}pre code{background:none;color:inherit;padding:0}.tag{font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--accent2)}table{border-collapse:collapse;width:100%;margin:16px 0;font-size:.94rem}th,td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#f3f5fa}ol li,ul li{margin:.35em 0}.flow{counter-reset:step;list-style:none;padding:0}.flow li{counter-increment:step;position:relative;padding:0 0 18px 48px}.flow li:before{content:counter(step);position:absolute;left:0;top:0;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:white;font-weight:800}.flow li:not(:last-child):after{content:"";position:absolute;left:15px;top:34px;height:calc(100% - 30px);border-left:2px solid #c8d0e2}.footer{max-width:1080px;margin:0 auto 40px;padding:0 20px;color:var(--muted);font-size:.9rem}.toplink{float:right;font-size:.85rem;text-decoration:none;color:var(--accent)}@media(max-width:850px){.layout{grid-template-columns:1fr}.toc{position:relative;top:0;max-height:none}.grid{grid-template-columns:1fr}.hero{padding-top:42px}}@media print{body{background:white}.hero{padding:30px}.layout{display:block;margin:0;max-width:none}.toc{display:none}.section{box-shadow:none;break-inside:avoid;margin:12px 0}.diagram{break-inside:avoid}a{color:inherit}}
+</style>
+</head>
+<body>
+<header class="hero" id="top">
+ <div class="hero-inner">
+  <div class="eyebrow">Study guide · Agentic AI with LangGraph</div>
+  <h1>Building a RAG Chatbot with LangGraph</h1>
+  <p>From a basic chatbot to a multi-utility assistant that can answer questions from uploaded PDFs while still using ordinary conversation and tools.</p>
+  <div class="meta"><span class="pill">Source-based notes</span><span class="pill">Concepts + architecture + code</span><span class="pill">Approx. 37-minute lesson</span></div>
+ </div>
+</header>
+<div class="layout">
+<nav class="toc" aria-label="Table of contents">
+ <h2>On this page</h2>
+ <a href="#overview">1. Overview and goal</a><a href="#plan">2. Plan of action</a><a href="#why">3. Why RAG?</a><a href="#principle">4. Core principle</a><a href="#architecture">5. RAG architecture</a><a href="#pipeline">6. Indexing pipeline</a><a href="#retrieval">7. Retrieval and answer flow</a><a href="#langgraph">8. LangGraph integration</a><a href="#code">9. Illustrative code</a><a href="#project">10. Existing chatbot integration</a><a href="#tracing">11. Observability and tracing</a><a href="#checklist">12. Checklist and recap</a><a href="#glossary">13. Glossary</a>
+</nav>
+<main>
+<section class="section" id="overview">
+ <span class="tag">Lesson overview</span><h2>1. What are we building?</h2>
+ <p class="lead">The lesson extends an existing LangGraph chatbot into a <strong>multi-utility chatbot</strong>. Users can chat normally, call existing tools, and upload a document—such as a PDF or e-book—to ask questions grounded in that document.</p>
+ <p>The project is incremental: each new capability teaches a new LangGraph concept. The playlist has already covered the basic chatbot, UI, streaming, persistence/resuming chats, observability, tools, and MCP. This lesson adds Retrieval-Augmented Generation (RAG).</p>
+ <div class="grid">
+  <div class="mini"><div class="number">01</div><strong>Normal chat</strong><span class="muted">Handle general conversational messages.</span></div>
+  <div class="mini"><div class="number">02</div><strong>Tool use</strong><span class="muted">Use tools such as search, calculator, or stock-price lookup when appropriate.</span></div>
+  <div class="mini"><div class="number">03</div><strong>Document Q&A</strong><span class="muted">Retrieve relevant passages from uploaded PDFs and answer from them.</span></div>
+ </div>
+ <div class="callout green"><strong>Learning outcome:</strong> understand RAG at a high level, implement a standalone RAG tool in a fresh LangGraph example, then integrate it into the existing chatbot project.</div>
+</section>
+<section class="section" id="plan">
+ <span class="tag">Roadmap</span><h2>2. Plan of action: three parts</h2>
+ <ol class="flow">
+  <li><strong>Quick RAG recap.</strong> Review why RAG is needed, its core principle, and the high-level architecture. The lesson recommends a separate, more detailed RAG lesson for learners who need deeper theory.</li>
+  <li><strong>Build a standalone RAG chatbot.</strong> Start with a clean notebook and implement document loading, chunking, embeddings, vector storage, retrieval, and a RAG tool. Connect the tool to a LangGraph chat node.</li>
+  <li><strong>Integrate into the existing project.</strong> Add PDF upload to the Streamlit sidebar, implement an ingestion function, register the RAG tool alongside existing tools, and make small frontend/thread-handling changes.</li>
+ </ol>
+ <p>The intermediate standalone implementation is intentional: adding RAG directly to a larger existing codebase could obscure the core idea. Learning the small version first makes integration easier to understand.</p>
+</section>
+<section class="section" id="why">
+ <span class="tag">Why RAG?</span><h2>3. Three problems RAG helps address</h2>
+ <h3>3.1 Outdated or missing knowledge</h3><p>A model's built-in knowledge comes from its training. It may not know newer facts or information that was never included in training. A system can fetch relevant external information and pass it to the model as context. The transcript describes web search as one familiar example of this general retrieval pattern.</p>
+ <h3>3.2 Private or organization-specific information</h3><p>A general model has not automatically seen your personal expense spreadsheet, internal company reports, or private project documents. RAG lets an application retrieve relevant material from a data source you provide and use it to answer questions about that material.</p>
+ <h3>3.3 Hallucinations and unsupported answers</h3><p>Language models can confidently produce incorrect claims, such as references or links that do not exist. RAG can reduce this risk by grounding the response in retrieved passages and instructing the model to answer from the supplied evidence.</p>
+ <div class="callout amber"><strong>Important limitation:</strong> RAG does not guarantee truth, privacy, or zero hallucinations. Retrieval can miss relevant material, documents can contain errors, and the model can still misinterpret context. Use source citations, access controls, and validation when the application requires them.</div>
+ <table><thead><tr><th>Problem</th><th>What RAG adds</th><th>Example</th></tr></thead><tbody>
+ <tr><td>Knowledge gap</td><td>Relevant retrieved information</td><td>Ask about information in a recently updated handbook.</td></tr>
+ <tr><td>Private data gap</td><td>Context from authorized documents</td><td>Ask about a company's uploaded financial report.</td></tr>
+ <tr><td>Unsupported generation</td><td>Evidence the answer can be grounded in</td><td>Ask a question about a specific chapter of an ML book.</td></tr>
+ </tbody></table>
+</section>
+<section class="section" id="principle">
+ <span class="tag">Core concept</span><h2>4. RAG's principle: in-context learning</h2>
+ <p>At a high level, RAG uses <strong>in-context information</strong>: the application sends the user's question together with relevant text, and the model uses that context to form its answer. The model's internal learned knowledge is often called <em>parametric knowledge</em>; retrieved passages provide external context for the current request.</p>
+ <div class="diagram">
+ <svg viewBox="0 0 900 250" role="img" aria-label="Comparison of ordinary language model prompting and RAG prompting">
+ <defs><marker id="arrow1" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#667085"/></marker></defs>
+ <rect x="15" y="20" width="400" height="210" rx="16" fill="#f2f4f8" stroke="#d2d9e5"/><text x="215" y="48" text-anchor="middle" font-size="17" font-weight="700" fill="#172033">Ordinary prompt</text>
+ <rect x="45" y="78" width="140" height="58" rx="10" fill="#fff" stroke="#aeb9cb"/><text x="115" y="102" text-anchor="middle" font-size="14" fill="#172033">User question</text><text x="115" y="120" text-anchor="middle" font-size="12" fill="#5b6475">Prompt</text>
+ <path d="M185 107 H235" stroke="#667085" stroke-width="2" marker-end="url(#arrow1)"/><rect x="240" y="78" width="145" height="58" rx="10" fill="#e0e7ff" stroke="#818cf8"/><text x="312" y="102" text-anchor="middle" font-size="14" fill="#172033">LLM</text><text x="312" y="120" text-anchor="middle" font-size="12" fill="#5b6475">Learned knowledge</text>
+ <text x="215" y="178" text-anchor="middle" font-size="13" fill="#5b6475">May lack private or recent facts</text>
+ <rect x="435" y="20" width="450" height="210" rx="16" fill="#effcf7" stroke="#a7ddca"/><text x="660" y="48" text-anchor="middle" font-size="17" font-weight="700" fill="#172033">RAG prompt</text>
+ <rect x="455" y="75" width="120" height="58" rx="10" fill="#fff" stroke="#aeb9cb"/><text x="515" y="99" text-anchor="middle" font-size="13" fill="#172033">Question</text><text x="515" y="117" text-anchor="middle" font-size="11" fill="#5b6475">+ retrieved text</text>
+ <path d="M575 104 H620" stroke="#667085" stroke-width="2" marker-end="url(#arrow1)"/><rect x="625" y="75" width="105" height="58" rx="10" fill="#d1fae5" stroke="#34a884"/><text x="677" y="99" text-anchor="middle" font-size="13" fill="#172033">LLM</text><text x="677" y="117" text-anchor="middle" font-size="11" fill="#5b6475">Generate</text>
+ <path d="M730 104 H760" stroke="#667085" stroke-width="2" marker-end="url(#arrow1)"/><rect x="765" y="75" width="100" height="58" rx="10" fill="#fff" stroke="#aeb9cb"/><text x="815" y="99" text-anchor="middle" font-size="13" fill="#172033">Answer</text><text x="815" y="117" text-anchor="middle" font-size="11" fill="#5b6475">Grounded</text>
+ <text x="660" y="178" text-anchor="middle" font-size="13" fill="#356b5a">Application selects useful evidence first</text>
+ </svg><div class="caption">Conceptual illustration: RAG adds relevant retrieved context to the prompt rather than relying only on the model's built-in knowledge.</div>
+ </div>
+ <h3>Why not paste the whole document?</h3><p>Models have a finite context window, measured in tokens. A short spreadsheet may fit, but dozens of e-books or a codebase containing thousands of files may exceed that limit. Even if the full content fits, irrelevant material can distract from the question.</p>
+ <p>Instead, split the source into smaller chunks, find the chunks most relevant to the question, and include only those chunks as context. For a question such as “What is machine learning?”, the system should retrieve the sections that discuss machine learning rather than sending every page of a large book.</p>
+</section>
+<section class="section" id="architecture">
+ <span class="tag">Architecture</span><h2>5. RAG architecture at a glance</h2>
+ <p>RAG has two broad phases: <strong>indexing</strong> (prepare and store the documents) and <strong>question answering</strong> (retrieve relevant chunks and generate a response).</p>
+ <div class="diagram">
+ <svg viewBox="0 0 940 430" role="img" aria-label="RAG indexing and retrieval architecture diagram">
+ <defs><marker id="arrow2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#667085"/></marker></defs>
+ <text x="24" y="28" font-size="16" font-weight="800" fill="#4f46e5">PHASE A · INDEXING (usually performed at upload time)</text>
+ <g font-size="13" text-anchor="middle" fill="#172033">
+ <rect x="20" y="50" width="140" height="62" rx="10" fill="#eef2ff" stroke="#a5b4fc"/><text x="90" y="76">PDF / document</text><text x="90" y="95" font-size="11">Source</text>
+ <rect x="195" y="50" width="140" height="62" rx="10" fill="#eef2ff" stroke="#a5b4fc"/><text x="265" y="76">Load + split</text><text x="265" y="95" font-size="11">Text chunks</text>
+ <rect x="370" y="50" width="140" height="62" rx="10" fill="#eef2ff" stroke="#a5b4fc"/><text x="440" y="76">Embedding model</text><text x="440" y="95" font-size="11">Vectors</text>
+ <rect x="545" y="50" width="170" height="62" rx="10" fill="#d1fae5" stroke="#6cc6a8"/><text x="630" y="76">Vector store</text><text x="630" y="95" font-size="11">Vectors + text + metadata</text>
+ </g>
+ <path d="M160 81 H190 M335 81 H365 M510 81 H540" stroke="#667085" stroke-width="2" marker-end="url(#arrow2)"/>
+ <path d="M630 112 V142" stroke="#667085" stroke-width="2" stroke-dasharray="4 4"/>
+ <text x="24" y="176" font-size="16" font-weight="800" fill="#0f766e">PHASE B · QUESTION ANSWERING (performed per query)</text>
+ <g font-size="13" text-anchor="middle" fill="#172033">
+ <rect x="20" y="198" width="135" height="64" rx="10" fill="#fff" stroke="#aeb9cb"/><text x="87" y="225">User question</text><text x="87" y="244" font-size="11">Query</text>
+ <rect x="190" y="198" width="145" height="64" rx="10" fill="#fff" stroke="#aeb9cb"/><text x="262" y="225">Embed query</text><text x="262" y="244" font-size="11">Query vector</text>
+ <rect x="370" y="198" width="150" height="64" rx="10" fill="#d1fae5" stroke="#6cc6a8"/><text x="445" y="225">Retriever</text><text x="445" y="244" font-size="11">Similarity search</text>
+ <rect x="555" y="198" width="155" height="64" rx="10" fill="#fff7df" stroke="#e5bd58"/><text x="632" y="225">Top-k chunks</text><text x="632" y="244" font-size="11">Text + metadata</text>
+ <rect x="745" y="198" width="170" height="64" rx="10" fill="#e0e7ff" stroke="#818cf8"/><text x="830" y="225">Prompt + LLM</text><text x="830" y="244" font-size="11">Generate answer</text>
+ </g>
+ <path d="M155 230 H185 M335 230 H365 M520 230 H550 M710 230 H740" stroke="#667085" stroke-width="2" marker-end="url(#arrow2)"/>
+ <path d="M445 198 V160 H630 V117" fill="none" stroke="#0f766e" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrow2)"/>
+ <rect x="745" y="305" width="170" height="54" rx="10" fill="#fff" stroke="#aeb9cb"/><text x="830" y="328" text-anchor="middle" font-size="13" fill="#172033">Final response</text><text x="830" y="346" text-anchor="middle" font-size="11" fill="#5b6475">Based on context</text>
+ <path d="M830 262 V300" stroke="#667085" stroke-width="2" marker-end="url(#arrow2)"/>
+ <text x="24" y="400" font-size="12" fill="#5b6475">Embedding = numeric representation of semantic meaning · Top-k = the selected number of closest matches</text>
+ </svg><div class="caption">The vector store retains the chunk text and associated metadata along with its embedding, so retrieved vectors can be mapped back to readable source content.</div>
+ </div>
+ <ol><li><strong>Load:</strong> read the source document (for example, a PDF).</li><li><strong>Split:</strong> create smaller text chunks, often with some overlap.</li><li><strong>Embed:</strong> convert each chunk into a numeric vector that represents semantic meaning.</li><li><strong>Store:</strong> save vectors and their associated text/metadata in a vector store such as FAISS or Chroma.</li><li><strong>Retrieve:</strong> embed the user's question and search for semantically similar chunks.</li><li><strong>Generate:</strong> send the question and retrieved context to the LLM and produce an answer.</li></ol>
+</section>
+<section class="section" id="pipeline">
+ <span class="tag">Build phase 1</span><h2>6. Preparing documents: loading, chunking, embedding, storing</h2>
+ <h3>6.1 Load the PDF</h3><p>The lesson uses a machine-learning book PDF (called “Intro to ML” in the walkthrough). A PDF loader reads the file and returns document objects. A document object typically includes page text and metadata.</p>
+ <h3>6.2 Split into chunks</h3><p>A recursive character text splitter divides large documents into manageable chunks. Two key settings are:</p>
+ <ul><li><strong>Chunk size:</strong> the approximate maximum size of each text chunk.</li><li><strong>Chunk overlap:</strong> repeated text shared between adjacent chunks to help preserve continuity when a concept crosses a boundary.</li></ul>
+ <p>Too-small chunks may lose context; too-large chunks can retrieve irrelevant content or consume too much context window. Chunking should be tuned for the document type and questions.</p>
+ <h3>6.3 Generate embeddings</h3><p>The lesson names OpenAI's <code>text-embedding-3-small</code> as its embedding model. Each chunk is mapped to a vector. Similar meanings tend to be near each other in the embedding space, even if they use different words.</p>
+ <h3>6.4 Save in a vector store</h3><p>The example uses FAISS. The vector store supports similarity search and associates vectors with the text chunks they represent. The lesson then creates a retriever configured to return the four most similar chunks (top-k = 4).</p>
+ <div class="callout"><strong>Remember:</strong> the embedding model and the LLM do different jobs. The embedding model maps text to vectors for retrieval; the LLM reads the question and retrieved text to compose the answer.</div>
+</section>
+<section class="section" id="retrieval">
+ <span class="tag">Build phase 2</span><h2>7. How a question becomes an answer</h2>
+ <ol class="flow">
+  <li><strong>User asks a question.</strong> Example from the lesson: “What is a decision tree?”</li>
+  <li><strong>Retriever embeds the question.</strong> It creates a query vector using the embedding model.</li>
+  <li><strong>Similarity search runs.</strong> The vector store compares the query with stored vectors and selects the closest matches.</li>
+  <li><strong>Relevant text is extracted.</strong> Each retrieved document may contain an ID, page content, and metadata. The tool gathers the page content and metadata from the top results.</li>
+  <li><strong>Question + context go to the LLM.</strong> The prompt includes the original query and the retrieved passages. The model generates an answer grounded in that material.</li>
+ </ol>
+ <h3>What is in a retrieved document object?</h3>
+ <table><thead><tr><th>Field</th><th>Purpose</th></tr></thead><tbody><tr><td><code>page_content</code></td><td>The actual text from the chunk; usually the main evidence for the answer.</td></tr><tr><td><code>metadata</code></td><td>Additional information such as page number, source file, or author, when available.</td></tr><tr><td><code>id</code></td><td>An identifier for the stored document/chunk, depending on the implementation.</td></tr></tbody></table>
+ <p>The transcript demonstrates questions about finding an ideal value of <em>k</em> in k-nearest neighbors and splitting a node in a decision tree. The sample runs take roughly 8–9 seconds in that demo, illustrating that retrieval and model calls add latency; actual timing depends on the model, provider, document size, and network.</p>
+</section>
+<section class="section" id="langgraph">
+ <span class="tag">Agentic pattern</span><h2>8. Integrating RAG as a LangGraph tool</h2>
+ <p>The central implementation choice in the lesson is to <strong>wrap the retriever in a tool</strong>. This keeps RAG conceptually similar to the search, calculator, and stock-price tools already used in the chatbot.</p>
+ <div class="diagram">
+ <svg viewBox="0 0 900 320" role="img" aria-label="LangGraph chat node and tool node flow">
+ <defs><marker id="arrow3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#667085"/></marker></defs>
+ <rect x="25" y="118" width="120" height="60" rx="12" fill="#f3f4f6" stroke="#c6cedb"/><text x="85" y="143" text-anchor="middle" font-size="14" fill="#172033">START</text><text x="85" y="161" text-anchor="middle" font-size="11" fill="#5b6475">Incoming message</text>
+ <rect x="205" y="96" width="175" height="105" rx="14" fill="#e0e7ff" stroke="#818cf8" stroke-width="1.5"/><text x="292" y="127" text-anchor="middle" font-size="16" font-weight="700" fill="#172033">Chat node</text><text x="292" y="149" text-anchor="middle" font-size="12" fill="#374151">LLM chooses:</text><text x="292" y="168" text-anchor="middle" font-size="12" fill="#374151">answer or call tool</text>
+ <rect x="500" y="96" width="175" height="105" rx="14" fill="#d1fae5" stroke="#34a884" stroke-width="1.5"/><text x="587" y="127" text-anchor="middle" font-size="16" font-weight="700" fill="#172033">Tool node</text><text x="587" y="149" text-anchor="middle" font-size="12" fill="#374151">Runs selected tool</text><text x="587" y="168" text-anchor="middle" font-size="12" fill="#374151">RAG retrieves chunks</text>
+ <rect x="745" y="118" width="130" height="60" rx="12" fill="#f3f4f6" stroke="#c6cedb"/><text x="810" y="143" text-anchor="middle" font-size="14" fill="#172033">END</text><text x="810" y="161" text-anchor="middle" font-size="11" fill="#5b6475">Final response</text>
+ <path d="M145 148 H200" stroke="#667085" stroke-width="2" marker-end="url(#arrow3)"/><path d="M380 120 C430 60 455 60 500 120" fill="none" stroke="#667085" stroke-width="2" marker-end="url(#arrow3)"/><text x="440" y="58" text-anchor="middle" font-size="12" fill="#5b6475">Tool needed</text>
+ <path d="M500 180 C455 245 430 245 380 180" fill="none" stroke="#667085" stroke-width="2" marker-end="url(#arrow3)"/><text x="440" y="266" text-anchor="middle" font-size="12" fill="#5b6475">Tool result / retrieved context</text>
+ <path d="M380 148 H740" stroke="#667085" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#arrow3)"/><text x="560" y="87" text-anchor="middle" font-size="11" fill="#5b6475">If no tool is needed, answer directly</text>
+ </svg><div class="caption">Simplified control flow. A real graph uses conditional routing to decide whether the assistant's message contains a tool call.</div>
+ </div>
+ <h3>Node responsibilities</h3><ul><li><strong>Chat node:</strong> invokes the LLM with the conversation and any tool results. It decides whether to answer directly or request a tool.</li><li><strong>Tool node:</strong> executes the selected tool, including the RAG tool when requested.</li><li><strong>Conditional edge:</strong> routes to the tool node when a tool call is present; otherwise routes to the end.</li><li><strong>Return edge:</strong> after the tool result is added to the conversation, control returns to the chat node so the LLM can write the final response.</li></ul>
+ <p>The RAG tool's description is important: it should tell the LLM when the tool is appropriate, for example, when a user asks a question about an uploaded document. If the user says “hello,” the model should not need to retrieve document chunks.</p>
+</section>
+<section class="section" id="code">
+ <span class="tag">Code companion</span><h2>9. Illustrative Python code</h2>
+ <p class="lead">The transcript explains the implementation but does not include the full source code or exact package versions. The snippets below are a teaching template that follows the described pipeline; treat them as a starting point, not a verbatim copy of the instructor's repository. Library APIs can change between versions.</p>
+ <h3>9.1 Install the main dependencies</h3>
+ <pre><code>pip install -U langchain langchain-community langchain-openai langgraph \
+  pypdf faiss-cpu</code></pre>
+ <p>Configure your model provider's API key securely in your environment. Do not commit secrets to source control.</p>
+ <h3>9.2 Load a PDF, split it, and create a vector store</h3>
+ <pre><code>import os
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_community.vectorstores import FAISS
+
+# Set OPENAI_API_KEY in your environment before running.
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+def build_retriever(pdf_path: str):
+    """Index one PDF and return a retriever for relevant chunks."""
+    loader = PyPDFLoader(pdf_path)
+    pages = loader.load()
+
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=150,
+    )
+    chunks = splitter.split_documents(pages)
+
+    embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+    vector_store = FAISS.from_documents(chunks, embeddings)
+
+    # Return the four most similar chunks for each query.
+    return vector_store.as_retriever(
+        search_type="similarity",
+        search_kwargs={"k": 4},
+    )
+
+retriever = build_retriever("intro_to_ml.pdf")
+matches = retriever.invoke("What is a decision tree?")
+for i, doc in enumerate(matches, start=1):
+    print(f"--- Chunk {i} ---")
+    print(doc.page_content[:500])
+    print(doc.metadata)</code></pre>
+ <div class="callout amber"><strong>Practical note:</strong> <code>chunk_size=1000</code> and <code>chunk_overlap=150</code> are example settings, not values specified in the transcript. Tune them for your documents. This simple example builds an in-memory FAISS index each time it runs; a real app should decide how to persist, identify, update, and delete indexes.</div>
+ <h3>9.3 Wrap retrieval in a tool</h3>
+ <pre><code>from langchain_core.tools import tool
+
+@tool
+def search_uploaded_document(question: str) -> str:
+    """Search the user's uploaded document to answer document-specific questions."""
+    docs = retriever.invoke(question)
+    if not docs:
+        return "No relevant passages were found in the uploaded document."
+
+    passages = []
+    for i, doc in enumerate(docs, start=1):
+        source = doc.metadata.get("source", "uploaded document")
+        page = doc.metadata.get("page")
+        page_label = f", page {page + 1}" if isinstance(page, int) else ""
+        passages.append(
+            f"[Passage {i} — {source}{page_label}]\\n{doc.page_content}"
+        )
+    return "\\n\\n".join(passages)</code></pre>
+ <p>The tool returns readable text so the LLM can use it. Metadata is included when available. The page number adjustment above assumes the loader reports zero-based page indices; verify the convention for your loader.</p>
+ <h3>9.4 Bind the tool to the LLM</h3>
+ <pre><code>tools = [search_uploaded_document]
+llm_with_tools = llm.bind_tools(tools)
+
+# At each chat turn, invoke llm_with_tools with the conversation state.
+# If the assistant returns a tool call, execute the requested tool,
+# add its result to the message history, and call the LLM again.</code></pre>
+ <p>In a LangGraph implementation, this pattern is usually represented by a chat node, a tool node, and conditional routing. The lesson describes the same structure and notes that it closely resembles the existing tool-based graph.</p>
+ <h3>9.5 Prompt guidance for grounded answers</h3>
+ <pre><code>SYSTEM_INSTRUCTIONS = """
+You are a helpful assistant.
+When a question asks about an uploaded document, use the
+document-search tool before answering.
+Base document-specific claims on the retrieved passages.
+If the passages do not contain the answer, say that you
+could not find enough information in the uploaded document.
+Do not invent quotations, page numbers, or source details.
+"""</code></pre>
+ <p class="caption">This is example prompt text added to make the grounding expectation explicit; it is not quoted from the transcript.</p>
+</section>
+<section class="section" id="project">
+ <span class="tag">Project integration</span><h2>10. Add RAG to the existing multi-utility chatbot</h2>
+ <p>The lesson says the project receives two new files: one backend file (described as a LangGraph RAG backend) and one Streamlit frontend file. Most existing code remains similar; the major additions are document ingestion, a RAG tool, and a PDF upload control.</p>
+ <h3>10.1 Backend changes</h3>
+ <ul><li>Create an <code>ingest_pdf()</code> function to load the uploaded PDF, split it into chunks, create embeddings, build the vector store, and return a retriever.</li><li>Define the RAG tool around the retriever. Retrieve relevant documents, collect <code>page_content</code> and useful metadata, and return this context to the model.</li><li>Add the RAG tool to the existing tools list alongside the search, calculator, and stock-price tools.</li><li>Bind the tools to the LLM and use the existing LangGraph chat/tool flow.</li><li>Add error handling for invalid files or failures during parsing, embedding, retrieval, or model calls.</li></ul>
+ <h3>10.2 Frontend changes</h3><ul><li>Add a PDF uploader in the Streamlit sidebar.</li><li>Pass the uploaded file to the ingestion function and associate the resulting retriever with the correct user/session/thread.</li><li>Keep the existing chat UI and history behavior, with small changes to thread handling as needed.</li></ul>
+ <div class="diagram">
+ <svg viewBox="0 0 900 280" role="img" aria-label="Existing chatbot architecture expanded with PDF ingestion and RAG">
+ <defs><marker id="arrow4" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#667085"/></marker></defs>
+ <g font-size="13" text-anchor="middle" fill="#172033">
+ <rect x="25" y="40" width="180" height="62" rx="12" fill="#eef2ff" stroke="#a5b4fc"/><text x="115" y="65">Streamlit UI</text><text x="115" y="84" font-size="11">Chat + PDF uploader</text>
+ <rect x="265" y="40" width="180" height="62" rx="12" fill="#fff" stroke="#aeb9cb"/><text x="355" y="65">Backend / LangGraph</text><text x="355" y="84" font-size="11">Chat node + routing</text>
+ <rect x="505" y="15" width="165" height="62" rx="12" fill="#d1fae5" stroke="#6cc6a8"/><text x="587" y="40">Existing tools</text><text x="587" y="59" font-size="11">Search, calculator, stock</text>
+ <rect x="505" y="112" width="165" height="62" rx="12" fill="#d1fae5" stroke="#6cc6a8"/><text x="587" y="137">RAG tool</text><text x="587" y="156" font-size="11">Retriever + context</text>
+ <rect x="730" y="112" width="145" height="62" rx="12" fill="#fff7df" stroke="#e5bd58"/><text x="802" y="137">Vector store</text><text x="802" y="156" font-size="11">Chunks + embeddings</text>
+ <rect x="25" y="190" width="180" height="62" rx="12" fill="#fff" stroke="#aeb9cb"/><text x="115" y="215">Uploaded PDF</text><text x="115" y="234" font-size="11">Ingestion pipeline</text>
+ </g>
+ <path d="M205 71 H260 M445 60 H500 M445 82 C470 82 475 143 500 143 M670 143 H725 M205 220 H455 V175 H500" fill="none" stroke="#667085" stroke-width="2" marker-end="url(#arrow4)"/>
+ <text x="352" y="211" text-anchor="middle" font-size="11" fill="#5b6475">Load → split → embed → index</text>
+ </svg><div class="caption">Integration overview based on the lesson's described changes. The exact project filenames and interfaces may differ in the downloadable source code.</div>
+ </div>
+ <h3>10.3 Example ingestion function shape</h3>
+ <pre><code>def ingest_pdf(uploaded_pdf_path: str):
+    """Create a retriever for one uploaded PDF."""
+    # 1. Load PDF pages
+    # 2. Split pages into chunks
+    # 3. Create embeddings
+    # 4. Build/persist a vector store as required
+    # 5. Return a retriever associated with this upload/session
+    return build_retriever(uploaded_pdf_path)</code></pre>
+ <p>This short wrapper illustrates the function's responsibility. A production implementation should also validate file type/size, use a unique per-upload identifier, clean up temporary files, and avoid accidentally sharing one user's private document index with another user.</p>
+</section>
+<section class="section" id="tracing">
+ <span class="tag">Observability</span><h2>11. Inspecting the workflow with tracing</h2>
+ <p>The lesson uses LangSmith tracing (the transcript's speech recognition renders the name approximately as “LangXith/LangSmith”) to inspect the sequence behind a document question. A trace makes it easier to see where a tool was selected, what the retriever returned, and how the final answer was generated.</p>
+ <ol><li>The user's question enters the chat node.</li><li>The LLM decides that RAG is needed and emits a tool call.</li><li>The tool node invokes the RAG function, which searches the vector store and returns relevant chunks.</li><li>The tool output is added to the message history and sent back to the chat node.</li><li>The LLM uses the original question and retrieved context to produce the final answer.</li></ol>
+ <div class="callout green"><strong>Why tracing matters:</strong> it helps debug tool selection, poor retrieval, irrelevant chunks, latency, and unexpected answers. Inspect traces carefully because prompts and retrieved passages may contain sensitive user data.</div>
+</section>
+<section class="section" id="checklist">
+ <span class="tag">Revision</span><h2>12. Implementation checklist and key takeaways</h2>
+ <h3>Checklist</h3>
+ <ul><li>□ Understand why RAG is useful: knowledge gaps, private documents, and grounding.</li><li>□ Load the PDF into document objects.</li><li>□ Split documents into chunks with suitable size and overlap.</li><li>□ Create embeddings for each chunk.</li><li>□ Store embeddings with their text and metadata in a vector store.</li><li>□ Build a retriever and choose a top-k value.</li><li>□ Wrap retrieval in a clearly described tool.</li><li>□ Bind the RAG tool to the LLM.</li><li>□ Build a LangGraph chat node, tool node, and conditional edges.</li><li>□ Add PDF upload and ingestion to the existing Streamlit UI.</li><li>□ Test normal chat, document questions, and existing tools independently.</li><li>□ Trace the workflow and inspect retrieval quality and errors.</li></ul>
+ <h3>Key takeaways</h3><ul><li>RAG is not simply “upload a file to an LLM”; it includes indexing and retrieval so that only relevant content is placed in the model's context.</li><li>Chunking and embeddings prepare a searchable representation of the source.</li><li>A retriever returns relevant text; the LLM turns that evidence into a natural-language answer.</li><li>In this lesson's design, RAG is a tool that the LangGraph agent can choose when needed.</li><li>Building a standalone example first makes integration into a larger chatbot easier to reason about.</li><li>RAG can reduce unsupported answers, but answer quality depends on source quality, retrieval quality, prompt design, and model behavior.</li></ul>
+</section>
+<section class="section" id="glossary">
+ <span class="tag">Quick reference</span><h2>13. Glossary</h2>
+ <table><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody>
+ <tr><td><strong>RAG</strong></td><td>Retrieval-Augmented Generation: retrieve relevant external information and provide it as context for generation.</td></tr>
+ <tr><td><strong>LLM</strong></td><td>Large Language Model; generates responses from the prompt, context, and learned parameters.</td></tr>
+ <tr><td><strong>Parametric knowledge</strong></td><td>Information encoded in the model's learned parameters during training.</td></tr>
+ <tr><td><strong>Context window</strong></td><td>The finite amount of text/tokens a model can process in a single interaction.</td></tr>
+ <tr><td><strong>Chunk</strong></td><td>A smaller segment of a document created for indexing and retrieval.</td></tr>
+ <tr><td><strong>Chunk overlap</strong></td><td>Text shared between adjacent chunks to preserve continuity across boundaries.</td></tr>
+ <tr><td><strong>Embedding</strong></td><td>A vector representation of text that captures useful semantic relationships.</td></tr>
+ <tr><td><strong>Vector store</strong></td><td>A system for storing vectors and finding similar vectors; examples in the lesson are FAISS and Chroma.</td></tr>
+ <tr><td><strong>Retriever</strong></td><td>A component that finds and returns relevant documents/chunks for a query.</td></tr>
+ <tr><td><strong>Top-k</strong></td><td>The number of retrieved matches requested; the lesson's example uses four.</td></tr>
+ <tr><td><strong>Metadata</strong></td><td>Information about a chunk, such as source, page number, or author, if available.</td></tr>
+ <tr><td><strong>Tool</strong></td><td>A callable function the model can request to perform a specific operation.</td></tr>
+ <tr><td><strong>LangGraph node</strong></td><td>A step in a graph workflow, such as a chat node or tool-execution node.</td></tr>
+ <tr><td><strong>Tracing / observability</strong></td><td>Recording and inspecting execution steps to understand and debug application behavior.</td></tr>
+ </tbody></table>
+ <div class="callout"><strong>Source boundary:</strong> these notes follow the supplied lesson transcript. The code examples and added diagrams are explanatory supplements because the transcript describes the code but does not provide every original code cell or the complete repository.</div>
+</section>
+</main>
+</div>
+<footer class="footer"><a class="toplink" href="#top">Back to top ↑</a><p>Study notes: “Building a RAG chatbot with LangGraph” · Designed as a responsive, self-contained HTML reading page. Save the file and open it in a browser; diagrams are embedded as SVG, so no external image downloads are required.</p></footer>
+</body>
+</html>
