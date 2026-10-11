@@ -1,481 +1,314 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LangGraph Documentation Index</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LangGraph Notes Index</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #60a5fa;
+      --accent-2: #a78bfa;
+      --border: rgba(255,255,255,0.12);
+      --row: rgba(148, 163, 184, 0.08);
+      --shadow: 0 20px 50px rgba(0,0,0,0.35);
+    }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 40px 20px;
-            color: #333;
-        }
+    * { box-sizing: border-box; }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #111827 100%);
+      color: var(--text);
+      padding: 40px 20px;
+    }
 
-        header {
-            text-align: center;
-            color: white;
-            margin-bottom: 50px;
-            animation: fadeInDown 0.6s ease-out;
-        }
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+    }
 
-        header h1 {
-            font-size: 3em;
-            font-weight: 700;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-        }
+    h1 {
+      text-align: center;
+      margin-bottom: 12px;
+      font-size: clamp(2rem, 4vw, 3rem);
+      letter-spacing: 0.03em;
+    }
 
-        header p {
-            font-size: 1.2em;
-            font-weight: 300;
-            opacity: 0.95;
-        }
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      margin-bottom: 28px;
+      font-size: 1.05rem;
+    }
 
-        .content {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 24px;
-            animation: fadeInUp 0.6s ease-out;
-        }
+    .table-wrap {
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow: auto;
+    }
 
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+    }
 
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            transform: translateX(-100%);
-            transition: transform 0.3s ease;
-        }
+    thead th {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #fff;
+      text-align: left;
+      padding: 16px 18px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
 
-        .card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
-        }
+    tbody td {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
 
-        .card:hover::before {
-            transform: translateX(0);
-        }
+    tbody tr:nth-child(even) {
+      background: var(--row);
+    }
 
-        .card-number {
-            display: inline-block;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 0.9em;
-            margin-bottom: 12px;
-        }
+    tbody tr:hover {
+      background: rgba(96, 165, 250, 0.08);
+    }
 
-        .card h2 {
-            font-size: 1.3em;
-            margin-bottom: 12px;
-            color: #333;
-            line-height: 1.4;
-        }
+    .serial {
+      font-weight: 700;
+      color: #cbd5e1;
+      width: 70px;
+    }
 
-        .card a {
-            display: inline-block;
-            margin-top: 16px;
-            padding: 10px 20px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            font-size: 0.95em;
-        }
+    .title {
+      font-weight: 600;
+      color: #f8fafc;
+      min-width: 420px;
+    }
 
-        .card a:hover {
-            background: linear-gradient(135deg, #764ba2, #667eea);
-            transform: translateX(4px);
-        }
+    .file-name {
+      color: var(--muted);
+      font-family: "Consolas", "Courier New", monospace;
+      min-width: 420px;
+    }
 
-        .badge {
-            display: inline-block;
-            background: #f0f0f0;
-            color: #667eea;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.75em;
-            font-weight: 600;
-            margin-top: 12px;
-        }
+    a.link-btn {
+      display: inline-block;
+      padding: 8px 14px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      color: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
 
-        .stats {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            margin-bottom: 40px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-            animation: fadeInUp 0.6s ease-out 0.2s both;
-        }
+    a.link-btn:hover {
+      transform: translateY(-1px);
+      opacity: 0.95;
+    }
 
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-number {
-            font-size: 2.5em;
-            font-weight: 700;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .stat-label {
-            font-size: 0.9em;
-            color: #666;
-            margin-top: 8px;
-            font-weight: 500;
-        }
-
-        .category {
-            margin-bottom: 40px;
-        }
-
-        .category-title {
-            font-size: 1.8em;
-            color: white;
-            margin-bottom: 20px;
-            font-weight: 600;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .category-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 24px;
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        footer {
-            text-align: center;
-            color: white;
-            margin-top: 60px;
-            padding-top: 40px;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-            font-size: 0.95em;
-        }
-
-        @media (max-width: 768px) {
-            header h1 {
-                font-size: 2em;
-            }
-
-            .content {
-                grid-template-columns: 1fr;
-            }
-
-            .stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-    </style>
+    .footer {
+      text-align: center;
+      color: var(--muted);
+      margin-top: 18px;
+      font-size: 0.95rem;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🦾 LangGraph Mastery</h1>
-            <p>Complete Learning Path: From Basics to Advanced AI Agents</p>
-        </header>
+  <div class="container">
+    <h1>LangGraph Notes</h1>
+    <div class="subtitle">Index of all LangGraph markdown notes</div>
 
-        <div class="stats">
-            <div class="stat-item">
-                <div class="stat-number">28</div>
-                <div class="stat-label">Comprehensive Guides</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">100%</div>
-                <div class="stat-label">Coverage</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">🚀</div>
-                <div class="stat-label">Beginner to Expert</div>
-            </div>
-        </div>
-
-        <div class="category">
-            <h2 class="category-title">📚 Complete Learning Path</h2>
-            <div class="category-grid">
-                <div class="card">
-                    <div class="card-number">01</div>
-                    <h2>Generative AI Vs Agentic AI</h2>
-                    <p>Understanding the fundamental differences between generative and agentic AI systems.</p>
-                    <a href="02.Generative%20AI%20Vs%20Agentic%20AI.md">Read →</a>
-                    <span class="badge">Fundamentals</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">02</div>
-                    <h2>Agentic AI</h2>
-                    <p>Deep dive into agentic AI concepts and architecture.</p>
-                    <a href="03.Agentic%20AI.md">Read →</a>
-                    <span class="badge">Concepts</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">03</div>
-                    <h2>Lanchain vs Langgraph</h2>
-                    <p>Comparison between Lanchain and Langgraph frameworks.</p>
-                    <a href="04.%20Lanchain%20vs%20Langgraph.md">Read →</a>
-                    <span class="badge">Comparison</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">04</div>
-                    <h2>LangGraph Core Concepts</h2>
-                    <p>Essential concepts and building blocks of LangGraph.</p>
-                    <a href="05.%20LangGraph%20Core%20Concepts.md">Read →</a>
-                    <span class="badge">Core</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">05</div>
-                    <h2>Sequential Workflows</h2>
-                    <p>Building linear, step-by-step workflows in LangGraph.</p>
-                    <a href="06.%20Sequential%20Workflows%20in%20LangGraph.md">Read →</a>
-                    <span class="badge">Workflows</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">06</div>
-                    <h2>Parallel Workflows</h2>
-                    <p>Implementing concurrent and parallel processing in LangGraph.</p>
-                    <a href="07.%20%20Parallel%20Workflows%20in%20LangGraph.md">Read →</a>
-                    <span class="badge">Workflows</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">07</div>
-                    <h2>Conditional Workflows</h2>
-                    <p>Creating branching logic and conditional execution paths.</p>
-                    <a href="08.%20%20Conditional%20Workflows%20in%20LangGraph.md">Read →</a>
-                    <span class="badge">Workflows</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">08</div>
-                    <h2>Iterative Workflows</h2>
-                    <p>Implementing loops and iterative patterns in agents.</p>
-                    <a href="09.%20%20Iterative%20Workflows%20in%20LangGraph.md">Read →</a>
-                    <span class="badge">Workflows</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">09</div>
-                    <h2>Building a Chatbot</h2>
-                    <p>Complete guide to creating chatbots using LangGraph.</p>
-                    <a href="10.%20How%20to%20build%20a%20Chatbot%20using%20LangGraph.md">Read →</a>
-                    <span class="badge">Projects</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">10</div>
-                    <h2>Persistence in LangGraph</h2>
-                    <p>Saving and managing state persistence across sessions.</p>
-                    <a href="11.%20%20Persistence%20in%20LangGraph.md">Read →</a>
-                    <span class="badge">Advanced</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">11</div>
-                    <h2>Chatbot with UI & Streamlit</h2>
-                    <p>Building a complete chatbot application with user interface using Streamlit.</p>
-                    <a href="12.%20Building%20a%20Chatbot%20with%20UI%20in%20LangGraph%20%26%20Streamlit.md">Read →</a>
-                    <span class="badge">Projects</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">12</div>
-                    <h2>Streaming in LangGraph</h2>
-                    <p>Implementing real-time streaming of responses and data.</p>
-                    <a href="13.%20Streaming%20in%20LangGraph.md">Read →</a>
-                    <span class="badge">Advanced</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">13</div>
-                    <h2>Resume Chat Feature</h2>
-                    <p>Building a ChatGPT-like resume chat feature.</p>
-                    <a href="14.%20How%20to%20build%20a%20Resume%20Chat%20feature%20like%20ChatGPT.md">Read →</a>
-                    <span class="badge">Projects</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">14</div>
-                    <h2>LangGraph + SQLite Integration</h2>
-                    <p>Integrating chatbots with databases using SQLite.</p>
-                    <a href="15.%20LangGraph%20%2B%20SQLite%20%7C%20Chatbot%20with%20Database%20Integration.md">Read →</a>
-                    <span class="badge">Integration</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">15</div>
-                    <h2>LangSmith Crash Course</h2>
-                    <p>Quick introduction to LangSmith monitoring and debugging tools.</p>
-                    <a href="16.%20LangSmith%20Crash%20Course.md">Read →</a>
-                    <span class="badge">Tools</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">16</div>
-                    <h2>LangSmith Integration</h2>
-                    <p>Integrating LangSmith with your LangGraph chatbot applications.</p>
-                    <a href="17.%20LangSmith%20Integration%20with%20LangGraph%20Chatbot%20App.md">Read →</a>
-                    <span class="badge">Tools</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">17</div>
-                    <h2>Tools in LangGraph</h2>
-                    <p>Using and creating tools for agent actions and interactions.</p>
-                    <a href="18.%20Tools%20in%20LangGraph.md">Read →</a>
-                    <span class="badge">Advanced</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">18</div>
-                    <h2>MCP Client with LangGraph</h2>
-                    <p>Building Model Context Protocol clients using LangGraph.</p>
-                    <a href="19.%20%20How%20to%20build%20MCP%20Client%20using%20LangGraph.md">Read →</a>
-                    <span class="badge">Advanced</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">19</div>
-                    <h2>RAG using LangGraph</h2>
-                    <p>Implementing Retrieval Augmented Generation with LangGraph.</p>
-                    <a href="20.%20RAG%20using%20LangGraph.md">Read →</a>
-                    <span class="badge">Advanced</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">20</div>
-                    <h2>Human in the Loop (HITL)</h2>
-                    <p>Implementing human approval workflows in AI agents.</p>
-                    <a href="21.%20Human%20in%20the%20loop%20(HITL)%20using%20LangGraph.md">Read →</a>
-                    <span class="badge">Advanced</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">21</div>
-                    <h2>SubGraphs in LangGraph</h2>
-                    <p>Creating modular and reusable sub-graphs for complex workflows.</p>
-                    <a href="22.%20SubGraphs%20in%20LangGraph.md">Read →</a>
-                    <span class="badge">Advanced</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">22</div>
-                    <h2>LLM Memory Explained</h2>
-                    <p>Understanding how LLMs don't have memory but how they appear to remember.</p>
-                    <a href="23.%20%20LLMs%20Don%E2%80%99t%20Have%20Memory%20%E2%80%94%20So%20How%20Do%20They%20Remember%3F.md">Read →</a>
-                    <span class="badge">Concepts</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">23</div>
-                    <h2>Short Term Memory</h2>
-                    <p>Implementing short-term memory in LangGraph agents.</p>
-                    <a href="24.%20How%20To%20Implement%20Short%20Term%20Memory%20Using%20LangGraph.md">Read →</a>
-                    <span class="badge">Memory</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">24</div>
-                    <h2>Long Term Memory</h2>
-                    <p>Building persistent long-term memory systems for agents.</p>
-                    <a href="25.%20Long%20Term%20Memory%20in%20LangGraph.md">Read →</a>
-                    <span class="badge">Memory</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">25</div>
-                    <h2>AI Blog Writing Agent</h2>
-                    <p>Creating an agent that plans, researches, and writes blogs automatically.</p>
-                    <a href="26.%20This%20AI%20Agent%20Plans,%20Researches%20%26%20Writes%20Blogs%20Automatically%20using%20LangGraph.md">Read →</a>
-                    <span class="badge">Projects</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">26</div>
-                    <h2>Corrective RAG (CRAG)</h2>
-                    <p>Advanced RAG techniques: How CRAG solves traditional RAG problems.</p>
-                    <a href="27.%20Advanced%20RAG:%20How%20Corrective%20RAG%20(CRAG)%20Solves%20Traditional%20RAG%20Problems.md">Read →</a>
-                    <span class="badge">Advanced</span>
-                </div>
-
-                <div class="card">
-                    <div class="card-number">27</div>
-                    <h2>Self-RAG Tutorial</h2>
-                    <p>Making your AI fact-check itself with Self-RAG implementation.</p>
-                    <a href="28.%20Self-RAG%20Tutorial:%20How%20to%20Make%20Your%20AI%20Fact-Check%20Itself.md">Read →</a>
-                    <span class="badge">Advanced</span>
-                </div>
-            </div>
-        </div>
-
-        <footer>
-            <p>📖 LangGraph Documentation Index | Created for comprehensive learning and reference</p>
-            <p style="margin-top: 10px; opacity: 0.8;">Navigate through the guides to master AI agents and autonomous systems</p>
-        </footer>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 80px;">#</th>
+            <th>Title</th>
+            <th>File</th>
+            <th>Link</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="serial">01</td>
+            <td class="title">Generative AI Vs Agentic AI</td>
+            <td class="file-name">02.Generative AI Vs Agentic AI.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/02.Generative%20AI%20Vs%20Agentic%20AI.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">02</td>
+            <td class="title">Agentic AI</td>
+            <td class="file-name">03.Agentic AI.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/03.Agentic%20AI.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">03</td>
+            <td class="title">Lanchain vs Langgraph</td>
+            <td class="file-name">04. Lanchain vs Langgraph.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/04.%20Lanchain%20vs%20Langgraph.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">04</td>
+            <td class="title">LangGraph Core Concepts</td>
+            <td class="file-name">05. LangGraph Core Concepts.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/05.%20LangGraph%20Core%20Concepts.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">05</td>
+            <td class="title">Sequential Workflows in LangGraph</td>
+            <td class="file-name">06. Sequential Workflows in LangGraph.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/06.%20Sequential%20Workflows%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">06</td>
+            <td class="title">Parallel Workflows in LangGraph</td>
+            <td class="file-name">07.  Parallel Workflows in LangGraph.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/07.%20%20Parallel%20Workflows%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">07</td>
+            <td class="title">Conditional Workflows in LangGraph</td>
+            <td class="file-name">08.  Conditional Workflows in LangGraph.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/08.%20%20Conditional%20Workflows%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">08</td>
+            <td class="title">Iterative Workflows in LangGraph</td>
+            <td class="file-name">09.  Iterative Workflows in LangGraph.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/09.%20%20Iterative%20Workflows%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">09</td>
+            <td class="title">How to build a Chatbot using LangGraph</td>
+            <td class="file-name">10. How to build a Chatbot using LangGraph.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/10.%20How%20to%20build%20a%20Chatbot%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">10</td>
+            <td class="title">Persistence in LangGraph</td>
+            <td class="file-name">11.  Persistence in LangGraph.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/11.%20%20Persistence%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">11</td>
+            <td class="title">Building a Chatbot with UI in LangGraph & Streamlit</td>
+            <td class="file-name">12. Building a Chatbot with UI in LangGraph & Streamlit.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/12.%20Building%20a%20Chatbot%20with%20UI%20in%20LangGraph%20%26%20Streamlit.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">12</td>
+            <td class="title">Streaming in LangGraph</td>
+            <td class="file-name">13. Streaming in LangGraph.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/13.%20Streaming%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">13</td>
+            <td class="title">How to build a Resume Chat feature like ChatGPT</td>
+            <td class="file-name">14. How to build a Resume Chat feature like ChatGPT.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/14.%20How%20to%20build%20a%20Resume%20Chat%20feature%20like%20ChatGPT.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">14</td>
+            <td class="title">LangGraph + SQLite | Chatbot with Database Integration</td>
+            <td class="file-name">15. LangGraph + SQLite | Chatbot with Database Integration.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/15.%20LangGraph%20%2B%20SQLite%20%7C%20Chatbot%20with%20Database%20Integration.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">15</td>
+            <td class="title">LangSmith Crash Course</td>
+            <td class="file-name">16. LangSmith Crash Course.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/16.%20LangSmith%20Crash%20Course.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">16</td>
+            <td class="title">LangSmith Integration with LangGraph Chatbot App</td>
+            <td class="file-name">17. LangSmith Integration with LangGraph Chatbot App.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/17.%20LangSmith%20Integration%20with%20LangGraph%20Chatbot%20App.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">17</td>
+            <td class="title">Tools in LangGraph</td>
+            <td class="file-name">18. Tools in LangGraph.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/18.%20Tools%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">18</td>
+            <td class="title">How to build MCP Client using LangGraph</td>
+            <td class="file-name">19.  How to build MCP Client using LangGraph.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/19.%20%20How%20to%20build%20MCP%20Client%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">19</td>
+            <td class="title">RAG using LangGraph</td>
+            <td class="file-name">20. RAG using LangGraph.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/20.%20RAG%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">20</td>
+            <td class="title">Human in the loop (HITL) using LangGraph</td>
+            <td class="file-name">21. Human in the loop (HITL) using LangGraph.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/21.%20Human%20in%20the%20loop%20(HITL)%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">21</td>
+            <td class="title">SubGraphs in LangGraph</td>
+            <td class="file-name">22. SubGraphs in LangGraph.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/22.%20SubGraphs%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">22</td>
+            <td class="title">LLMs Don’t Have Memory — So How Do They Remember?</td>
+            <td class="file-name">23.  LLMs Don’t Have Memory — So How Do They Remember?.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/23.%20%20LLMs%20Don%E2%80%99t%20Have%20Memory%20%E2%80%94%20So%20How%20Do%20They%20Remember%3F.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">23</td>
+            <td class="title">How To Implement Short Term Memory Using LangGraph</td>
+            <td class="file-name">24. How To Implement Short Term Memory Using LangGraph.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/24.%20How%20To%20Implement%20Short%20Term%20Memory%20Using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">24</td>
+            <td class="title">Long Term Memory in LangGraph</td>
+            <td class="file-name">25. Long Term Memory in LangGraph.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/25.%20Long%20Term%20Memory%20in%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">25</td>
+            <td class="title">This AI Agent Plans, Researches &amp; Writes Blogs Automatically using LangGraph</td>
+            <td class="file-name">26. This AI Agent Plans, Researches &amp; Writes Blogs Automatically using LangGraph.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/26.%20This%20AI%20Agent%20Plans,%20Researches%20%26%20Writes%20Blogs%20Automatically%20using%20LangGraph.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">26</td>
+            <td class="title">Advanced RAG: How Corrective RAG (CRAG) Solves Traditional RAG Problems</td>
+            <td class="file-name">27. Advanced RAG: How Corrective RAG (CRAG) Solves Traditional RAG Problems.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/27.%20Advanced%20RAG:%20How%20Corrective%20RAG%20(CRAG)%20Solves%20Traditional%20RAG%20Problems.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+          <tr>
+            <td class="serial">27</td>
+            <td class="title">Self-RAG Tutorial: How to Make Your AI Fact-Check Itself</td>
+            <td class="file-name">28. Self-RAG Tutorial: How to Make Your AI Fact-Check Itself.md</td>
+            <td><a class="link-btn" href="https://sudhir-garg.github.io/notes/LangGraph/28.%20Self-RAG%20Tutorial:%20How%20to%20Make%20Your%20AI%20Fact-Check%20Itself.md" target="_blank" rel="noopener">Open</a></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
+
+    <div class="footer">LangGraph Notes Index • GitHub Pages links</div>
+  </div>
 </body>
 </html>
